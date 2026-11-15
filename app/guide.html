@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>전자계약 서버 설치 안내</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<style>
+/* 레이아웃: 왼쪽 단계 번호 레일 + 오른쪽 설명 · 화면 그림. 좁은 화면에서는 한 줄로 */
+:root{
+  --green:#17320B;          /* 작성기 기본 색 (작성기 안에서 열면 회사 색으로 바뀜) */
+  --bg:#f4f2ee; --card:#fff; --text:#222; --sub:#6f6a64; --line:#dcd8d0;
+  --tint:#eef2ea;           /* 초록 기운 옅은 바탕 */
+  --mark:#d93b2b;           /* 화면 그림에서 '여기를 누르세요' 표시 */
+  --warn-bg:#fff6e5; --warn:#8a5a00;
+  --gbar:#f1f3f4; --gline:#dadce0; --gblue:#1a73e8; --gtext:#3c4043;  /* 구글 화면 흉내용 중립색 */
+  --f:"Noto Sans KR","맑은 고딕","Malgun Gothic",system-ui,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.7 var(--f);-webkit-font-smoothing:antialiased}
+a{color:var(--green)}
+.wrap{max-width:920px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* 표지 */
+.cover{background:var(--green);color:#fff;border-radius:16px;padding:34px 30px 26px;display:grid;gap:18px}
+.cover .eyebrow{font-size:12.5px;letter-spacing:.12em;opacity:.75}
+.cover h1{margin:0;font-size:clamp(26px,4.6vw,38px);line-height:1.25;font-weight:800;text-wrap:balance}
+.cover p{margin:0;max-width:60ch;opacity:.92}
+.facts{display:flex;flex-wrap:wrap;gap:8px}
+.facts span{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:4px 12px;font-size:13px}
+.sig{margin-top:6px;display:grid;gap:2px}
+.sig i.bar{display:block;width:34px;height:2px;background:#fff;opacity:.8;margin-bottom:8px}
+.sig b{font-size:15px;letter-spacing:.02em}
+.sig em{font-size:12px;opacity:.78}
+
+/* 전체 흐름 */
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:22px 0 8px;padding:0;list-style:none}
+.flow li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 10px 9px;font-size:13px;line-height:1.45}
+.flow li b{display:block;color:var(--green);font-size:12px;margin-bottom:2px}
+.flow a{text-decoration:none;color:inherit;display:block}
+.flow a:hover b{text-decoration:underline}
+@media (max-width:760px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* 단계 */
+.step{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 18px;margin-top:40px;scroll-margin-top:16px}
+.step>.n{width:44px;height:44px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:800;font-size:19px}
+.step>.body{min-width:0}
+.step h2{margin:6px 0 4px;font-size:21px;line-height:1.35;color:var(--green);text-wrap:balance}
+.step .lead{margin:0 0 14px;color:var(--sub)}
+@media (max-width:560px){.step{grid-template-columns:1fr}.step>.n{margin-bottom:6px}}
+.sub{display:flex;gap:10px;align-items:baseline;margin:18px 0 8px;font-weight:700}
+.sub i{font-style:normal;flex:none;min-width:24px;height:24px;border-radius:6px;background:var(--tint);color:var(--green);display:grid;place-items:center;font-size:13px}
+ol.do,ul.do{margin:0 0 12px;padding-left:1.3em}
+ol.do li,ul.do li{margin:3px 0}
+kbd,.k{font-family:var(--f);font-size:.92em;background:var(--card);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 6px;white-space:nowrap}
+.note,.warn{border-radius:10px;padding:11px 14px;margin:12px 0;font-size:14px}
+.note{background:var(--tint);border:1px solid #d5ddcd}
+.warn{background:var(--warn-bg);border:1px solid #f0d9a8;color:#5b4300}
+.warn b{color:var(--warn)}
+.linkbox{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin:8px 0 12px}
+.linkbox input{flex:1 1 280px;min-width:0;font:13px var(--mono);border:1px solid var(--line);border-radius:8px;padding:9px 10px;background:var(--card);color:var(--text)}
+.btn{font:inherit;font-size:14px;border-radius:8px;padding:8px 14px;cursor:pointer;border:1px solid var(--green);background:var(--green);color:#fff;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
+.btn.ghost{background:var(--card);color:var(--green)}
+.btn:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #9bb98a;outline-offset:2px}
+
+/* ===== 화면 그림 ===== */
+.shot{margin:10px 0 6px;border:1px solid var(--gline);border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06);font:13px/1.5 var(--f);color:var(--gtext)}
+.shot .tb{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--gbar);border-bottom:1px solid var(--gline)}
+.shot .tb i{width:10px;height:10px;border-radius:50%;background:#d6d6d6}
+.shot .tb span{margin-left:8px;font-size:12px;color:#70757a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shot .cv{position:relative;padding:14px;min-height:120px}
+.cap{font-size:12.5px;color:var(--sub);margin:0 0 4px}
+.scroll{overflow-x:auto}
+.mark{position:relative;outline:2.5px solid var(--mark);outline-offset:2px;border-radius:6px}
+.tag{position:absolute;top:-11px;right:-11px;width:20px;height:20px;border-radius:50%;background:var(--mark);color:#fff;font:700 11.5px/20px var(--f);text-align:center;z-index:2}
+.tag.l{right:auto;left:-11px}
+/* 시트 */
+.menubar{display:flex;flex-wrap:wrap;gap:2px 12px;padding:2px 2px 8px;border-bottom:1px solid var(--gline);font-size:12.5px}
+.menubar span{padding:1px 4px}
+.grid-s{display:grid;grid-template-columns:28px repeat(5,1fr);font-size:11px;color:#80868b}
+.grid-s div{border-right:1px solid #eee;border-bottom:1px solid #eee;height:22px;padding:2px 4px}
+.grid-s .h{background:#f8f9fa;text-align:center}
+.drop{position:absolute;background:#fff;border:1px solid var(--gline);border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.15);padding:6px 0;min-width:230px;font-size:13px;z-index:3}
+.drop div{padding:6px 14px;white-space:nowrap}
+.drop hr{border:0;border-top:1px solid var(--gline);margin:5px 0}
+.sheettabs{display:flex;gap:4px;margin-top:10px;font-size:12px}
+.sheettabs span{padding:3px 10px;border-radius:4px;background:#eef0f1}
+.sheettabs .new{background:#e6f4ea;color:#137333;font-weight:700}
+/* 다이얼로그 */
+.dlg{background:#fff;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);border:1px solid var(--gline);padding:16px 18px;max-width:440px;margin:6px auto}
+.dlg h4{margin:0 0 8px;font-size:16px;font-weight:500;color:#202124}
+.dlg .acts{display:flex;justify-content:flex-end;gap:14px;margin-top:12px;color:var(--gblue);font-weight:500}
+.gbtn{display:inline-block;background:var(--gblue);color:#fff;border-radius:5px;padding:5px 14px;font-weight:500}
+.gbtn.o{background:#fff;color:var(--gblue);border:1px solid var(--gline)}
+.field{border:1px solid #9aa0a6;border-radius:5px;padding:6px 10px;margin:14px 0 4px;position:relative;font-size:13px;display:flex;justify-content:space-between}
+.field small{position:absolute;top:-9px;left:8px;background:#fff;padding:0 4px;font-size:11px;color:#5f6368}
+.lbl{font-size:12.5px;font-weight:700;color:#202124;margin-top:10px}
+.mono{font-family:var(--mono);font-size:12px;word-break:break-all}
+.ide{display:grid;grid-template-columns:150px minmax(0,1fr);min-height:150px}
+.ide .side{background:#f8f9fa;border-right:1px solid var(--gline);padding:10px;font-size:12px}
+.ide .side div{padding:3px 6px;border-radius:4px}
+.ide .side .on{background:#e8f0fe;color:var(--gblue)}
+.ide .main{padding:10px 12px;font-family:var(--mono);font-size:11.5px;color:#5f6368;line-height:1.7}
+.idebar{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--gline);flex-wrap:wrap}
+.idebar .t{font-size:16px;color:#202124}
+.idebar .sp{flex:1}
+.consent{max-width:420px;margin:0 auto;font-size:13px}
+.consent .who{display:flex;gap:10px;align-items:center;border:1px solid var(--gline);border-radius:20px;padding:4px 12px 4px 4px;width:max-content;max-width:100%;margin:8px 0}
+.consent .av{width:22px;height:22px;border-radius:50%;background:#c9d3c2}
+.consent .lnk{color:var(--gblue);text-decoration:underline}
+.twocol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:700px){.twocol{grid-template-columns:1fr}.ide{grid-template-columns:1fr}.ide .side{display:none}}
+/* 작성기 */
+.app-top{background:var(--green);color:#fff;padding:8px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.app-top span{border:1px solid rgba(255,255,255,.4);border-radius:6px;padding:3px 9px}
+.app-top .ok{margin-left:auto;border-radius:999px;background:rgba(255,255,255,.15)}
+.app-card{border:1px solid var(--line);border-radius:10px;padding:12px;margin:10px;background:#fff}
+.app-card .ta{border:1px solid var(--line);border-radius:6px;padding:8px;font-family:var(--mono);font-size:11.5px;color:#555;background:#fafaf8}
+.okline{color:#1e6b2a;font-weight:700}
+
+/* 문제 해결 */
+details.faq{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:8px 0;padding:0 14px}
+details.faq summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;gap:10px}
+details.faq summary::before{content:"+";color:var(--green);font-weight:800;width:14px;flex:none}
+details.faq[open] summary::before{content:"–"}
+details.faq>div{padding:0 0 12px 24px}
+h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
+.foot{margin-top:40px;color:var(--sub);font-size:12.5px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+@media print{.btn,.linkbox button{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="eyebrow">견적서 작성기 · 전자계약 서버</div>
+  <h1>우리 회사 전용 서버를<br>구글 계정으로 만드는 방법</h1>
+  <p>견적 목록을 팀이 함께 보고, 고객에게 카카오톡으로 전자서명을 받으려면 서버가 하나 필요합니다. 서버는 <b>내 구글 계정 안</b>에 만들어지고, 견적서 · 서명 · 계약서 PDF도 모두 내 구글 드라이브에 저장됩니다.</p>
+  <div class="facts"><span>약 10분</span><span>비용 0원</span><span>구글 계정(지메일) 1개</span><span>PC 크롬 브라우저 권장</span><span>처음 한 번만</span></div>
+  <div class="sig"><i class="bar"></i><b>weavery lab</b><em>weaving your brand and the mood of your space</em></div>
+</header>
+
+<ol class="flow" aria-label="전체 순서">
+  <li><a href="#s1"><b>1</b>서버 시트 사본 만들기</a></li>
+  <li><a href="#s2"><b>2</b>처음 설정 · 권한 허용</a></li>
+  <li><a href="#s3"><b>3</b>웹 앱으로 배포</a></li>
+  <li><a href="#s4"><b>4</b>주소 저장 · 연결 코드</a></li>
+  <li><a href="#s5"><b>5</b>작성기에 연결</a></li>
+  <li><a href="#s6"><b>6</b>회사 정보 · 팀 초대</a></li>
+</ol>
+<p class="cap">팀에서 <b>한 사람(대표 계정)</b>만 1~4단계를 하면 됩니다. 팀원은 5단계의 초대 링크만 받으면 바로 연결됩니다.</p>
+
+<!-- 1 -->
+<section class="step" id="s1">
+  <div class="n">1</div>
+  <div class="body">
+    <h2>서버 시트 사본 만들기</h2>
+    <p class="lead">서버가 들어 있는 구글 시트를 내 드라이브로 복사합니다. 서버 프로그램(Apps Script)도 함께 복사됩니다.</p>
+    <ol class="do">
+      <li>회사 메일로 쓸 <b>구글 계정에 로그인</b>한 상태에서 아래 링크를 엽니다.</li>
+      <li><b>[사본 만들기]</b>를 누릅니다.</li>
+    </ol>
+    <div class="linkbox">
+      <input id="copyUrl" readonly value="https://docs.google.com/spreadsheets/d/18r9JjPYgOiupHOaArAV4zJXKg9-ewtcxOMnnD3K4ypA/copy" aria-label="서버 시트 사본 만들기 링크">
+      <button class="btn ghost" type="button" data-copy="copyUrl">복사</button>
+      <a class="btn" href="https://docs.google.com/spreadsheets/d/18r9JjPYgOiupHOaArAV4zJXKg9-ewtcxOMnnD3K4ypA/copy" target="_blank" rel="noopener">사본 만들기 열기</a>
+    </div>
+    <div class="shot" role="img" aria-label="문서 복사 화면에서 사본 만들기 버튼을 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>docs.google.com/spreadsheets/…/copy</span></div>
+      <div class="cv">
+        <div style="font-size:22px;color:#202124;margin:4px 0 10px">문서 복사</div>
+        <div style="background:#fbe9a7;border-radius:4px;padding:6px 10px;font-size:12px;max-width:380px">⚠ 첨부된 Apps Script 파일 및 기능도 복사됩니다.</div>
+        <div style="margin:10px 0 12px">'전자계약 서버 (견적서 작성기)'을(를) 복사하시겠습니까?</div>
+        <span class="gbtn mark">사본 만들기<span class="tag">1</span></span>
+        <span class="gbtn o" style="margin-left:6px">Apps Script 파일 보기</span>
+      </div>
+    </div>
+    <div class="note">노란 경고 문구는 정상입니다. 서버 프로그램이 같이 복사된다는 뜻이에요. 복사된 시트의 이름은 회사 이름으로 바꿔도 됩니다.</div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="step" id="s2">
+  <div class="n">2</div>
+  <div class="body">
+    <h2>처음 설정하고 권한 허용하기</h2>
+    <p class="lead">서버가 내 시트 · 드라이브에 저장하고 메일을 보낼 수 있도록 허락하는 단계입니다.</p>
+
+    <div class="sub"><i>2-1</i>시트 위 메뉴에서 [전자계약 → ① 처음 설정]</div>
+    <div class="shot" role="img" aria-label="시트 메뉴 전자계약을 열고 처음 설정을 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>전자계약 서버 (견적서 작성기)의 사본</span></div>
+      <div class="cv" style="min-height:210px">
+        <div class="menubar"><span>파일</span><span>수정</span><span>보기</span><span>삽입</span><span>서식</span><span>데이터</span><span>도구</span><span>확장 프로그램</span><span>도움말</span><span class="mark">전자계약<span class="tag">1</span></span></div>
+        <div class="grid-s"><div class="h"></div><div class="h">A</div><div class="h">B</div><div class="h">C</div><div class="h">D</div><div class="h">E</div>
+          <div class="h">1</div><div></div><div></div><div></div><div></div><div></div>
+          <div class="h">2</div><div></div><div></div><div></div><div></div><div></div>
+          <div class="h">3</div><div></div><div></div><div></div><div></div><div></div>
+          <div class="h">4</div><div></div><div></div><div></div><div></div><div></div></div>
+        <div class="drop" style="top:40px;right:14px">
+          <div class="mark" style="margin:0 6px">① 처음 설정 (권한 허용)<span class="tag">2</span></div>
+          <div>② 연결 코드 보기</div><hr>
+          <div>연결 코드 새로 만들기 (기존 팀원 연결 끊김)</div>
+        </div>
+      </div>
+    </div>
+    <div class="note"><b>[전자계약] 메뉴가 안 보이면</b> 시트를 새로고침(<kbd>F5</kbd>)하고 5~10초 기다려 주세요. 메뉴가 메뉴줄 끝에 생깁니다.</div>
+
+    <div class="sub"><i>2-2</i>'승인 필요' 창에서 [확인] → 내 계정 선택</div>
+    <div class="shot" role="img" aria-label="승인 필요 창에서 확인을 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>승인 필요</span></div>
+      <div class="cv" style="background:#e8eaed">
+        <div class="dlg"><h4>승인 필요</h4>이 문서에 첨부된 스크립트를 실행하려면 사용자의 허가가 필요합니다.
+          <div class="acts"><span>취소</span><span class="mark" style="padding:0 6px">확인<span class="tag">1</span></span></div></div>
+      </div>
+    </div>
+
+    <div class="sub"><i>2-3</i>'확인하지 않은 앱' 경고 → [고급] → [(안전하지 않음)으로 이동] → [허용]</div>
+    <div class="twocol">
+      <div class="shot" role="img" aria-label="경고 화면에서 고급을 누르고 이동을 누릅니다">
+        <div class="tb"><i></i><i></i><i></i><span>accounts.google.com</span></div>
+        <div class="cv">
+          <div class="consent">
+            <div style="font-size:17px;color:#202124;margin-bottom:6px">Google에서 확인하지 않은 앱</div>
+            앱에서 내 Google 계정에 대한 액세스를 요청합니다. 개발자를 알고 신뢰하는 경우에만 계속하세요.
+            <div style="margin:12px 0 4px"><span class="lnk mark" style="padding:0 4px">고급<span class="tag">1</span></span></div>
+            <div style="margin-top:12px"><span class="lnk mark" style="padding:0 4px">전자계약 서버(으)로 이동(안전하지 않음)<span class="tag">2</span></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="shot" role="img" aria-label="권한 목록 맨 아래 허용을 누릅니다">
+        <div class="tb"><i></i><i></i><i></i><span>accounts.google.com</span></div>
+        <div class="cv">
+          <div class="consent">
+            <div style="font-size:16px;color:#202124">전자계약 서버에서 내 Google 계정에 액세스하려고 합니다</div>
+            <div class="who"><span class="av"></span>내계정@gmail.com</div>
+            <ul style="margin:6px 0;padding-left:18px;font-size:12.5px">
+              <li>내 Google Drive 파일 보기, 수정, 생성, 삭제</li>
+              <li>내 스프레드시트 보기, 수정, 생성, 삭제</li>
+              <li>내 이름으로 이메일 보내기</li>
+              <li>Google 애플리케이션 내에서 대화상자 표시</li>
+            </ul>
+            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px"><span class="gbtn o">취소</span><span class="gbtn mark">허용<span class="tag">3</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="warn"><b>왜 '안전하지 않음'이라고 나오나요?</b> 구글 심사를 받지 않은 스크립트에는 모두 이 경고가 나옵니다. 이 서버는 <b>내 계정 안에서, 내 시트와 드라이브에만</b> 동작하고 다른 곳으로 데이터를 보내지 않습니다. 화면의 '개발자'에 내 이메일이 보이면 내가 복사한 서버가 맞습니다.</div>
+
+    <div class="sub"><i>2-4</i>'설정이 끝났습니다' 확인</div>
+    <p style="margin:0 0 6px">허용이 끝나면 시트 아래에 <b>전자계약 · 견적목록</b> 탭이 생기고, 내 드라이브에 <b>'… 보관함'</b> 폴더가 만들어집니다.</p>
+    <div class="shot" role="img" aria-label="시트 아래에 전자계약, 견적목록 탭이 새로 생깁니다">
+      <div class="cv" style="min-height:0;padding:10px 14px"><div class="sheettabs" style="margin:0"><span>시트1</span><span class="new">견적목록</span><span class="new">전자계약</span></div></div>
+    </div>
+    <div class="note">허용한 뒤에 아무 일도 없어 보이면 <b>[전자계약 → ① 처음 설정]을 한 번 더</b> 눌러 주세요. 탭이 생기면 성공입니다.</div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="step" id="s3">
+  <div class="n">3</div>
+  <div class="body">
+    <h2>서버를 웹 앱으로 배포하기</h2>
+    <p class="lead">작성기와 고객의 서명 페이지가 서버에 접속할 수 있도록 인터넷 주소를 하나 만듭니다.</p>
+
+    <div class="sub"><i>3-1</i>[확장 프로그램 → Apps Script]를 열고, 오른쪽 위 [배포 → 새 배포]</div>
+    <div class="shot" role="img" aria-label="Apps Script 편집기에서 배포, 새 배포를 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>script.google.com · 전자계약 서버</span></div>
+      <div class="idebar"><span class="t">전자계약 서버</span><span class="sp"></span>
+        <span style="position:relative"><span class="gbtn mark">배포 ▾<span class="tag">1</span></span>
+          <span class="drop" style="right:0;top:34px;min-width:150px">
+            <span style="display:block" class="mark"><span style="display:block;padding:6px 14px">새 배포</span><span class="tag">2</span></span>
+            <span style="display:block;padding:6px 14px">배포 관리</span>
+            <span style="display:block;padding:6px 14px">배포 테스트</span>
+          </span></span></div>
+      <div class="ide"><div class="side"><div class="on">Code.gs</div><div>라이브러리</div><div>서비스</div></div>
+        <div class="main">/**<br> * 견적서 · 전자계약 서버<br> * …<br> */<br>const TZ = 'Asia/Seoul';</div></div>
+    </div>
+    <div class="note">코드는 <b>고칠 필요가 없습니다.</b> 편집기 화면은 그대로 두고 배포 버튼만 쓰면 됩니다.</div>
+
+    <div class="sub"><i>3-2</i>유형 선택(톱니바퀴) → [웹 앱] → 실행 '나', 액세스 '모든 사용자' → [배포]</div>
+    <div class="shot" role="img" aria-label="새 배포 창에서 웹 앱을 고르고 액세스를 모든 사용자로 바꾼 뒤 배포를 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>새 배포</span></div>
+      <div class="cv" style="display:grid;grid-template-columns:minmax(0,140px) minmax(0,1fr);gap:14px">
+        <div style="border-right:1px solid var(--gline);padding-right:10px">
+          <div style="font-weight:700;font-size:12.5px;display:flex;justify-content:space-between">유형 선택 <span class="mark" style="padding:0 3px">⚙<span class="tag">1</span></span></div>
+          <div class="mark" style="margin-top:12px;padding:3px 6px">웹 앱<span class="tag">2</span></div>
+        </div>
+        <div>
+          <div class="lbl">설명 (안 써도 됨)</div>
+          <div class="field" style="margin-top:4px;color:#9aa0a6">새 설명</div>
+          <div class="lbl">웹 앱</div>
+          <div class="field"><small>다음 사용자 인증 정보로 실행</small>나(내계정@gmail.com) <span>▾</span></div>
+          <div class="field mark"><small>액세스 권한이 있는 사용자</small><b>모든 사용자</b> <span>▾</span><span class="tag">3</span></div>
+          <div style="text-align:right;margin-top:14px"><span class="gbtn mark">배포<span class="tag">4</span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="warn"><b>액세스는 꼭 '모든 사용자'</b>로 골라 주세요. 'Google 계정이 있는 모든 사용자'나 '나만'으로 두면 고객이 서명 페이지를 열 수 없습니다. 데이터는 연결 코드(비밀번호) 없이는 볼 수 없으니 안전합니다.</div>
+
+    <div class="sub"><i>3-3</i>[액세스 승인]이 나오면 2-3과 같이 → [허용]</div>
+    <p style="margin:0 0 6px">처음 배포할 때 한 번 더 권한을 묻습니다. 계정 선택 → 고급 → 이동 → 허용 순서로 똑같이 진행하세요.</p>
+
+    <div class="sub"><i>3-4</i>완료 화면의 <b>웹 앱 URL</b> [복사]</div>
+    <div class="shot" role="img" aria-label="배포 완료 화면에서 웹 앱 URL 아래 복사를 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>새 배포</span></div>
+      <div class="cv">
+        <div>배포가 업데이트되었습니다.</div>
+        <div class="lbl">버전 1 (날짜 · 시각)</div>
+        <div style="font-size:12px;color:#5f6368;margin-top:6px">배포 ID</div>
+        <div class="mono" style="color:#5f6368">AKfycb…(긴 문자)</div>
+        <div class="lbl" style="margin-top:12px">웹 앱</div>
+        <div style="font-size:12px;color:#5f6368">URL</div>
+        <div class="mono" style="color:var(--gblue)">https://script.google.com/macros/s/AKfycb…/exec</div>
+        <div style="margin-top:6px"><span class="mark" style="color:var(--gblue);padding:0 6px">⧉ 복사<span class="tag">1</span></span></div>
+        <div style="text-align:right"><span class="gbtn">완료</span></div>
+      </div>
+    </div>
+    <div class="note">주소는 <b>https://script.google.com/macros/s/</b>로 시작해서 <b>/exec</b>로 끝납니다. '배포 ID'가 아니라 그 아래 <b>'웹 앱 URL'</b>을 복사하세요. 놓쳤다면 [배포 → 배포 관리]에서 다시 볼 수 있습니다.</div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="step" id="s4">
+  <div class="n">4</div>
+  <div class="body">
+    <h2>웹 앱 주소 저장하고 연결 코드 받기</h2>
+    <p class="lead">시트로 돌아가 방금 복사한 주소를 한 번 저장하면, 작성기에 넣을 연결 코드가 나옵니다.</p>
+    <ol class="do">
+      <li>시트 탭으로 돌아가 <b>[전자계약 → ② 연결 코드 보기]</b></li>
+      <li>칸에 웹 앱 URL을 붙여넣고(<kbd>Ctrl</kbd>+<kbd>V</kbd>) <b>[저장]</b></li>
+      <li>잠시 뒤 <b>연결 코드</b>가 나옵니다.</li>
+    </ol>
+    <div class="twocol">
+      <div class="shot" role="img" aria-label="연결 코드 창에 웹 앱 주소를 붙여넣고 저장을 누릅니다">
+        <div class="tb"><i></i><i></i><i></i><span>연결 코드</span></div>
+        <div class="cv">
+          <div style="font-size:12.5px"><b>웹 앱 주소</b>를 붙여넣어 주세요. (배포 완료 화면의 웹 앱 URL)</div>
+          <div class="field mark" style="margin-top:10px"><span class="mono">https://script.google.com/macros/s/…/exec</span><span class="tag">1</span></div>
+          <div style="margin-top:10px"><span class="gbtn o mark" style="color:#202124">저장<span class="tag">2</span></span></div>
+        </div>
+      </div>
+      <div class="shot" role="img" aria-label="연결 코드가 나오면 이 연결로 작성기 바로 열기를 누릅니다">
+        <div class="tb"><i></i><i></i><i></i><span>연결 코드</span></div>
+        <div class="cv">
+          <div style="font-size:12.5px">아래 <b>연결 코드</b>를 작성기 [회사 설정 → 서버 연결]에 붙여넣으세요. <span style="color:#b00">이 코드는 비밀번호와 같습니다.</span></div>
+          <div class="mono" style="border:1px solid var(--gline);border-radius:5px;padding:8px;margin:8px 0;color:#5f6368">WQ1.eyJ1IjoiaHR0cHM6Ly9zY3Jp…</div>
+          <span class="gbtn o" style="color:#202124">복사</span>
+          <span class="mark" style="color:var(--gblue);text-decoration:underline;margin-left:8px;padding:0 4px">이 연결로 작성기 바로 열기<span class="tag">3</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="warn"><b>연결 코드는 비밀번호와 같습니다.</b> 코드를 가진 사람은 우리 견적 목록을 보고 고칠 수 있으니, 우리 팀에게만 주세요. 유출됐다면 <b>[전자계약 → 연결 코드 새로 만들기]</b>로 바로 바꿀 수 있습니다.</div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="step" id="s5">
+  <div class="n">5</div>
+  <div class="body">
+    <h2>작성기에 연결하기</h2>
+    <p class="lead">둘 중 편한 방법으로 연결하세요.</p>
+    <ul class="do">
+      <li><b>바로 열기:</b> 4단계 창의 <b>[이 연결로 작성기 바로 열기]</b>를 누르고, 이름을 물으면 내 이름을 입력합니다.</li>
+      <li><b>붙여넣기:</b> 작성기 <b>[회사 설정 → 서버 연결 · 팀]</b>에서 연결 코드를 붙여넣고, 내 이름을 쓴 뒤 <b>[연결하기]</b>.</li>
+    </ul>
+    <div class="shot" role="img" aria-label="작성기 회사 설정에서 연결 코드를 붙여넣고 연결하기를 누르면 서버 연결됨이 표시됩니다">
+      <div class="app-top"><b style="font-size:14px">견적서 작성기</b><span>견적 목록</span><span>새 견적서</span><span>회사 설정</span><span class="ok">✓ 연결됨</span></div>
+      <div class="app-card">
+        <div style="font-weight:700;color:var(--green);margin-bottom:6px">회사 설정 · 서버 연결 · 팀</div>
+        <div class="ta mark">WQ1.eyJ1IjoiaHR0cHM6Ly9zY3Jp…<span class="tag">1</span></div>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:140px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:#888" class="mark">내 이름: 홍길동<span class="tag">2</span></div>
+          <div class="mark" style="flex:1;min-width:140px;background:var(--green);color:#fff;border-radius:6px;padding:6px 8px;text-align:center;font-weight:700">연결하기<span class="tag">3</span></div>
+        </div>
+        <div class="okline" style="margin-top:10px">✓ 서버 연결됨 · 내 이름 홍길동</div>
+      </div>
+    </div>
+    <div class="linkbox">
+      <input id="appUrl" readonly value="https://garnet00700-ux.github.io/weavery/app/" aria-label="작성기 주소">
+      <button class="btn ghost" type="button" data-copy="appUrl">작성기 주소 복사</button>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="step" id="s6">
+  <div class="n">6</div>
+  <div class="body">
+    <h2>회사 정보 넣고 팀원 초대하기</h2>
+    <p class="lead">연결 후 한 번 넣으면 팀 전체에 똑같이 적용됩니다.</p>
+    <ul class="do">
+      <li><b>회사 정보:</b> 상호 · 대표자 · <b>이메일</b>은 꼭 넣어 주세요. 서명이 끝나면 이 이메일로 계약서 PDF가 옵니다. 홈페이지 등 나머지는 비워도 됩니다.</li>
+      <li><b>로고 · 사인 · 명함:</b> 견적서에 찍힐 로고와 대표 사인(직접 그리기 가능), 완료 메일에 넣을 명함 이미지.</li>
+      <li><b>메일 · 카카오 문구:</b> 고객에게 가는 메일 제목과 인사말을 우리 회사 말투로 바꿀 수 있습니다.</li>
+      <li><b>팀원 초대:</b> [서버 연결 · 팀]의 <b>팀원 초대 링크</b>를 복사해 팀원에게 보내면, 팀원은 링크만 열면 바로 연결됩니다.</li>
+    </ul>
+    <div class="note">이제 견적서를 만들고 <b>[전자서명 요청]</b>을 누르면 카카오톡으로 서명 링크를 보낼 수 있습니다. 고객이 서명하면 고객과 우리 회사 메일로 같은 계약서 PDF가 가고, 견적 목록의 상태가 <b>완료</b>로 바뀝니다.</div>
+  </div>
+</section>
+
+<h3 class="sec">문제가 생겼을 때</h3>
+<details class="faq"><summary>시트에 [전자계약] 메뉴가 안 보여요</summary><div>시트를 새로고침하고 5~10초 기다리세요. 그래도 없으면 사본이 아니라 원본 링크를 연 것일 수 있습니다. 1단계의 <b>사본 만들기</b> 링크로 다시 복사해 주세요.</div></details>
+<details class="faq"><summary>작성기에서 "연결하지 못했습니다: Failed to fetch"가 나와요</summary><div>
+  웹 앱 주소가 틀렸거나 배포가 안 된 경우입니다.
+  <ol class="do"><li>Apps Script에서 <b>[배포 → 배포 관리]</b>를 열어 <b>웹 앱 URL</b>을 복사합니다.</li>
+  <li>시트 <b>[전자계약 → ② 연결 코드 보기]</b> → 아래 <b>'웹 앱 주소 바꾸기'</b>를 열어 붙여넣고 저장합니다.</li>
+  <li>새로 나온 연결 코드로 다시 연결합니다.</li></ol>
+  배포할 때 액세스가 <b>'모든 사용자'</b>였는지도 확인해 주세요.</div></details>
+<details class="faq"><summary>"연결 코드(키)가 맞지 않습니다"가 나와요</summary><div>누군가 연결 코드를 새로 만들어서 예전 코드가 무효가 된 것입니다. 시트의 <b>[② 연결 코드 보기]</b>에서 최신 코드를 받아 다시 연결하세요.</div></details>
+<details class="faq"><summary>팀원이 퇴사했어요</summary><div>시트 <b>[전자계약 → 연결 코드 새로 만들기]</b>를 누르면 기존 연결이 모두 끊깁니다. 새 초대 링크를 남은 팀원에게 다시 보내 주세요. 견적 목록과 회사 설정은 그대로 남습니다.</div></details>
+<details class="faq"><summary>서버 업데이트 안내를 받았어요 (코드 교체)</summary><div>
+  <ol class="do"><li>Apps Script의 Code.gs 내용을 새 코드로 바꾸고 저장(<kbd>Ctrl</kbd>+<kbd>S</kbd>)합니다.</li>
+  <li><b>[배포 → 배포 관리]</b> → 연필(수정) → 버전 <b>'새 버전'</b> → <b>[배포]</b>.</li></ol>
+  이렇게 하면 주소가 바뀌지 않아 연결 코드를 다시 줄 필요가 없습니다. '새 배포'로 하면 주소가 바뀌니 주의하세요.</div></details>
+<details class="faq"><summary>메일은 하루에 몇 통까지 보낼 수 있나요?</summary><div>일반 지메일 계정은 구글 기준 <b>하루 약 100통</b>입니다. 서명 1건에 고객 · 우리 회사 2통이 가므로 하루 약 50건까지 처리할 수 있습니다. 구글 워크스페이스(회사 도메인) 계정은 한도가 더 큽니다.</div></details>
+<details class="faq"><summary>데이터는 어디에 저장되나요?</summary><div>모두 서버를 만든 사람의 구글 계정에 저장됩니다. 견적 목록은 이 시트의 <b>견적목록</b> 탭, 서명 기록은 <b>전자계약</b> 탭, 계약서 원본 · 서명 이미지 · 최종 PDF는 드라이브의 <b>'… 보관함'</b> 폴더에 있습니다. 시트나 폴더를 지우면 복구할 수 없으니 지우지 마세요.</div></details>
+
+<p class="foot">견적서 작성기 · 전자계약 서버 설치 안내</p>
+</div>
+
+<script>
+// 복사 버튼
+document.querySelectorAll("[data-copy]").forEach(function(b){
+  b.addEventListener("click",function(){
+    var el=document.getElementById(b.getAttribute("data-copy")), t=el.value, done=function(){ var o=b.textContent; b.textContent="복사됨"; setTimeout(function(){ b.textContent=o; },1400); };
+    if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(done,function(){ el.select(); document.execCommand("copy"); done(); }); }
+    else { el.select(); document.execCommand("copy"); done(); }
+  });
+});
+// 작성기 안에서 열면 회사 색을 따라갑니다
+try{
+  var c=parent!==window&&parent.getComputedStyle(parent.document.documentElement).getPropertyValue("--green").trim();
+  if(/^#[0-9a-fA-F]{6}$/.test(c)) document.documentElement.style.setProperty("--green",c);
+}catch(e){}
+</script>
+</body>
+</html>
