@@ -232,6 +232,11 @@ textarea{resize:vertical;line-height:1.5}
 .qi-warn{color:#9a5b00;font-weight:500;font-size:12.5px;margin-left:8px}
 /* 상단바는 회사 대표 색 · 로고가 바뀌어도 원래 모양 그대로 */
 .topbar{--green:#17320B}
+/* 회사 설정 로고 미리보기 (A4 윗부분 36mm를 반으로 줄여서) */
+.lmock-cap{font-size:12px;color:var(--ui-sub);margin:10px 0 4px}
+.lmock{width:100%;max-width:400px;border:1px solid var(--ui-border);border-radius:8px;overflow:hidden;background:#fff}
+.lmock .lm-page{zoom:.5;height:36mm;padding:0;box-shadow:none;position:relative;overflow:hidden;pointer-events:none}
+.lmock .lm-title{position:absolute;left:9mm;top:26mm;font-size:15pt;font-weight:700}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -309,9 +314,9 @@ table.sg .nm{display:flex;justify-content:flex-end;align-items:center;gap:5mm;pa
 table.sg .seal{position:relative;display:inline-block}
 table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;object-fit:contain;transform:translate(-50%,-55%)}
 
-/* 공용: 로고 대신 상호 글자 */
-.page .logo-t{position:absolute;left:9mm;top:9mm;max-width:40mm;font-size:13pt;font-weight:800;color:var(--green);line-height:1.15;word-break:keep-all}
-.page img.logo{max-height:20mm;object-fit:contain;object-position:left center}
+/* 공용: 로고 · 상호 글자는 상단 가로선(top:16.3mm)에 세로 가운데를 맞추고, 선이 시작하는 곳(52mm) 앞에서 끝나게 */
+.page .logo-t{position:absolute;left:9mm;top:16.3mm;transform:translateY(-50%);max-width:40mm;font-size:13pt;font-weight:800;color:var(--green);line-height:1.15;word-break:keep-all}
+.page img.logo{top:16.3mm;transform:translateY(-50%);width:auto;height:auto;max-width:40mm;max-height:11mm;object-fit:contain;object-position:left center}
 .page .wmark{object-fit:contain;max-height:100mm}
 </style>
 <style>
@@ -491,6 +496,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
             <button class="btn" type="button" onclick="document.getElementById('bLogoDel').click()">로고 없이 (상호 글자)</button>
           </div>
         </div>
+        <div class="lmock-cap">견적서 · 계약서 윗부분에 이렇게 들어갑니다</div><div class="lmock"></div>
         <div class="grid3" style="margin-top:10px">
           <label class="f">대표 색상<input type="color" data-c="color"></label>
           <label class="f">표 머리 색<input type="color" data-c="tbl"></label>
@@ -510,6 +516,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           </div>
           <input type="file" id="fLogo" accept="image/*" hidden>
         </div>
+        <div class="lmock-cap">견적서 · 계약서 윗부분에 이렇게 들어갑니다</div><div class="lmock"></div>
         <div class="sub">대표 사인</div>
         <div class="signbox">
           <div class="signprev" id="signPrev"></div>
@@ -1157,7 +1164,13 @@ $("#sTabs").onclick=e=>{ const b=e.target.closest("[data-t]"); if(b) selTab(b.da
 $("#bSettings").onclick=()=>openSettings();
 $("#sClose").onclick=closeSettings;
 $("#setModal").addEventListener("click",e=>{ if(e.target.id==="setModal") closeSettings(); });
+// 회사 설정의 로고 미리보기: 실제 견적서 첫 장 윗부분(로고 · 가로선 · 슬로건)을 줄여서 보여 줌
+function renderLogoMock(){
+  const head=profile.logo?`<img class="logo" src="${profile.logo}" alt="">`:`<div class="logo-t">${esc(profile.name||"상호")}</div>`;
+  $$(".lmock").forEach(m=>{ m.innerHTML=`<div class="page lm-page">${head}<div class="rule"></div><div class="slogan">${esc(profile.slogan||"")}</div><div class="lm-title">견적서</div></div>`; });
+}
 function renderSettings(){
+  renderLogoMock();
   $$("#setModal [data-c]").forEach(el=>{ const v=getAt(profile,el.dataset.c); if(el.type==="checkbox") el.checked=!!v; else el.value=v??""; });
   $("#logoPrev").innerHTML=$("#logoPrev2").innerHTML=profile.logo?`<img src="${profile.logo}" alt="로고">`:"로고 없음 (상호 글자)";
   $("#signPrev").innerHTML=profile.sign?`<img src="${profile.sign}" alt="사인">`:"사인 없음";
@@ -1172,6 +1185,7 @@ $("#setModal").addEventListener("input",e=>{
   setAt(profile,el.dataset.c,v);
   if(el.dataset.c==="depositRate"&&!state.esign) state.depositRate=Number(v)||0;
   saveProfile(); esMarkStale(); schedule();
+  if(/^(color|tbl|slogan|name)$/.test(el.dataset.c)) renderLogoMock();
   if(!$("#mailPrev").hidden) renderMailPrev();
 });
 $("#mailReset").onclick=()=>{ if(!confirm("메일 · 카카오 문구를 기본 문구로 되돌릴까요?")) return; profile.mail=clone(MAIL_DEFAULT); profile.kakao=Object.assign(clone(KAKAO_MSG),{key:profile.kakao.key}); saveProfile(); renderSettings(); if(!$("#mailPrev").hidden) renderMailPrev(); };
@@ -1873,7 +1887,7 @@ function renderPreview(){
   $("#pages").innerHTML="";
   onProds().forEach(p=>{ flow("quote",quoteBlocks(p)); flow("contract",contractBlocks(p)); });
   if(!onProds().length) $("#pages").innerHTML=`<div class="lempty" style="background:#fff;border-radius:10px;padding:40px">왼쪽 [상품 선택]에서 상품을 하나 이상 고르세요.</div>`;
-  const pages=$$(".page"); pages.forEach((p,i)=>p.classList.toggle("last",i===pages.length-1));
+  const pages=$$("#pages .page"); pages.forEach((p,i)=>p.classList.toggle("last",i===pages.length-1));
   updateSums(); applyZoom();
 }
 let rT; function schedule(){clearTimeout(rT);rT=setTimeout(renderPreview,120);}
