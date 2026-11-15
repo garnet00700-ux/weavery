@@ -1053,7 +1053,17 @@ $("#bEsign").onclick=()=>{ esignMode=true; doPrint("_전자서명용"); esignMod
 /* ===== 전자서명: 서명 요청 → 카카오톡/링크 → 고객 서명 → 양측 메일 → 목록 '완료' 자동 전환 ===== */
 const ES_KEY="weavery-esign-settings";      // 관리자 키 등은 이 브라우저에만 (견적서 파일·백업에 들어가지 않음)
 const ES_EMPTY={apiUrl:"",adminKey:"",siteUrl:"",kakaoKey:""};
-function esCfg(){ try{ return Object.assign({},ES_EMPTY,JSON.parse(localStorage.getItem(ES_KEY))||{}); }catch(e){ return Object.assign({},ES_EMPTY); } }
+// 공개돼도 되는 기본값 (관리자 키는 절대 여기 넣지 않음)
+const ES_DEFAULTS={
+  apiUrl:"https://script.google.com/macros/s/AKfycbwcLFnqWmoPk058L461WaVY09Cd_EHaTcERseYhX3HJWLwfiRi05AYfW7LqYX0b8qA/exec",
+  siteUrl:"https://garnet00700-ux.github.io/weavery/",
+  kakaoKey:"05e61de54c3d735b4d6ac22bef462327"
+};
+function esCfg(){
+  let c; try{ c=Object.assign({},ES_EMPTY,JSON.parse(localStorage.getItem(ES_KEY))||{}); }catch(e){ c=Object.assign({},ES_EMPTY); }
+  for(const k in ES_DEFAULTS) if(!c[k]) c[k]=ES_DEFAULTS[k];
+  return c;
+}
 function esSaveCfg(){
   const c={apiUrl:$("#esApi").value.trim(),adminKey:$("#esKey").value.trim(),siteUrl:$("#esSite").value.trim(),kakaoKey:$("#esKakao").value.trim()};
   try{ localStorage.setItem(ES_KEY,JSON.stringify(c)); }catch(e){}
