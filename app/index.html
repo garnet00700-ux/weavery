@@ -1,0 +1,1798 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>견적서 작성기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* 원본 견적서 PDF 색상 기준 */
+:root{
+  --green:#17320B;     /* 상단 라인 · 합계 라인 · 안내 박스 테두리 */
+  --g1:#D9D9D9;        /* 표 머리 · 의뢰자/수행자 세로칸 · 표 선 */
+  --g2:#EDEDED;        /* 항목명 칸 · 구성/수량 칸 */
+  --body:#545454;      /* 본문 회색 글자 */
+  --brown:#B88060;     /* 로고 브라운 */
+  --leaf:#708858;      /* 로고 잎 그린 */
+  --ui-bg:#f4f2ee; --ui-card:#fff; --ui-text:#222; --ui-sub:#6f6a64; --ui-border:#dcd8d0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--ui-bg);color:var(--ui-text);font-family:"Noto Sans KR","맑은 고딕","Malgun Gothic",sans-serif;font-size:14px}
+
+/* ===== 상단 바 ===== */
+.topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 16px;background:var(--green);color:#fff}
+.topbar .brand{display:flex;align-items:center;gap:8px;margin-right:10px}
+.topbar .brand span{display:inline-flex;background:#fff;border-radius:6px;padding:3px 6px}
+.topbar .brand img{height:24px;display:block}
+.topbar h1{font-size:15px;margin:0;font-weight:700;letter-spacing:-.3px}
+.topbar .sp{flex:1}
+.btn{border:1px solid var(--ui-border);background:#fff;color:var(--ui-text);padding:7px 12px;border-radius:7px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f5f3ef}
+.topbar .btn{background:transparent;color:#fff;border-color:rgba(255,255,255,.35)}
+.topbar .btn:hover{background:rgba(255,255,255,.12)}
+.topbar .btn.primary{background:#fff;color:var(--green);border-color:#fff;font-weight:700}
+.topbar select{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:7px;padding:6px;font:inherit;font-size:13px}
+.topbar select option{color:#222}
+.saved{font-size:12px;opacity:.75}
+
+/* ===== 견적 목록 창 ===== */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(20,24,16,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px}
+.modal[hidden]{display:none}
+.padbox{width:min(620px,100%);padding:0 16px 16px}
+.padbox .mhead{padding:14px 0;margin-bottom:10px}
+#padCv{width:100%;height:240px;border:1.5px dashed #B8B8B8;border-radius:10px;background:#fff;touch-action:none;cursor:crosshair;display:block}
+.padbtns{display:flex;gap:8px;margin-top:12px}
+.cardprev{width:170px;height:100px}
+.cardprev img{max-width:96%;max-height:92%}
+.mbox{background:#fff;border-radius:12px;width:min(760px,100%);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.mhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--ui-border)}
+.mhead b{color:var(--green);font-size:16px;white-space:nowrap}
+.mcount{font-size:12px;color:var(--ui-sub);white-space:nowrap}
+.mhead input{flex:1;min-width:0}
+.mbody{overflow:auto;padding:8px 10px;flex:1}
+.lfilter{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--ui-border);background:#fafaf8}
+.lfilter .lfl{font-size:12px;color:var(--ui-sub);margin-right:2px}
+.lfilter button,.lfilter .lmonth{border:1px solid var(--ui-border);background:#fff;border-radius:999px;padding:5px 12px;font:inherit;font-size:12.5px;cursor:pointer;color:#333;display:inline-flex;align-items:center;gap:6px}
+.lfilter button:hover,.lfilter .lmonth:hover{border-color:var(--green)}
+.lfilter .on{background:var(--green);color:#fff;border-color:var(--green)}
+.lfilter .lmonth input{border:0;padding:0;width:auto;font-size:12.5px;background:transparent;color:inherit}
+.lfilter .lmonth select{border:0;padding:0;font:inherit;font-size:12.5px;background:transparent;color:inherit;cursor:pointer}
+.lfilter .lmonth.on select option{color:#222}
+.lfilter .lmonth.on input{color-scheme:dark}
+.lfilter .lsum{margin-left:auto;font-size:12.5px;color:var(--ui-sub);white-space:nowrap}
+.lfilter .lsum b{color:#000}
+.mfoot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--ui-border)}
+.lrow{display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--ui-border);border-radius:9px;margin-bottom:8px;cursor:pointer;background:#fff}
+.lrow:hover{border-color:var(--green);background:#f6f8f3}
+.lrow.cur{border-color:var(--green);background:#f1f4ee}
+.lrow .lmain{flex:1;min-width:0}
+.lrow .lname{font-weight:700;color:var(--green);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .lsub{font-size:12px;color:var(--ui-sub);margin-top:2px}
+.lrow .tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:4px;background:var(--g2);color:#333;margin-right:4px}
+.lrow .tag.now{background:var(--green);color:#fff}
+.lst{border:1.5px solid;border-radius:999px;padding:4px 12px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;background:#fff}
+.lst.wait{color:#9a6a1f;border-color:#e2c48f;background:#fdf6e8}
+.lst.done{color:#fff;border-color:var(--green);background:var(--green)}
+.lst:hover{filter:brightness(.95)}
+.lfilter.lstat{padding-top:0}
+#lFilter{border-bottom:0}
+.lrow .lamt{text-align:right;font-size:12px;color:var(--ui-sub);white-space:nowrap}
+.lrow .lamt b{display:block;color:#000;font-size:14px}
+.lrow .lact{display:flex;gap:4px}
+.lempty{padding:40px 10px;text-align:center;color:var(--ui-sub);line-height:1.7}
+@media (max-width:600px){.lrow{flex-wrap:wrap}.lrow .lamt{text-align:left}}
+
+/* ===== 레이아웃 ===== */
+.wrap{display:grid;grid-template-columns:minmax(320px,540px) 1fr;height:calc(100vh - var(--topbar-h,56px))}
+.editor{overflow:auto;padding:16px;border-right:1px solid var(--ui-border)}
+.preview{overflow:auto;padding:24px;background:#8b8782}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(280px,46%) 1fr}.editor{padding:10px}.preview{padding:12px}.grid2,.grid3{grid-template-columns:1fr}}
+@media (max-width:600px){.wrap{grid-template-columns:1fr;height:auto}.editor{border-right:0}}
+
+/* ===== 입력 카드 ===== */
+.card{background:var(--ui-card);border:1px solid var(--ui-border);border-radius:10px;margin-bottom:14px}
+.hide{display:none!important}   /* 선택하지 않은 상품의 카드·입력칸 */
+.card>summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:700;color:var(--green);display:flex;align-items:center;gap:8px}
+.card>summary::-webkit-details-marker{display:none}
+.card>summary::before{content:"▸";font-size:12px;transition:transform .15s}
+.card[open]>summary::before{transform:rotate(90deg)}
+.card .in{padding:0 14px 14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.sub{font-size:12px;color:var(--brown);font-weight:700;margin:12px 0 6px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ui-sub)}
+input,textarea,select.f{font:inherit;font-size:13px;color:var(--ui-text);border:1px solid var(--ui-border);border-radius:6px;padding:7px 8px;background:#fff;width:100%}
+input:disabled{background:#f3f3f3;color:#999}
+input:focus,textarea:focus{outline:2px solid #a9b89a;border-color:transparent}
+textarea{resize:vertical;line-height:1.5}
+.hint{font-size:12px;color:var(--ui-sub);margin:6px 0 0;line-height:1.55}
+.hint code{background:#efece6;padding:1px 4px;border-radius:4px;color:var(--brown)}
+.prods{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.prods label{display:flex;align-items:center;gap:8px;border:1.5px solid var(--ui-border);border-radius:8px;padding:10px;cursor:pointer;font-weight:700;color:var(--green)}
+.prods label:has(input:checked){border-color:var(--green);background:#f1f4ee}
+.prods input,.chk input{width:18px;height:18px;accent-color:var(--green);margin:0}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+
+.item{border:1px solid var(--ui-border);border-radius:8px;padding:10px;margin-bottom:8px;background:#fbfaf8}
+.item .row{display:grid;gap:6px;margin-bottom:6px}
+.item .r1{grid-template-columns:1fr 1.6fr}
+.item .r2{grid-template-columns:1fr .7fr 1.2fr}
+.item .ih{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.item .it{flex:1;min-width:0}
+.item .it b{display:block;color:var(--green);font-size:13.5px}
+.item .it small{color:var(--ui-sub);font-size:11.5px}
+.item .need{display:flex;flex-direction:column;gap:8px}
+.item .more{margin-top:8px;border-top:1px dashed var(--ui-border);padding-top:6px}
+.item .more>summary{cursor:pointer;font-size:12px;color:var(--ui-sub);list-style:none}
+.item .more>summary::before{content:"▸ "}
+.item .more[open]>summary::before{content:"▾ "}
+.item .more[open]>summary{margin-bottom:8px}
+.tools{display:flex;gap:4px}
+.ib{border:1px solid var(--ui-border);background:#fff;border-radius:6px;width:30px;height:32px;cursor:pointer;font-size:13px;color:var(--ui-sub);flex:none}
+.ib:hover{background:#efece6}
+.ib.del:hover{color:#b3261e;border-color:#e3b3ae}
+.li{display:flex;gap:6px;align-items:flex-start;margin-bottom:6px}
+.li textarea{flex:1}
+.term{border:1px solid var(--ui-border);border-radius:8px;padding:8px;margin-bottom:8px;background:#fbfaf8}
+.term .th{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.term .no{font-size:12px;font-weight:700;color:var(--green);white-space:nowrap;min-width:44px}
+.sum-box{display:flex;justify-content:space-between;align-items:center;background:var(--green);color:#fff;border-radius:8px;padding:10px 12px;margin-top:8px;font-weight:700}
+.signbox{display:flex;gap:10px;align-items:center}
+.signprev{width:170px;height:90px;border:1px solid var(--ui-border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ui-sub);font-size:12px;
+  background:conic-gradient(#eee 25%,#fff 0 50%,#eee 0 75%,#fff 0) 0 0/14px 14px;flex:none}
+.signprev img{max-width:90%;max-height:85%}
+.btncol{display:flex;flex-direction:column;gap:6px}
+
+/* ===== 전자서명 ===== */
+.es-box{border:1.5px solid var(--ui-border);border-radius:9px;padding:12px;background:#fbfaf8;margin-top:12px}
+.es-st{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+.es-badge{border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700}
+.es-badge.sent{background:#fdf6e8;color:#9a6a1f;border:1px solid #e2c48f}
+.es-badge.signed{background:var(--green);color:#fff}
+.es-badge.none{background:var(--g2);color:#555}
+.es-meta{font-size:12px;color:var(--ui-sub);line-height:1.7;margin-bottom:8px;word-break:break-all}
+.es-meta b{color:#222;font-weight:500}
+.es-btns{display:flex;gap:6px;flex-wrap:wrap}
+.es-btns .btn{flex:1 1 auto}
+.btn.kakao{background:#FEE500;border-color:#FEE500;color:#191919;font-weight:700}
+.btn.kakao:hover{background:#f3da00}
+.btn.go{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
+.btn.go:hover{background:#244a14}
+.es-warn{background:#fff4e5;border:1px solid #f0c48a;color:#8a4b00;border-radius:7px;padding:7px 9px;font-size:12px;margin-bottom:8px;line-height:1.55}
+.es-set{margin-top:10px;font-size:12.5px}
+.es-set>summary{cursor:pointer;color:var(--ui-sub)}
+.es-set .grid2{margin-top:8px}
+.lrow .tag.es{background:#fdf6e8;color:#9a6a1f}
+.lrow .tag.es.ok{background:#e4ecdc;color:var(--green)}
+
+/* ===== 공용 작성기 추가 화면 스타일 ===== */
+.sync{font-size:12px;border-radius:999px;padding:3px 10px;white-space:nowrap;border:1px solid rgba(255,255,255,.35);color:#fff;opacity:.9}
+.sync.on{background:rgba(255,255,255,.14)}
+.sync.err{background:#a33;border-color:#a33}
+.brand .logo-t{font-weight:800;font-size:15px;color:var(--green);padding:0 6px}
+.welcome{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff8e6;border-bottom:1px solid #ecd9a8;padding:10px 16px;font-size:13px}
+.welcome b{color:#7a5300}
+.welcome span{flex:1;min-width:220px}
+.setbox{width:min(820px,100%)}
+.stabs{display:flex;gap:4px;padding:8px 16px 0;border-bottom:1px solid var(--ui-border);flex-wrap:wrap}
+.stabs button{border:1px solid var(--ui-border);border-bottom:none;background:#f6f4f0;border-radius:8px 8px 0 0;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ui-sub)}
+.stabs button.on{background:#fff;color:var(--green);font-weight:700;position:relative;top:1px}
+.sbody{padding:16px}
+.sbody section .sub:first-child{margin-top:0}
+.sbody textarea,#impText{width:100%;font:inherit;font-size:13px;border:1px solid var(--ui-border);border-radius:7px;padding:8px;resize:vertical}
+.steps{padding-left:20px}
+.steps li{margin-bottom:4px}
+.mchk{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.mailprev{margin-top:10px;border:1px solid var(--ui-border);border-radius:8px;max-height:420px;overflow:auto;background:#f4f2ee}
+.conn-ok{background:#eef4ea;border:1px solid #c9dbbd;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.7}
+.conn-ok b{color:var(--green)}
+.conn-no{background:#f6f4f0;border:1px dashed var(--ui-border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--ui-sub)}
+.invite{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.invite input{flex:1;min-width:200px;font-size:12px}
+.impprev{margin:8px 0;max-height:180px;overflow:auto;font-size:12px;border:1px solid var(--ui-border);border-radius:7px;padding:6px 8px;background:#fbfaf8;color:#333}
+.impprev:empty{display:none}
+.impprev div{padding:2px 0;border-bottom:1px dashed #e4e0d8}
+.prodcfg{border:1px dashed var(--ui-border);border-radius:8px;padding:8px 10px;margin-bottom:10px;background:#fbfaf8}
+.prodcfg>summary{cursor:pointer;font-size:12.5px;color:var(--ui-sub)}
+.prodcfg[open]>summary{margin-bottom:8px}
+.pbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.lrow .by{font-size:11px;color:var(--ui-sub)}
+</style>
+
+<!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
+<style id="docCss">
+:root{--green:#17320B;--g1:#D9D9D9;--g2:#EDEDED;--body:#545454;--brown:#B88060;--leaf:#708858}
+/* ===== 미리보기 (A4) — 원본 PDF 레이아웃 기준 ===== */
+#pages{display:flex;flex-direction:column;align-items:center;gap:20px}
+.page{width:210mm;height:297mm;background:#fff;color:#000;padding:33mm 5mm 8mm;display:flex;flex-direction:column;box-shadow:0 4px 18px rgba(0,0,0,.25);
+  font-size:9pt;position:relative;overflow:hidden;line-height:1.45}
+.page .logo{position:absolute;left:9mm;top:7.5mm;width:23.5mm}
+.page .rule{position:absolute;left:52mm;right:0;top:16.3mm;border-top:.9px solid var(--green)}
+.page .slogan{position:absolute;right:12.5mm;top:11.6mm;font-size:7.4pt;color:#333}
+.page .wmark{position:absolute;left:92mm;top:153mm;width:108mm;opacity:.11;pointer-events:none}
+.page.blog{padding-bottom:4mm}
+.pb{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative}
+
+/* 견적서 */
+.qttl{font-size:14.5pt;font-weight:700;margin:2mm 0 6mm 5.6mm;letter-spacing:-.3px}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+table.t td,table.t th{border:1px solid var(--g1);padding:2px 5px;vertical-align:middle;word-break:keep-all;overflow-wrap:anywhere;text-align:center}
+.party td{height:9.9mm;font-size:9.2pt}
+.party .vt{background:var(--g1);font-weight:700;line-height:1.5}
+.party .lb{background:var(--g2);font-size:8.6pt}
+.party .val{font-size:9.6pt}
+.party .ceo{display:flex;justify-content:flex-end;gap:6mm;padding-right:1mm}
+.party .ceo span:first-child{margin-right:auto;padding-left:1mm}
+.lead{text-align:center;margin:6.2mm 0 7mm;font-size:9.6pt;font-weight:700;line-height:1.1}
+.lead i{display:block;font-style:normal;letter-spacing:1px}
+.items th{background:var(--g1);font-weight:700;height:9.6mm;font-size:9.2pt}
+.items td{height:10.3mm}
+.items .cat{background:var(--g2);font-size:8.6pt}
+.items .qty{background:var(--g2);font-size:8.8pt}
+.items .desc{font-size:10.4pt}
+.items .desc small{display:block;font-size:7.6pt;margin-top:1px}
+.items .amt{font-size:10pt}
+.items .note{font-size:8.6pt;line-height:1.5}
+.items .strike{text-decoration:line-through}
+.items .svc{font-weight:700}
+.totals{margin:9mm 0 0;padding:0 .3mm}
+.totals .row{display:grid;grid-template-columns:1fr 1fr;position:relative;border-bottom:.9px solid var(--green);height:11.6mm;align-items:center}
+.totals .row::before,.totals .row::after{content:"";position:absolute;bottom:-1mm;width:0;height:2mm;border-left:.9px solid var(--green)}
+.totals .row::before{left:0}.totals .row::after{right:0}
+.totals .cell{display:flex;align-items:baseline;gap:3mm;padding:0 6mm 0 5.4mm;font-size:11.2pt;font-weight:700}
+.totals .cell b{margin-left:auto;font-weight:700}
+.totals .cell+.cell{padding-left:5mm}
+.vatn{text-align:right;font-size:8pt;font-weight:700;margin:3mm 4mm 0}
+.qx{font-size:8pt;color:var(--body);margin:1.2mm 4mm 0;text-align:right}
+.qx b{color:#000}
+fieldset.notice{margin:5mm .8mm 0;border:.9px solid var(--green);border-radius:6mm;padding:3.4mm 2mm 3mm 2.2mm;font-size:8.6pt;line-height:1.5;color:var(--body)}
+fieldset.notice legend{margin-left:7mm;padding:0 3mm;font-weight:700;color:#000;font-size:8.8pt}
+fieldset.notice p{margin:0 0 4.2mm}
+fieldset.notice b{color:#000}
+fieldset.notice ul{margin:0;padding:0;list-style:none}
+
+/* 계약서 */
+.cttl{font-size:14.5pt;font-weight:700;margin:6.5mm 0 11.6mm 5.6mm;letter-spacing:-.3px}
+.cttl.sm{margin:0 0 3mm 2.5mm}
+.intro{margin:0 0 9.6mm 2.5mm;font-weight:700;font-size:9.6pt;line-height:1.5}
+.intro u{text-decoration:none;border-bottom:1px solid #000;display:inline-block;min-width:21mm;padding:0 2mm;text-align:center;line-height:1.25}
+.art{margin:0 0 5.7mm 2.5mm;font-size:9.5pt;line-height:1.44;color:var(--body)}
+.art b{display:block;color:#000;font-size:9.6pt;margin-bottom:.9mm}
+.art .ln{padding-left:4.2mm;text-indent:-4.2mm}
+.art .ln.d{padding-left:6.6mm;text-indent:-2.4mm}
+.art .ln.gap{height:2.9mm}
+.blog .art{margin-bottom:4mm;font-size:8.9pt;line-height:1.4}
+.blog .art b{font-size:9.2pt;margin-bottom:.9mm}
+.blog .art .ln.n{padding-left:6.4mm;text-indent:-4mm}
+.closing{text-align:center;margin:7mm 0 5.5mm;font-size:9.6pt;font-weight:700}
+.cdate{text-align:center;font-size:10pt;font-weight:700;margin-bottom:6mm;word-spacing:2mm}
+table.sg{width:139mm;margin:0 auto}
+table.sg td,table.sg th{height:9.6mm;font-size:9pt}
+table.sg th{background:var(--g2);font-weight:700}
+table.sg .lb{width:18%}
+table.sg .nm{display:flex;justify-content:flex-end;align-items:center;gap:5mm;padding-right:2mm}
+table.sg .seal{position:relative;display:inline-block}
+table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;object-fit:contain;transform:translate(-50%,-55%)}
+
+/* 공용: 로고 대신 상호 글자 */
+.page .logo-t{position:absolute;left:9mm;top:9mm;max-width:40mm;font-size:13pt;font-weight:800;color:var(--green);line-height:1.15;word-break:keep-all}
+.page img.logo{max-height:20mm;object-fit:contain;object-position:left center}
+.page .wmark{object-fit:contain;max-height:100mm}
+</style>
+<style>
+
+@media print{
+  @page{size:A4;margin:0}
+  body{background:#fff}
+  .topbar,.editor{display:none!important}
+  .wrap{display:block;height:auto}
+  .preview{padding:0;background:#fff;overflow:visible}
+  #pages{gap:0;zoom:1!important}
+  .page{box-shadow:none;break-after:page;page-break-after:always}
+  .page.last{break-after:auto;page-break-after:auto}
+  body[data-scope="quote"] .page[data-kind="contract"],
+  body[data-scope="contract"] .page[data-kind="quote"]{display:none!important}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand"><span id="topLogoBox"><img id="topLogo" alt=""></span><h1 id="topName">견적서 작성기</h1></div>
+  <button class="btn" id="bList" title="지금까지 만든 견적서 목록 — 팀이 함께 봅니다">견적 목록</button>
+  <button class="btn" id="bNew" title="의뢰자 정보와 금액을 비우고 새로 작성합니다">새 견적서</button>
+  <button class="btn" id="bSettings" title="회사 정보 · 로고 · 사인 · 메일 문구 · 서버 연결">회사 설정</button>
+  <button class="btn" id="bOpen" title="파일로 저장해 둔 견적서(.json) 열기">파일 열기</button>
+  <button class="btn" id="bSave">파일로 저장</button>
+  <input type="file" id="fOpen" accept=".json,application/json" hidden>
+  <span class="saved" id="saved"></span>
+  <span class="sp"></span>
+  <span class="sync" id="sync" title="서버 연결 상태"></span>
+  <select id="zoom" title="미리보기 배율">
+    <option value="fit">화면 맞춤</option><option value="0.6">60%</option><option value="0.75">75%</option><option value="1">100%</option>
+  </select>
+  <select id="scope" title="인쇄 범위">
+    <option value="all">전체 인쇄</option><option value="quote">견적서만</option><option value="contract">계약서만</option>
+  </select>
+  <button class="btn primary" id="bPrint">인쇄 / PDF 저장</button>
+</div>
+
+<!-- 첫 화면 안내 -->
+<div class="welcome" id="welcome" hidden>
+  <b>처음 오셨나요?</b> <span>[회사 설정]에서 회사 정보와 서버 연결을 먼저 해 주세요. 연결 코드가 있으면 바로 붙여넣으면 됩니다.</span>
+  <button class="btn go" type="button" id="wGo">회사 설정 열기</button>
+  <button class="ib" type="button" id="wClose" title="닫기">✕</button>
+</div>
+
+<!-- 사인 직접 그리기 -->
+<div class="modal" id="padModal" hidden>
+  <div class="mbox padbox" role="dialog" aria-label="사인 직접 그리기">
+    <div class="mhead"><b>대표 사인 직접 그리기</b></div>
+    <p class="hint" style="margin:0 0 8px">마우스나 터치패드, 펜으로 아래 칸에 사인해 주세요.</p>
+    <canvas id="padCv"></canvas>
+    <div class="padbtns">
+      <button class="btn" id="padClear" type="button">다시 쓰기</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="padCancel" type="button">취소</button>
+      <button class="btn go" id="padOk" type="button">이 사인 사용</button>
+    </div>
+  </div>
+</div>
+
+<!-- 조항 · 안내사항 가져오기 -->
+<div class="modal" id="impModal" hidden>
+  <div class="mbox padbox" role="dialog" aria-label="기존 양식에서 가져오기">
+    <div class="mhead"><b id="impTitle">기존 계약서에서 조항 가져오기</b></div>
+    <p class="hint" style="margin:0 0 8px">기존 계약서·견적서 파일(PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br>
+      <b>조항</b>은 "제1조 (목적)"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.</p>
+    <div class="padbtns" style="margin:0 0 8px">
+      <button class="btn" type="button" id="impFileBtn">파일 올리기</button>
+      <input type="file" id="impFile" accept=".pdf,.docx,.txt,application/pdf" hidden>
+      <span class="hint" id="impFileR" style="margin:0;align-self:center"></span>
+    </div>
+    <textarea id="impText" rows="9" placeholder="여기에 붙여넣기"></textarea>
+    <div class="impprev" id="impPrev"></div>
+    <div class="padbtns">
+      <label class="chk"><input type="checkbox" id="impReplace" checked>기존 내용을 지우고 바꾸기</label>
+      <span style="flex:1"></span>
+      <button class="btn" id="impCancel" type="button">취소</button>
+      <button class="btn go" id="impOk" type="button">넣기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 회사 설정 -->
+<div class="modal" id="setModal" hidden>
+  <div class="mbox setbox" role="dialog" aria-label="회사 설정">
+    <div class="mhead"><b>회사 설정</b><span class="mcount">팀 전체에 같이 적용됩니다 (서버 연결 시)</span><span style="flex:1"></span><button class="btn" id="sClose" type="button">닫기</button></div>
+    <div class="stabs" id="sTabs">
+      <button type="button" data-t="conn" class="on">서버 연결 · 팀</button>
+      <button type="button" data-t="co">회사 정보</button>
+      <button type="button" data-t="img">로고 · 사인 · 명함</button>
+      <button type="button" data-t="mail">메일 · 카카오 문구</button>
+    </div>
+    <div class="mbody sbody">
+      <!-- 서버 연결 -->
+      <section data-t="conn">
+        <div id="connView"></div>
+        <div class="sub">연결 코드로 연결</div>
+        <textarea id="cCode" rows="3" placeholder="WQ1.… 로 시작하는 연결 코드를 붙여넣으세요 (서버 시트 메뉴 [전자계약 → ② 연결 코드 보기])"></textarea>
+        <div class="grid2" style="margin-top:8px">
+          <label class="f">내 이름 <span style="font-weight:400">(목록에 '수정한 사람'으로 표시)</span><input id="cUser" placeholder="예: 홍길동"></label>
+          <div style="display:flex;align-items:flex-end;gap:6px"><button class="btn go" type="button" id="cConnect" style="flex:1">연결하기</button></div>
+        </div>
+        <p class="hint" id="cR"></p>
+        <details class="es-set"><summary>서버가 아직 없나요? (처음 설치)</summary>
+          <ol class="hint steps">
+            <li>안내받은 <b>서버 시트 사본 만들기</b> 링크를 열고 [사본 만들기]를 누릅니다. (내 구글 계정 · 내 드라이브에 만들어집니다)</li>
+            <li>복사된 시트 위쪽 메뉴 <b>[전자계약 → ① 처음 설정]</b> → 권한 허용</li>
+            <li><b>[확장 프로그램 → Apps Script]</b> → 오른쪽 위 <b>[배포 → 새 배포]</b> → 유형 <b>웹 앱</b> · 실행 <b>나</b> · 액세스 <b>모든 사용자</b> → 배포</li>
+            <li>시트로 돌아와 <b>[전자계약 → ② 연결 코드 보기]</b> → 코드를 복사해서 위 칸에 붙여넣기</li>
+          </ol>
+        </details>
+        <details class="es-set"><summary>고급: 주소 · 키 직접 입력</summary>
+          <div class="grid2" style="margin-top:8px">
+            <label class="f">서버 주소<input id="cUrl" placeholder="https://script.google.com/macros/s/…/exec"></label>
+            <label class="f">키<input id="cKey" type="password" autocomplete="off"></label>
+          </div>
+        </details>
+      </section>
+      <!-- 회사 정보 -->
+      <section data-t="co" hidden>
+        <div class="grid2">
+          <label class="f">상호명<input data-c="name"></label>
+          <label class="f">대표자<input data-c="ceo"></label>
+          <label class="f">사업자 등록번호<input data-c="bizno"></label>
+          <label class="f">연락처<input data-c="phone"></label>
+          <label class="f">업태<input data-c="bizType"></label>
+          <label class="f">업종<input data-c="bizItem"></label>
+          <label class="f">대표 메일 <span style="font-weight:400">(서명 완료 메일 받는 곳)</span><input type="email" data-c="email" placeholder="비우면 서버 구글 계정 메일"></label>
+          <label class="f">홈페이지<input data-c="web" placeholder="https://"></label>
+        </div>
+        <label class="f" style="margin-top:10px">주소<input data-c="address"></label>
+        <label class="f" style="margin-top:10px">입금 계좌 <span style="font-weight:400">(견적서 VAT 문구 아래에 표시)</span><input data-c="account" placeholder="예: 은행 000-0000-0000 (예금주 : 홍길동)"></label>
+        <label class="f" style="margin-top:10px">상단 슬로건 <span style="font-weight:400">(견적서·계약서 오른쪽 위)</span><input data-c="slogan"></label>
+        <div class="grid3" style="margin-top:10px">
+          <label class="f">대표 색상<input type="color" data-c="color"></label>
+          <label class="f">문서번호 앞글자 <span style="font-weight:400">(영문)</span><input data-c="prefix" maxlength="6" placeholder="DOC"></label>
+          <label class="f">계약금 기본 비율 (%)<input type="number" min="0" max="100" data-c="depositRate" data-num></label>
+        </div>
+        <p class="hint">여기서 바꾼 내용은 새로 만드는 견적서부터 적용되고, 상호·대표자·연락처·색상·로고는 지금 견적서에도 바로 반영됩니다.</p>
+      </section>
+      <!-- 로고 · 사인 · 명함 -->
+      <section data-t="img" hidden>
+        <div class="sub" style="margin-top:0">로고 <span style="font-weight:400;color:var(--ui-sub)">(견적서·계약서 왼쪽 위, 메일 머리)</span></div>
+        <div class="signbox">
+          <div class="signprev cardprev" id="logoPrev"></div>
+          <div class="btncol">
+            <button class="btn" id="bLogoUp" type="button">로고 이미지 올리기</button>
+            <button class="btn" id="bLogoDel" type="button">로고 없이 (상호 글자)</button>
+          </div>
+          <input type="file" id="fLogo" accept="image/*" hidden>
+        </div>
+        <div class="sub">대표 사인</div>
+        <div class="signbox">
+          <div class="signprev" id="signPrev"></div>
+          <div class="btncol">
+            <button class="btn" id="bSignDraw" type="button">직접 그리기</button>
+            <button class="btn" id="bSignUp" type="button">사인 이미지 올리기</button>
+            <button class="btn" id="bSignDel" type="button">사인 없이</button>
+          </div>
+          <input type="file" id="fSign" accept="image/*" hidden>
+        </div>
+        <p class="hint">흰 배경에 쓴 사인 사진을 올리면 배경을 자동으로 투명하게 바꿉니다.</p>
+        <div class="sub">완료 메일 명함</div>
+        <div class="signbox">
+          <div class="signprev cardprev" id="cardPrev"></div>
+          <div class="btncol">
+            <button class="btn" id="bCardUp" type="button">명함 이미지 올리기</button>
+            <button class="btn" id="bCardDel" type="button">기본 명함 쓰기</button>
+          </div>
+          <input type="file" id="fCard" accept="image/*" hidden>
+        </div>
+        <p class="hint">비워두면 회사 정보(이름 · 연락처 · 메일)로 만든 기본 명함이 들어갑니다.</p>
+      </section>
+      <!-- 메일 · 카카오 문구 -->
+      <section data-t="mail" hidden>
+        <p class="hint" style="margin-top:0">아래 <code>{ }</code> 칸은 자동으로 채워집니다:
+          <code>{상호}</code> <code>{대표}</code> <code>{의뢰인}</code> <code>{대표자}</code> <code>{서명자}</code> <code>{서명자메일}</code> <code>{계약명}</code> <code>{문서번호}</code> <code>{총액}</code> <code>{서명일시}</code></p>
+        <div class="sub">서명 완료 메일</div>
+        <label class="f">메일 제목<input data-c="mail.subject"></label>
+        <label class="f" style="margin-top:8px">고객에게 보내는 인사말<textarea rows="4" data-c="mail.client"></textarea></label>
+        <label class="f" style="margin-top:8px">우리 회사로 오는 알림 문구<textarea rows="3" data-c="mail.owner"></textarea></label>
+        <label class="f" style="margin-top:8px">맨 아래 문구 <span style="font-weight:400">(명함 위)</span><input data-c="mail.footer"></label>
+        <div class="mchk">
+          <label class="chk"><input type="checkbox" data-c="mail.summary" data-bool>계약 내용 요약 표</label>
+          <label class="chk"><input type="checkbox" data-c="mail.record" data-bool>서명 기록 (서버 시각 · 문서 고유번호)</label>
+          <label class="chk"><input type="checkbox" data-c="mail.card" data-bool>명함</label>
+        </div>
+        <button class="btn" type="button" id="mailPrevBtn" style="margin-top:8px">메일 미리보기</button>
+        <button class="btn" type="button" id="mailReset" style="margin-top:8px">기본 문구로 되돌리기</button>
+        <div class="mailprev" id="mailPrev" hidden></div>
+        <div class="sub">카카오톡 서명 요청 메시지</div>
+        <label class="f">메시지 <span style="font-weight:400">(200자 이내)</span><textarea rows="3" data-c="kakao.text"></textarea></label>
+        <div class="grid2" style="margin-top:8px">
+          <label class="f">버튼 글자<input data-c="kakao.button"></label>
+          <label class="f">카카오 JavaScript 키 <span style="font-weight:400">(비우면 공용 키)</span><input data-c="kakao.key" autocomplete="off"></label>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- 견적 목록 -->
+<div class="modal" id="listModal" hidden>
+  <div class="mbox" role="dialog" aria-label="견적 목록">
+    <div class="mhead">
+      <b>견적 목록</b><span class="mcount" id="lCount"></span>
+      <input id="lq" type="search" placeholder="업체명 · 대표자 · 연락처 검색">
+      <button class="btn" id="lClose" type="button">닫기</button>
+    </div>
+    <div class="lfilter" id="lFilter">
+      <span class="lfl">견적일</span>
+      <button type="button" data-f="all" class="on">전체</button>
+      <button type="button" data-f="today">당일</button>
+      <button type="button" data-f="yesterday">전일</button>
+      <button type="button" data-f="week">1주일</button>
+      <button type="button" data-f="thisMonth">당월</button>
+      <button type="button" data-f="lastMonth">전월</button>
+      <label class="lmonth" data-f="month">월별 <input type="month" id="lMonth"></label>
+      <label class="lmonth" data-f="year">연도별 <select id="lYear"></select></label>
+      <span class="lsum" id="lSum"></span>
+    </div>
+    <div class="lfilter lstat" id="lStat">
+      <span class="lfl">진행상태</span>
+      <button type="button" data-s="all" class="on">전체</button>
+      <button type="button" data-s="대기">대기</button>
+      <button type="button" data-s="완료">완료</button>
+    </div>
+    <div class="mbody" id="lBody"></div>
+    <div class="mfoot">
+      <span class="hint" id="lFootNote" style="margin:0;flex:1"></span>
+      <button class="btn" id="lBackup" type="button">목록 백업 파일 받기</button>
+      <button class="btn" id="lRestore" type="button">백업 파일 불러오기</button>
+      <input type="file" id="fRestore" accept=".json,application/json" hidden>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="editor" id="editor">
+
+    <details class="card" open>
+      <summary>상품 선택</summary>
+      <div class="in">
+        <div class="prods" id="prodPick"></div>
+        <button class="btn" type="button" id="bAddProd" style="margin-top:8px">+ 상품 종류 추가</button>
+        <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.</p>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>의뢰자 정보</summary>
+      <div class="in">
+        <div class="grid2">
+          <label class="f">업체명<input data-p="client.name"></label>
+          <label class="f">대표자<input data-p="client.ceo"></label>
+          <label class="f">연락처<input data-p="client.phone"></label>
+          <label class="f">이메일 <span style="font-weight:400">(최종 계약서 받을 주소)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
+          <label class="f">견적일<input type="date" data-p="quoteDate"></label>
+        </div>
+        <div class="grid2" id="deliverBox" style="margin-top:10px"></div>
+      </div>
+    </details>
+
+    <div id="prodCards"></div>
+
+    <details class="card" open>
+      <summary>대금 조건</summary>
+      <div class="in">
+        <div class="grid2">
+          <label class="f">계약금 비율 (%)<input type="number" min="0" max="100" data-num data-p="depositRate"></label>
+          <label class="f">부가세 표시<select class="f" data-p="vatMode" data-struct>
+            <option value="separate">VAT 별도</option>
+            <option value="include">VAT 10% 포함해 총액 계산</option>
+          </select></label>
+        </div>
+        <label class="chk" style="margin-top:10px"><input type="checkbox" data-p="showWords" data-bool>총액 한글 표기 (일금 ○○원정)</label>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>계약일 · 의뢰자 서명</summary>
+      <div class="in">
+        <div class="grid3">
+          <label class="f">년<input data-p="date.y"></label>
+          <label class="f">월<input data-p="date.m"></label>
+          <label class="f">일<input data-p="date.d"></label>
+        </div>
+        <p class="hint">빈칸이면 계약서에 공란으로 인쇄됩니다. <button class="btn" id="bToday" type="button" style="padding:3px 8px">오늘 날짜</button></p>
+        <div class="sub">의뢰자(고객) 사인</div>
+        <div class="signbox">
+          <div class="signprev" id="cSignPrev"></div>
+          <div class="btncol">
+            <button class="btn" id="bCSignUp" type="button">고객 사인 이미지 올리기</button>
+            <button class="btn" id="bCSignDel" type="button">고객 사인 지우기</button>
+          </div>
+          <input type="file" id="fCSign" accept="image/*" hidden>
+        </div>
+        <div class="es-box" id="esBox">
+          <div class="sub" style="margin-top:0">전자서명 요청 (카카오톡 · 링크)</div>
+          <div id="esView"></div>
+        </div>
+        <button class="btn" id="bEsign" type="button" style="width:100%;margin-top:10px">전자서명용 PDF 저장 (의뢰자 사인 칸 비움)</button>
+        <p class="hint">다른 전자서명 서비스(모두싸인 등)를 쓸 때만 사용하세요.</p>
+      </div>
+    </details>
+
+  </div>
+  <div class="preview" id="preview"><div id="pages"></div></div>
+</div>
+
+<script>
+/* ============================================================
+   공용 견적서 · 계약서 작성기
+   - 회사 설정(정보·로고·사인·명함·메일 문구·상품 기본값)과 견적 목록을
+     각 회사의 구글 시트 서버에 저장해서 팀이 함께 씁니다.
+   - 서버 연결 전에도 이 브라우저에 저장되어 그대로 쓸 수 있습니다.
+   ============================================================ */
+const APP_URL="https://garnet00700-ux.github.io/weavery/app/";        // 공용 작성기 · 서명 페이지 주소
+const KAKAO_DEFAULT="05e61de54c3d735b4d6ac22bef462327";                 // 공용 카카오 JavaScript 키 (위 도메인 등록됨)
+const K={cfg:"wq-cfg",doc:"wq-doc",list:"wq-list",prof:"wq-profile",dirty:"wq-dirty",del:"wq-del",welcome:"wq-welcome"};
+const clone=o=>JSON.parse(JSON.stringify(o));
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const bold=s=>s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");          // esc() 이후에 적용
+const won=n=>Math.round(Number(n)||0).toLocaleString("ko-KR");
+const has=v=>v!==""&&v!==null&&v!==undefined&&!isNaN(v);
+const lsGet=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } };
+const lsSet=(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); return true; }catch(e){ return false; } };
+function newId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function getAt(root,p){ return p.split(".").reduce((o,k)=>o==null?o:o[k],root); }
+function setAt(root,p,v){ const ks=p.split("."); let o=root; ks.slice(0,-1).forEach(k=>{ if(o[k]==null) o[k]={}; o=o[k]; }); o[ks[ks.length-1]]=v; }
+function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function todayYMD(){const d=new Date();return {y:String(d.getFullYear()),m:String(d.getMonth()+1),d:String(d.getDate())}}
+function fmtDate(iso){ if(!iso) return ""; const [y,m,d]=iso.split("-"); return `${y}. ${+m}. ${+d}.`; }
+function korWon(n){
+  n=Math.round(n); if(!n) return "영";
+  const d=["","일","이","삼","사","오","육","칠","팔","구"],u=["","십","백","천"],big=["","만","억","조"];
+  let s="",i=0;
+  while(n>0){const c=n%10000;if(c){const ds=String(c).padStart(4,"0");let t="";for(let j=0;j<4;j++){const x=+ds[j];if(x)t+=d[x]+u[3-j]}s=t+big[i]+s}n=Math.floor(n/10000);i++}
+  return s;
+}
+
+/* ===== 기본값 ===== */
+// mode: normal(합계 포함) | service(서비스, 0원) | monthly(월 금액, 합계 제외) | exclude(별도, 합계 제외)
+const ITEM=(cat,desc,sub,qty,price,mode)=>({cat,desc,sub,qty,price,amount:null,note:"",mode});
+const GENERIC_PRODUCT=()=>({
+  pid:newId(), on:true, name:"기본 상품",
+  quoteTitle:"견적서", contractTitle:"용역 계약서",
+  items:[ITEM("용역","기본 작업","","1식","","normal")],
+  extra:"", deliver:"",
+  noticeIntro:"계약서 내용을 확인하시고 **계약서 서명 및 계약금 입금 시 본 견적과 계약 조건에 동의**하신 것으로 간주하며,\n그 시점부터 계약의 효력이 발생합니다.",
+  notices:[
+    "계약금 입금 시 일정이 확정됩니다.",
+    "작업 기간은 **영업일 기준**으로 진행됩니다.",
+    "견적 유효기간은 견적일로부터 **30일**입니다.",
+    "세금계산서 및 현금영수증 발행 시, **VAT 10%**가 발생합니다."
+  ],
+  intro:"의뢰인 {대표자}(이하 '의뢰자'라 한다)과 {수행자}(이하 '수행자'라 한다)는\n아래 용역에 관하여 다음과 같이 계약을 체결하며, 서명 날인 또는 계약금 입금 시 즉시 효력이 발생한다.",
+  terms:[
+    ["목적","본 계약은 의뢰자가 요청한 용역의 수행과 관련하여 계약 당사자 간의 권리와 의무를 명확히 하는 것을 목적으로 한다."],
+    ["계약 금액 및 지급","① 계약 금액은 금 {금액}원으로 한다.\n② 의뢰자는 계약 시 계약금 {계약금비율}%를, 용역 완료 후 잔금 {잔금비율}%를 지급한다."],
+    ["작업 기간 및 납품","① 납품 예정일은 {납품일}로 한다.\n② 의뢰자의 자료 제공 지연 등 의뢰자의 사정으로 일정이 지연되는 경우 그 기간만큼 납품일이 연장된다."],
+    ["의무 및 책임","① 의뢰자는 용역 수행에 필요한 자료를 적시에 제공하고, 산출물 검토 의견을 성실히 전달한다.\n② 수행자는 약정한 내용과 일정에 따라 성실히 용역을 수행한다."],
+    ["수정 및 추가 작업","① 약정 범위 안의 수정은 협의한 횟수 내에서 무상으로 제공한다.\n② 약정 범위를 벗어난 추가 작업은 별도 견적으로 진행한다."],
+    ["계약의 해지 및 환불","① 상대방이 계약상 의무를 중대하게 위반한 경우 계약을 해지할 수 있다.\n② 해지 시 해지 시점까지 진행된 작업에 대해 정산하며, 작업이 시작된 이후 의뢰자의 단순 변심으로 인한 계약금 환불은 불가하다."],
+    ["저작권 및 산출물","① 최종 산출물의 소유권은 잔금 지급 완료 시점에 의뢰자에게 이전된다.\n② 수행자는 완성물을 포트폴리오로 활용할 수 있다. 단, 의뢰자가 사전에 거부 의사를 밝힌 경우에는 예외로 한다."],
+    ["기밀유지 및 분쟁해결","① 계약 당사자는 본 계약과 관련하여 알게 된 상대방의 정보를 제3자에게 누설해서는 안 된다.\n② 본 계약과 관련한 분쟁은 수행자의 소재지를 관할하는 법원을 제1심 관할로 한다.\n③ 본 계약에 명시되지 않은 사항은 관련 법령 및 상관례에 따른다."]
+  ].map(([title,body])=>({title,body}))
+});
+const MAIL_DEFAULT={
+  subject:"[{상호}] {의뢰인} 계약서 서명 완료 · 최종 계약서 ({문서번호})",
+  client:"{서명자}님, 안녕하세요. {상호}입니다.\n계약서 서명이 정상적으로 완료되어 양측 서명이 모두 들어간 최종 계약서를 보내드립니다.\n궁금하신 점은 언제든 편하게 연락 주세요. 감사합니다.",
+  owner:"{의뢰인} 계약서 서명이 완료되었습니다.\n의뢰자에게 아래와 같은 메일과 동일한 최종 계약서가 발송되었습니다. (의뢰자 메일: {서명자메일})",
+  footer:"문의 · 수정 요청은 아래 연락처로 주세요.",
+  summary:true, record:true, card:true
+};
+const KAKAO_MSG={text:"[{상호}] {대표자} 님, 계약서 서명 요청드립니다.\n{계약명}\n문서번호 {문서번호} · 내용 확인 후 서명해 주세요.",button:"계약서 확인 및 서명",key:""};
+const PROFILE_DEFAULT={
+  name:"",ceo:"",bizno:"",phone:"",email:"",bizType:"",bizItem:"",address:"",web:"",account:"",slogan:"",
+  color:"#17320B",prefix:"DOC",depositRate:30,
+  logo:"",sign:"",card:"",
+  mail:MAIL_DEFAULT, kakao:KAKAO_MSG,
+  templates:null, _updated:0
+};
+function normProfile(p){
+  p=p||{};
+  const o=Object.assign(clone(PROFILE_DEFAULT),p);
+  o.mail=Object.assign(clone(MAIL_DEFAULT),p.mail||{});
+  o.kakao=Object.assign(clone(KAKAO_MSG),p.kakao||{});
+  if(!Array.isArray(o.templates)||!o.templates.length) o.templates=[GENERIC_PRODUCT()];
+  o.templates=o.templates.map(normProduct);
+  return o;
+}
+function normProduct(x){
+  const g=GENERIC_PRODUCT(), o=Object.assign(g,x||{});
+  ["items","notices","terms"].forEach(k=>{ if(!Array.isArray(o[k])) o[k]=clone(g[k]); });
+  if(!o.pid) o.pid=newId();
+  return o;
+}
+function newDocFrom(prof){
+  return {v:1, docId:newId(), status:"대기", esign:null,
+    client:{name:"",ceo:"",phone:"",email:""}, quoteDate:todayISO(),
+    date:{y:String(new Date().getFullYear()),m:"",d:""}, clientSign:"",
+    prods:clone(prof.templates).map(p=>Object.assign(p,{deliver:"",extra:p.extra||""})),
+    depositRate:Number(prof.depositRate)||30, vatMode:"separate", showWords:false};
+}
+function normDoc(d){
+  if(!d||typeof d!=="object"||!Array.isArray(d.prods)) return newDocFrom(profile);
+  const o=Object.assign(newDocFrom(profile),d);
+  o.client=Object.assign({name:"",ceo:"",phone:"",email:""},d.client||{});
+  o.date=Object.assign({y:"",m:"",d:""},d.date||{});
+  o.prods=d.prods.map(normProduct);
+  if(o.status!=="완료") o.status="대기";
+  if(!o.esign||typeof o.esign!=="object"||!o.esign.id) o.esign=null;
+  if(!o.docId) o.docId=newId();
+  return o;
+}
+let cfg=Object.assign({url:"",key:"",user:""},lsGet(K.cfg,{}));
+let profile=normProfile(lsGet(K.prof,null));
+let state=normDoc(lsGet(K.doc,null));
+const P=()=>state.prods;
+const onProds=()=>state.prods.filter(p=>p.on);
+
+/* ===== 금액 계산 ===== */
+function itemAmount(it){
+  if(it.mode!=="normal") return 0;
+  if(has(it.amount)) return Number(it.amount);
+  return has(it.price)?Number(it.price):0;
+}
+function totals(p){
+  const supply=(p.items||[]).reduce((s,it)=>s+itemAmount(it),0);
+  const vat=state.vatMode==="include"?Math.round(supply*0.1):0;
+  const total=supply+vat;
+  const r=Math.min(100,Math.max(0,Number(state.depositRate)||0));
+  const dep=Math.round(total*r/100);
+  return {supply,vat,total,rate:r,dep,bal:total-dep};
+}
+const docTotal=()=>onProds().reduce((s,p)=>s+totals(p).total,0);
+// underline=true: 대표자·의뢰인 자리를 밑줄 칸으로
+function fill(text,p,underline){
+  const t=p?totals(p):{supply:0,total:0,rate:Number(state.depositRate)||0};
+  const u=v=>underline?"\u0001"+v+"\u0002":v;
+  return String(text||"")
+    .replace(/\{대표자\}/g,u(state.client.ceo||""))
+    .replace(/\{의뢰인\}/g,u(state.client.name||""))
+    .replace(/\{수행자\}/g,profile.name||"")
+    .replace(/\{계약금비율\}/g,t.rate)
+    .replace(/\{잔금비율\}/g,100-t.rate)
+    .replace(/\{금액\}/g,t.supply?won(t.supply):"　　　　")
+    .replace(/\{총액\}/g,t.total?won(t.total):"　　　　")
+    .replace(/\{납품일\}/g,(p&&p.deliver)||"　　　　");
+}
+const blankLine=s=>s.replace(/\u0001(.*?)\u0002/g,"<u>$1</u>");
+function tpl(t,v){ return String(t??"").replace(/\{([^{}]+)\}/g,(m,k)=>k in v?v[k]:m); }
+
+/* ===== 저장 (이 브라우저) + 서버 동기화 ===== */
+let saveT;
+function save(){ clearTimeout(saveT); saveT=setTimeout(saveNow,300); }
+function saveNow(){
+  clearTimeout(saveT);
+  if(!lsSet(K.doc,state)){ $("#saved").textContent="자동 저장 실패 (파일로 저장을 이용하세요)"; return; }
+  saveToList();
+  $("#saved").textContent="자동 저장됨 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+}
+const loadList=()=>{ const l=lsGet(K.list,[]); return Array.isArray(l)?l:[]; };
+const storeList=l=>lsSet(K.list,l);
+const dirty=new Set(lsGet(K.dirty,[]));
+const delQ=new Set(lsGet(K.del,[]));
+const storeQ=()=>{ lsSet(K.dirty,[...dirty]); lsSet(K.del,[...delQ]); };
+function entryOf(d){
+  return {id:d.docId,name:d.client.name,ceo:d.client.ceo,phone:d.client.phone,
+    prods:d.prods.filter(p=>p.on).map(p=>p.name),status:d.status,total:d.prods.filter(p=>p.on).reduce((s,p)=>s+totalsFor(d,p).total,0),
+    quoteDate:d.quoteDate,updated:Date.now(),by:cfg.user||"",data:d};
+}
+function totalsFor(d,p){ const keep=state; state=d; try{ return totals(p); } finally{ state=keep; } }
+let lastSaved="";
+function saveToList(){
+  const list=loadList(), i=list.findIndex(x=>x.id===state.docId);
+  if(i<0&&!state.client.name.trim()&&!state.client.ceo.trim()) return;     // 빈 견적서는 목록에 넣지 않음
+  const snap=JSON.stringify(state);
+  if(i>=0&&snap===lastSaved) return;
+  lastSaved=snap;
+  const e=entryOf(clone(state));
+  if(i>=0) list.splice(i,1);
+  list.unshift(e); storeList(list);
+  dirty.add(e.id); storeQ(); pushSoon();
+}
+function putEntry(e){ const list=loadList(), i=list.findIndex(x=>x.id===e.id); if(i>=0) list[i]=e; else list.unshift(e); storeList(list); }
+
+/* ----- 서버 API ----- */
+const connected=()=>!!(cfg.url&&cfg.key);
+async function api(body){
+  if(!connected()) throw new Error("서버가 연결되지 않았습니다. [회사 설정 → 서버 연결]에서 연결해 주세요.");
+  const r=await fetch(cfg.url,{method:"POST",body:JSON.stringify(Object.assign({key:cfg.key,by:cfg.user||""},body))});
+  let j; try{ j=await r.json(); }catch(e){ throw new Error("서버 응답을 읽을 수 없습니다. 배포 설정(액세스: 모든 사용자)을 확인하세요."); }
+  if(!j.ok) throw new Error(j.error||"서버 오류");
+  return j;
+}
+let syncState="", syncMsg="";
+function setSync(s,msg){ syncState=s; syncMsg=msg||""; renderSync(); }
+function renderSync(){
+  const el=$("#sync");
+  if(!connected()){ el.className="sync"; el.textContent="서버 미연결 · 이 컴퓨터에만 저장"; return; }
+  el.className="sync "+(syncState==="err"?"err":"on");
+  el.textContent=syncState==="err"?"서버 연결 오류":syncState==="busy"?"동기화 중…":`팀 공유 중${cfg.user?" · "+cfg.user:""}`;
+  el.title=syncMsg||"서버 연결 상태";
+}
+let pushT, pushing=false;
+function pushSoon(){ if(!connected()) return; clearTimeout(pushT); pushT=setTimeout(push,1500); }
+async function push(){
+  if(!connected()||pushing) return; pushing=true;
+  try{
+    for(const id of [...delQ]){ await api({action:"remove",id}); delQ.delete(id); storeQ(); }
+    for(const id of [...dirty]){
+      const e=loadList().find(x=>x.id===id);
+      if(!e){ dirty.delete(id); storeQ(); continue; }
+      const r=await api({action:"save",entry:{id:e.id,name:e.name,ceo:e.ceo,status:e.status,total:e.total,quoteDate:e.quoteDate,data:e.data}});
+      const cur=loadList().find(x=>x.id===id);
+      if(cur&&cur.updated===e.updated){ cur.updated=r.updated; cur.by=cfg.user||""; putEntry(cur); dirty.delete(id); storeQ(); }
+    }
+    setSync("ok");
+  }catch(err){ setSync("err",err.message); }
+  pushing=false;
+  if(dirty.size||delQ.size) pushSoon();
+}
+let pulling=false;
+async function pull(){
+  if(!connected()||pulling) return 0; pulling=true;
+  let changed=0;
+  try{
+    const list=loadList(), have={};
+    list.forEach(x=>{ if(!dirty.has(x.id)) have[x.id]=x.updated||0; });
+    const r=await api({action:"list",have});
+    const map=new Map(list.map(x=>[x.id,x])), seen=new Set();
+    for(const it of r.items||[]){
+      seen.add(it.id);
+      if(dirty.has(it.id)||delQ.has(it.id)) continue;
+      if(it.deleted){ if(map.has(it.id)){ map.delete(it.id); changed++; } continue; }
+      if(it.data){
+        const d=normDoc(it.data), e=entryOf(d); e.updated=it.updated; e.by=it.by||"";
+        map.set(it.id,e); changed++;
+        if(it.id===state.docId&&JSON.stringify(d)!==JSON.stringify(state)){
+          state=d; lastSaved=JSON.stringify(state); lsSet(K.doc,state); renderEditor(); renderPreview();
+          $("#saved").textContent=`${it.by||"팀원"}님이 수정한 내용을 불러왔습니다`;
+        }
+      }
+    }
+    // 서버에 없는 항목: 아직 안 올린 것은 올림
+    for(const [id] of map) if(!seen.has(id)&&!dirty.has(id)){ dirty.add(id); }
+    storeQ();
+    storeList([...map.values()].sort((a,b)=>(b.updated||0)-(a.updated||0)));
+    setSync("ok");
+  }catch(err){ setSync("err",err.message); }
+  pulling=false;
+  if(dirty.size||delQ.size) pushSoon();
+  return changed;
+}
+/* 회사 설정 동기화 */
+let profT;
+function saveProfile(){
+  lsSet(K.prof,profile)||alert("이미지가 너무 커서 이 브라우저에 저장하지 못했습니다. 더 작은 이미지를 써 주세요.");
+  clearTimeout(profT); profT=setTimeout(pushProfile,1200);
+  applyBrand();
+}
+async function pushProfile(){
+  if(!connected()) return;
+  try{ const r=await api({action:"profileSave",profile}); profile._updated=r.updated; lsSet(K.prof,profile); setSync("ok"); }
+  catch(err){ setSync("err",err.message); }
+}
+async function pullProfile(){
+  if(!connected()) return;
+  try{
+    const r=await api({action:"profileGet"});
+    if(!r.profile){ await pushProfile(); return; }
+    if((r.updated||0)>(profile._updated||0)){ profile=normProfile(r.profile); lsSet(K.prof,profile); applyBrand(); renderSettings(); renderEditor(); renderPreview(); }
+    else if((profile._updated||0)>(r.updated||0)) await pushProfile();
+  }catch(err){ setSync("err",err.message); }
+}
+async function syncAll(){ if(!connected()) return; setSync("busy"); await pullProfile(); await push(); await pull(); }
+
+/* ===== 에디터 ===== */
+function bindSimple(){
+  $$("#editor [data-p]").forEach(el=>{
+    if(el.closest("#prodCards")) return;
+    const v=getAt(state,el.dataset.p);
+    if(el.hasAttribute("data-bool")) el.checked=!!v; else el.value=v??"";
+  });
+}
+const MODE_LABEL={normal:"합계 포함",service:"서비스 (무상)",monthly:"월 금액 (합계 제외)",exclude:"별도 (합계 제외)"};
+const openSet=new Set(["items"]);    // 열려 있는 접이식 칸 (다시 그려도 유지)
+const isOpen=k=>openSet.has(k)?"open":"";
+function tools(list,i,dup){
+  return `<div class="tools">
+    <button class="ib" type="button" data-list="${list}" data-act="up" data-i="${i}" title="위로">↑</button>
+    <button class="ib" type="button" data-list="${list}" data-act="down" data-i="${i}" title="아래로">↓</button>
+    ${dup?`<button class="ib" type="button" data-list="${list}" data-act="dup" data-i="${i}" title="복제">⧉</button>`:""}
+    <button class="ib del" type="button" data-list="${list}" data-act="del" data-i="${i}" title="삭제">✕</button></div>`;
+}
+function itemHead(it){ return `<b>${esc(it.desc||"(세부항목 없음)")}</b><small>${esc([it.cat,it.qty,MODE_LABEL[it.mode]].filter(Boolean).join(" · "))}</small>`; }
+function itemsHtml(pi){
+  const list=`prods.${pi}.items`;
+  return P()[pi].items.map((it,i)=>{
+    const p=`${list}.${i}`;
+    const disc=it.mode==="normal"&&(it.disc||has(it.amount));
+    let need="";
+    if(it.mode==="normal"){
+      need=`<label class="f">금액 (원)<input type="number" min="0" step="10000" data-num data-null data-p="${p}.price" value="${it.price??""}"></label>
+        <label class="chk"><input type="checkbox" data-bool data-struct data-p="${p}.disc" ${disc?"checked":""}>할인 적용</label>`;
+      if(disc) need+=`<div class="grid2">
+          <label class="f">할인 후 금액 (원)<input type="number" min="0" step="10000" data-num data-null data-p="${p}.amount" value="${it.amount??""}"></label>
+          <label class="f">할인 내용 (비고)<input data-p="${p}.note" value="${esc(it.note)}" placeholder="예: 10% 할인"></label></div>`;
+    }else if(it.mode==="service"){
+      need=`<label class="f">정가 (원) <span style="font-weight:400">— 취소선 + "서비스"로 표시, 비우면 "서비스"만</span><input type="number" min="0" step="10000" data-num data-null data-p="${p}.price" value="${it.price??""}"></label>`;
+    }else if(it.mode==="monthly"){
+      need=`<label class="f">월 금액 (원) <span style="font-weight:400">— 총액에 포함되지 않음</span><input type="number" min="0" step="10000" data-num data-null data-p="${p}.price" value="${it.price??""}"></label>`;
+    }else need=`<p class="hint" style="margin:0">견적서에 "별도"로 표시됩니다.</p>`;
+    return `<div class="item">
+      <div class="ih"><div class="it" data-h="${p}">${itemHead(it)}</div>${tools(list,i,true)}</div>
+      <div class="need">${need}</div>
+      <details class="more" data-k="${p}" ${isOpen(p)}><summary>항목 수정</summary>
+        <div class="row r1">
+          <label class="f">구성<input data-p="${p}.cat" value="${esc(it.cat)}"></label>
+          <label class="f">세부항목<input data-p="${p}.desc" value="${esc(it.desc)}"></label>
+        </div>
+        <div class="row r2">
+          <label class="f">보조 문구<input data-p="${p}.sub" value="${esc(it.sub)}"></label>
+          <label class="f">수량<input data-p="${p}.qty" value="${esc(it.qty)}"></label>
+          <label class="f">합계 반영<select class="f" data-p="${p}.mode" data-struct>
+            ${Object.entries(MODE_LABEL).map(([k,l])=>`<option value="${k}" ${it.mode===k?"selected":""}>${l}</option>`).join("")}
+          </select></label>
+        </div>
+        ${disc?"":`<label class="f">비고<input data-p="${p}.note" value="${esc(it.note)}"></label>`}
+      </details>
+    </div>`;
+  }).join("");
+}
+function noticesHtml(pi){
+  const list=`prods.${pi}.notices`;
+  return P()[pi].notices.map((t,i)=>`
+    <div class="li"><textarea rows="2" data-p="${list}.${i}">${esc(t)}</textarea>
+      <div class="btncol" style="gap:3px">
+        <button class="ib" type="button" data-list="${list}" data-act="up" data-i="${i}" title="위로">↑</button>
+        <button class="ib del" type="button" data-list="${list}" data-act="del" data-i="${i}" title="삭제">✕</button>
+      </div></div>`).join("");
+}
+function termsHtml(pi){
+  const list=`prods.${pi}.terms`;
+  return P()[pi].terms.map((t,i)=>`
+    <div class="term">
+      <div class="th">
+        <span class="no">제${i+1}조</span>
+        <input data-p="${list}.${i}.title" value="${esc(t.title)}">
+        <button class="ib" type="button" data-list="${list}" data-act="up" data-i="${i}" title="위로">↑</button>
+        <button class="ib" type="button" data-list="${list}" data-act="down" data-i="${i}" title="아래로">↓</button>
+        <button class="ib del" type="button" data-list="${list}" data-act="del" data-i="${i}" title="삭제">✕</button>
+      </div>
+      <textarea rows="4" data-p="${list}.${i}.body">${esc(t.body)}</textarea>
+    </div>`).join("");
+}
+function prodCardHtml(p,pi){
+  const k=`p${p.pid}`;
+  return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
+    <summary>${esc(p.name||"(이름 없는 상품)")} — 견적 · 계약</summary>
+    <div class="in">
+      <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>상품 이름 · 문서 제목</summary>
+        <div class="grid3">
+          <label class="f">상품 이름<input data-p="prods.${pi}.name" data-title></label>
+          <label class="f">견적서 제목<input data-p="prods.${pi}.quoteTitle"></label>
+          <label class="f">계약서 제목<input data-p="prods.${pi}.contractTitle"></label>
+        </div>
+      </details>
+      <div class="sub" style="margin-top:4px">견적 품목</div>
+      <div>${itemsHtml(pi)}</div>
+      <button class="btn" type="button" data-add="prods.${pi}.items">+ 품목 추가</button>
+      <p class="hint">할인 후 금액을 넣으면 <b>금액 칸은 정가 취소선</b>, <b>비고 칸은 할인 내용 + 할인가</b>로 표시됩니다. 같은 구성명이 이어지면 한 칸으로 묶입니다.</p>
+      <label class="f" style="margin-top:10px">기타 안내 (VAT 문구 아래 한 줄)<input data-p="prods.${pi}.extra"></label>
+      <div class="sum-box"><span>${esc(p.name)} 총액</span><span data-sum="${pi}"></span></div>
+      <details class="prodcfg" data-k="${k}-nt" ${isOpen(k+"-nt")} style="margin-top:12px"><summary>견적서 안내사항 (${p.notices.length}개)</summary>
+        <p class="hint" style="margin:0 0 8px"><code>**굵게**</code>처럼 별표 두 개로 감싸면 굵은 글씨가 됩니다.</p>
+        <label class="f">머리 문단<textarea rows="3" data-p="prods.${pi}.noticeIntro">${esc(p.noticeIntro)}</textarea></label>
+        <div class="sub">항목 (앞에 "- "가 자동으로 붙습니다)</div>
+        <div>${noticesHtml(pi)}</div>
+        <button class="btn" type="button" data-add="prods.${pi}.notices">+ 항목 추가</button>
+        <button class="btn" type="button" data-imp="notices" data-pi="${pi}">기존 양식에서 가져오기</button>
+      </details>
+      <details class="prodcfg" data-k="${k}-tm" ${isOpen(k+"-tm")}><summary>계약서 조항 (${p.terms.length}개)</summary>
+        <p class="hint" style="margin:0 0 8px">조 번호는 자동입니다. 줄이 <code>- </code>로 시작하면 들여쓰기, 빈 줄은 간격이 됩니다.<br>
+          자동으로 채워지는 칸: <code>{대표자}</code> <code>{의뢰인}</code> <code>{수행자}</code> <code>{금액}</code> <code>{총액}</code> <code>{계약금비율}</code> <code>{잔금비율}</code> <code>{납품일}</code></p>
+        <label class="f">머리말<textarea rows="3" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
+        <div class="sub">조항</div>
+        <div>${termsHtml(pi)}</div>
+        <button class="btn" type="button" data-add="prods.${pi}.terms">+ 조항 추가</button>
+        <button class="btn" type="button" data-imp="terms" data-pi="${pi}">기존 계약서에서 가져오기</button>
+      </details>
+      <div class="pbtns">
+        <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 견적서부터 이 상품의 품목·안내사항·조항이 기본으로 들어갑니다 (팀 공유)">이 상품을 기본값으로 저장</button>
+        <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
+        <button class="btn" type="button" data-pact="del" data-pi="${pi}">상품 종류 삭제</button>
+      </div>
+    </div>
+  </details>`;
+}
+function renderProds(){
+  $("#prodPick").innerHTML=P().map((p,i)=>`<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}>${esc(p.name||"(이름 없음)")}</label>`).join("");
+  $("#deliverBox").innerHTML=P().map((p,i)=>p.on?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
+  $("#prodCards").innerHTML=P().map(prodCardHtml).join("");
+  // 텍스트 칸 값 넣기 (value 속성 대신 직접 넣어야 줄바꿈 등 정확)
+  $$("#prodCards [data-p]").forEach(el=>{ if(el.tagName==="SELECT"||el.type==="checkbox") return; const v=getAt(state,el.dataset.p); if(el.value!==String(v??"")) el.value=v??""; });
+  updateSums();
+}
+function updateSums(){ $$("[data-sum]").forEach(s=>{ const p=P()[+s.dataset.sum]; if(p) s.textContent="₩ "+won(totals(p).total); }); }
+function renderImages(){
+  $("#cSignPrev").innerHTML=state.clientSign?`<img src="${state.clientSign}" alt="고객 사인">`:"고객 사인 없음";
+}
+function renderEditor(){ bindSimple(); renderProds(); renderImages(); renderEsign(); }
+
+$("#editor").addEventListener("input",e=>{
+  const el=e.target; if(!el.dataset.p) return;
+  let v=el.value;
+  if(el.hasAttribute("data-bool")) v=el.checked;
+  else if(el.hasAttribute("data-num")) v= v==="" ? (el.hasAttribute("data-null")?null:"") : Number(v);
+  setAt(state,el.dataset.p,v);
+  const m=el.dataset.p.match(/^(prods\.\d+\.items\.\d+)\.(\w+)$/);
+  if(m&&m[2]==="disc"&&!v){ const it=getAt(state,m[1]); it.amount=null; it.note=""; }
+  if(m&&/^(cat|desc|qty)$/.test(m[2])){ const h=document.querySelector(`[data-h="${m[1]}"]`); if(h) h.innerHTML=itemHead(getAt(state,m[1])); }
+  if(el.hasAttribute("data-struct")) renderProds();
+  else if(el.hasAttribute("data-title")){ $("#prodPick").innerHTML=P().map((p,i)=>`<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}>${esc(p.name||"(이름 없음)")}</label>`).join(""); }
+  updateSums(); esMarkStale(); save(); schedule();
+});
+$("#editor").addEventListener("change",e=>{
+  if(e.target.matches("select[data-p]")) e.target.dispatchEvent(new Event("input",{bubbles:true}));
+  if(e.target.hasAttribute("data-title")) renderProds();
+});
+$("#editor").addEventListener("toggle",e=>{
+  const d=e.target; if(!d.dataset||!d.dataset.k) return;
+  d.open?openSet.add(d.dataset.k):openSet.delete(d.dataset.k);
+},true);
+function move(arr,i,d){const j=i+d;if(j<0||j>=arr.length)return;[arr[i],arr[j]]=[arr[j],arr[i]]}
+$("#editor").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.act){
+    const arr=getAt(state,b.dataset.list),i=+b.dataset.i,a=b.dataset.act;
+    if(a==="up")move(arr,i,-1); if(a==="down")move(arr,i,1);
+    if(a==="dup")arr.splice(i+1,0,clone(arr[i]));
+    if(a==="del"){ if(!confirm("이 항목을 삭제할까요?"))return; arr.splice(i,1); }
+  }else if(b.dataset.add){
+    const path=b.dataset.add, arr=getAt(state,path), last=arr[arr.length-1];
+    if(/\.items$/.test(path)){ const n=ITEM(last?last.cat:"","","","1식","","normal"); arr.push(n); openSet.add(`${path}.${arr.length-1}`); }
+    else if(/\.notices$/.test(path)) arr.push("");
+    else arr.push({title:"새 조항",body:""});
+  }else if(b.dataset.pact){
+    const pi=+b.dataset.pi, p=P()[pi], a=b.dataset.pact;
+    if(a==="tpl"){
+      if(!confirm(`'${p.name}' 상품의 지금 품목 · 안내사항 · 조항을 기본값으로 저장할까요?\n다음에 만드는 새 견적서부터 적용됩니다.${connected()?" (팀 전체)":""}`)) return;
+      const t=clone(p); t.deliver=""; t.items.forEach(it=>{ it.amount=null; it.disc=false; });
+      const j=profile.templates.findIndex(x=>x.pid===p.pid);
+      if(j>=0) profile.templates[j]=t; else profile.templates.push(t);
+      saveProfile(); $("#saved").textContent=`'${p.name}' 기본값을 저장했습니다`; return;
+    }
+    if(a==="reset"){
+      const t=profile.templates.find(x=>x.pid===p.pid);
+      if(!t) return alert("저장된 기본값이 없는 상품입니다. 먼저 [이 상품을 기본값으로 저장]을 눌러 주세요.");
+      if(!confirm(`'${p.name}' 상품을 저장된 기본값으로 되돌릴까요?\n(지금 입력한 품목 금액 · 조항 수정 내용이 바뀝니다)`)) return;
+      P()[pi]=Object.assign(clone(t),{on:p.on,deliver:p.deliver});
+    }
+    if(a==="del"){
+      if(!confirm(`'${p.name}' 상품 종류를 삭제할까요?\n이 견적서와 기본 상품 목록(팀 공유)에서 모두 빠집니다.`)) return;
+      P().splice(pi,1);
+      profile.templates=profile.templates.filter(x=>x.pid!==p.pid);
+      if(!profile.templates.length) profile.templates=[GENERIC_PRODUCT()];
+      saveProfile();
+    }
+  }else if(b.dataset.imp){ openImport(b.dataset.imp,+b.dataset.pi); return; }
+  else return;
+  renderProds(); esMarkStale(); save(); schedule();
+});
+$("#bAddProd").onclick=()=>{
+  const name=prompt("새 상품 종류 이름을 입력하세요.\n(예: 인테리어 시공, 촬영, 디자인, 컨설팅)");
+  if(!name||!name.trim()) return;
+  const p=GENERIC_PRODUCT(); p.name=name.trim(); p.quoteTitle=`${p.name} 견적서`; p.contractTitle=`${p.name} 계약서`;
+  p.items=[ITEM(p.name,"","","1식","","normal")];
+  P().push(p); profile.templates.push(clone(p)); saveProfile();
+  openSet.add(`p${p.pid}-cfg`);
+  renderProds(); save(); schedule();
+};
+$("#bToday").onclick=()=>{state.date=todayYMD();bindSimple();save();schedule();};
+
+
+/* ===== 회사 설정 창 ===== */
+function openSettings(tab){ renderSettings(); if(tab) selTab(tab); $("#setModal").hidden=false; }
+function closeSettings(){ $("#setModal").hidden=true; }
+function selTab(t){ $$("#sTabs [data-t]").forEach(b=>b.classList.toggle("on",b.dataset.t===t)); $$(".sbody section").forEach(s=>s.hidden=s.dataset.t!==t); }
+$("#sTabs").onclick=e=>{ const b=e.target.closest("[data-t]"); if(b) selTab(b.dataset.t); };
+$("#bSettings").onclick=()=>openSettings();
+$("#sClose").onclick=closeSettings;
+$("#setModal").addEventListener("click",e=>{ if(e.target.id==="setModal") closeSettings(); });
+function renderSettings(){
+  $$("#setModal [data-c]").forEach(el=>{ const v=getAt(profile,el.dataset.c); if(el.type==="checkbox") el.checked=!!v; else el.value=v??""; });
+  $("#logoPrev").innerHTML=profile.logo?`<img src="${profile.logo}" alt="로고">`:"로고 없음 (상호 글자)";
+  $("#signPrev").innerHTML=profile.sign?`<img src="${profile.sign}" alt="사인">`:"사인 없음";
+  $("#cardPrev").innerHTML=profile.card?`<img src="${profile.card}" alt="명함">`:"기본 명함 사용";
+  $("#cUser").value=cfg.user||""; $("#cUrl").value=cfg.url||""; $("#cKey").value=cfg.key||"";
+  renderConn();
+}
+$("#setModal").addEventListener("input",e=>{
+  const el=e.target; if(!el.dataset.c) return;
+  let v=el.type==="checkbox"?el.checked:el.value;
+  if(el.hasAttribute("data-num")) v=v===""?"":Number(v);
+  setAt(profile,el.dataset.c,v);
+  if(el.dataset.c==="depositRate"&&!state.esign) state.depositRate=Number(v)||0;
+  saveProfile(); esMarkStale(); schedule();
+  if(!$("#mailPrev").hidden) renderMailPrev();
+});
+$("#mailReset").onclick=()=>{ if(!confirm("메일 · 카카오 문구를 기본 문구로 되돌릴까요?")) return; profile.mail=clone(MAIL_DEFAULT); profile.kakao=Object.assign(clone(KAKAO_MSG),{key:profile.kakao.key}); saveProfile(); renderSettings(); if(!$("#mailPrev").hidden) renderMailPrev(); };
+$("#mailPrevBtn").onclick=()=>{ const m=$("#mailPrev"); m.hidden=!m.hidden; if(!m.hidden) renderMailPrev(); };
+function mailVars(){
+  return {"상호":profile.name||"(상호)","수행자":profile.name,"대표":profile.ceo,"연락처":profile.phone,"의뢰인":state.client.name||"(의뢰인)","대표자":state.client.ceo||"(대표자)",
+    "서명자":state.client.ceo||"홍길동","서명자메일":state.client.email||"client@example.com","계약명":esTitle(),"문서번호":(profile.prefix||"DOC")+"-20260101-ABCDE",
+    "총액":won(docTotal())+"원","서명일시":"2026-01-01 12:00:00 (KST)","요청일시":"2026-01-01 10:00:00 (KST)"};
+}
+function renderMailPrev(){
+  const M=profile.mail, v=mailVars(), G=profile.color||"#17320B";
+  const para=t=>esc(tpl(t,v)).replace(/\n/g,"<br>");
+  $("#mailPrev").innerHTML=`<div style="padding:14px;font-size:12px;color:#555"><b>제목</b> ${esc(tpl(M.subject,v))}</div>
+  <div style="max-width:560px;margin:0 auto 16px;background:#fff;border-radius:10px;border:1px solid #ddd;overflow:hidden">
+    <div style="padding:16px 20px 10px;border-bottom:2px solid ${G}">${profile.logo?`<img src="${profile.logo}" style="height:36px;display:block;margin-bottom:6px">`:`<div style="font-weight:700;color:${G}">${esc(profile.name)}</div>`}
+      <div style="font-size:16px;font-weight:700">계약서 서명이 완료되었습니다</div></div>
+    <div style="padding:14px 20px;font-size:13px;line-height:1.7">${para(M.client)}</div>
+    ${M.summary?`<div style="padding:0 20px 8px;font-size:12px;color:${G};font-weight:700">계약 내용 요약 <span style="color:#999;font-weight:400">(문서번호 · 계약명 · 금액 · 계좌 표)</span></div>`:""}
+    ${M.record?`<div style="padding:0 20px 8px;font-size:12px;color:${G};font-weight:700">서명 기록 <span style="color:#999;font-weight:400">(요청 · 열람 · 서명 완료 서버 시각, 문서 고유번호)</span></div>`:""}
+    <div style="padding:10px 20px 18px;font-size:12px;color:#666">${para(M.footer)}
+      ${M.card?(profile.card?`<img src="${profile.card}" style="display:block;max-width:300px;margin-top:6px;border:1px solid #ddd;border-radius:8px">`:`<div style="margin-top:6px;border:1px solid #ddd;border-left:3px solid ${G};border-radius:8px;padding:10px 12px;color:#222"><b>${esc(profile.ceo)}</b> 대표 · <b style="color:${G}">${esc(profile.name)}</b><br>T. ${esc(profile.phone)} ${profile.email?"· E. "+esc(profile.email):""}</div>`):""}
+    </div></div>
+  <div style="padding:0 14px 14px;font-size:12px;color:#555"><b>카카오톡 미리보기</b><br>${esc(tpl(profile.kakao.text,v)).replace(/\n/g,"<br>")}<br>[ ${esc(profile.kakao.button)} ]</div>`;
+}
+
+/* ----- 서버 연결 · 팀 초대 ----- */
+function parseCode(code){
+  code=String(code||"").trim().replace(/^.*#connect=/,"");
+  try{ code=decodeURIComponent(code); }catch(e){}
+  const m=code.match(/^WQ1\.([A-Za-z0-9_-]+)/); if(!m) return null;
+  try{
+    let s=m[1].replace(/-/g,"+").replace(/_/g,"/"); while(s.length%4) s+="=";
+    const j=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0))));
+    return j&&j.u&&j.k?{url:j.u,key:j.k}:null;
+  }catch(e){ return null; }
+}
+function makeCode(){
+  const b=new TextEncoder().encode(JSON.stringify({u:cfg.url,k:cfg.key}));
+  let s=""; b.forEach(x=>s+=String.fromCharCode(x));
+  return "WQ1."+btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+const inviteLink=()=>APP_URL+"#connect="+encodeURIComponent(makeCode());
+let connName="";
+function renderConn(){
+  const v=$("#connView");
+  if(!connected()){ v.innerHTML=`<div class="conn-no">서버에 연결되지 않았습니다. 지금은 이 컴퓨터 · 이 브라우저에만 저장됩니다.<br>연결하면 견적 목록과 회사 설정을 팀이 함께 쓰고, 카카오톡 전자서명을 보낼 수 있습니다.</div>`; return; }
+  v.innerHTML=`<div class="conn-ok"><b>✓ 서버 연결됨</b>${connName?` · ${esc(connName)}`:""}${cfg.user?` · 내 이름 <b>${esc(cfg.user)}</b>`:""}<br>
+    견적 목록 · 회사 설정이 팀원과 함께 저장됩니다.
+    <div class="sub">팀원 초대 링크 <span style="font-weight:400;color:var(--ui-sub)">— 팀원이 이 링크를 열면 바로 연결됩니다. 비밀번호와 같으니 우리 팀에게만 보내세요.</span></div>
+    <div class="invite"><input readonly id="invLink" value="${esc(inviteLink())}"><button class="btn" type="button" id="invCopy">복사</button></div>
+    <div class="pbtns"><button class="btn" type="button" id="cTest">연결 확인</button><button class="btn" type="button" id="cSync">지금 동기화</button><button class="btn" type="button" id="cOff">이 컴퓨터 연결 끊기</button></div></div>`;
+  $("#invCopy").onclick=async()=>{ try{ await navigator.clipboard.writeText(inviteLink()); $("#invCopy").textContent="복사됨"; }catch(e){ $("#invLink").select(); } };
+  $("#cTest").onclick=async()=>{ $("#cR").textContent="확인 중…"; try{ const r=await api({action:"check"}); connName=r.name||""; $("#cR").textContent=`✓ 연결 · 키 확인 완료 · 서버 시각 ${r.time}`; renderConn(); }catch(err){ $("#cR").textContent="✕ "+err.message; } };
+  $("#cSync").onclick=async()=>{ $("#cR").textContent="동기화 중…"; await syncAll(); $("#cR").textContent=syncState==="err"?"✕ "+syncMsg:"✓ 동기화했습니다."; };
+  $("#cOff").onclick=()=>{ if(!confirm("이 컴퓨터의 서버 연결을 끊을까요?\n서버의 자료는 그대로 남아 있고, 연결 코드로 언제든 다시 연결할 수 있습니다.")) return; cfg.url="";cfg.key=""; lsSet(K.cfg,cfg); renderSettings(); renderSync(); renderEsign(); };
+}
+async function doConnect(url,key,user){
+  $("#cR").textContent="연결 확인 중…";
+  const prev=clone(cfg);
+  cfg=Object.assign(cfg,{url,key,user:user??cfg.user});
+  try{
+    const r=await api({action:"check"}); connName=r.name||"";
+    lsSet(K.cfg,cfg);
+    $("#cR").textContent="✓ 연결되었습니다. 회사 설정과 견적 목록을 맞추는 중…";
+    // 이 브라우저의 기존 목록도 서버에 올림
+    loadList().forEach(x=>dirty.add(x.id)); storeQ();
+    await syncAll();
+    state=normDoc(state); renderSettings(); renderEditor(); renderPreview(); renderSync();
+    $("#cR").textContent="✓ 연결 완료 · 팀 공유를 시작합니다.";
+    return true;
+  }catch(err){ cfg=prev; lsSet(K.cfg,cfg); $("#cR").textContent="✕ 연결하지 못했습니다: "+err.message; renderSync(); return false; }
+}
+$("#cConnect").onclick=()=>{
+  const code=$("#cCode").value.trim(), user=$("#cUser").value.trim();
+  let c=code?parseCode(code):null;
+  if(!c){ const u=$("#cUrl").value.trim(), k=$("#cKey").value.trim(); if(u&&k) c={url:u,key:k}; }
+  if(!c) return $("#cR").textContent=code?"✕ 연결 코드 형식이 아닙니다. WQ1. 로 시작하는 코드를 그대로 붙여넣어 주세요.":"✕ 연결 코드를 붙여넣어 주세요.";
+  doConnect(c.url,c.key,user);
+};
+$("#cUser").addEventListener("change",()=>{ cfg.user=$("#cUser").value.trim(); lsSet(K.cfg,cfg); renderSync(); });
+
+/* ===== 이미지: 사인 · 로고 · 명함 ===== */
+function readImage(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=r.result; }; r.onerror=rej; r.readAsDataURL(file); }); }
+function scaled(img,maxW,type,q,bg){
+  const sc=Math.min(1,maxW/img.width), c=document.createElement("canvas");
+  c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+  const x=c.getContext("2d"); if(bg){ x.fillStyle=bg; x.fillRect(0,0,c.width,c.height); } x.drawImage(img,0,0,c.width,c.height);
+  return c.toDataURL(type,q);
+}
+// 흰 배경 사인 → 투명 PNG + 여백 자르기
+function toTransparentSign(img){
+  const sc=Math.min(1,700/img.width), w=Math.round(img.width*sc),h=Math.round(img.height*sc);
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  const x=c.getContext("2d");x.drawImage(img,0,0,w,h);
+  const d=x.getImageData(0,0,w,h),p=d.data;
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let i=0;i<p.length;i+=4){
+    const l=(p[i]*299+p[i+1]*587+p[i+2]*114)/1000;
+    let a=l>=235?0:l<=60?255:(235-l)*255/175; a=Math.min(a,p[i+3]);
+    p[i]=p[i+1]=p[i+2]=20;p[i+3]=a;
+    if(a>20){const k=i/4,px=k%w,py=(k/w)|0;if(px<x0)x0=px;if(px>x1)x1=px;if(py<y0)y0=py;if(py>y1)y1=py;}
+  }
+  if(x1<0) throw new Error("empty");
+  x.putImageData(d,0,0);
+  const pad=8;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(w-1,x1+pad);y1=Math.min(h-1,y1+pad);
+  const o=document.createElement("canvas");o.width=x1-x0+1;o.height=y1-y0+1;
+  o.getContext("2d").drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return o.toDataURL("image/png");
+}
+function imgInput(btn,input,fn){
+  $(btn).onclick=()=>$(input).click();
+  $(input).onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+    try{ await fn(await readImage(f)); }catch(err){ alert(err.message==="empty"?"사인을 찾지 못했습니다. 흰 배경에 어두운 선으로 된 이미지를 올려주세요.":"이미지를 읽지 못했습니다. JPG나 PNG 파일을 올려주세요."); } };
+}
+imgInput("#bLogoUp","#fLogo",img=>{ profile.logo=scaled(img,600,"image/png"); saveProfile(); renderSettings(); esMarkStale(); schedule(); });
+imgInput("#bSignUp","#fSign",img=>{ profile.sign=toTransparentSign(img); saveProfile(); renderSettings(); esMarkStale(); schedule(); });
+imgInput("#bCardUp","#fCard",img=>{ profile.card=scaled(img,900,"image/jpeg",.88,"#fff"); saveProfile(); renderSettings(); });
+imgInput("#bCSignUp","#fCSign",img=>{ state.clientSign=toTransparentSign(img); renderImages(); save(); schedule(); });
+$("#bLogoDel").onclick=()=>{ profile.logo=""; saveProfile(); renderSettings(); esMarkStale(); schedule(); };
+$("#bSignDel").onclick=()=>{ profile.sign=""; saveProfile(); renderSettings(); esMarkStale(); schedule(); };
+$("#bCardDel").onclick=()=>{ if(profile.card&&!confirm("올린 명함을 지우고 기본 명함을 쓸까요?")) return; profile.card=""; saveProfile(); renderSettings(); };
+$("#bCSignDel").onclick=()=>{ if(state.clientSign&&!confirm("고객 사인을 지울까요?"))return; state.clientSign="";renderImages();save();schedule();};
+/* 대표 사인 직접 그리기 */
+(()=>{
+  const m=$("#padModal"), cv=$("#padCv"), ctx=cv.getContext("2d");
+  let drawing=false, last=null, used=false;
+  const fit=()=>{ const r=cv.getBoundingClientRect(), dpr=Math.max(1,devicePixelRatio||1);
+    cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#141414"; used=false; };
+  const pt=e=>{ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top,p:e.pressure&&e.pointerType==="pen"?e.pressure:.5}; };
+  cv.addEventListener("pointerdown",e=>{ e.preventDefault(); try{cv.setPointerCapture(e.pointerId);}catch(_){} drawing=true; last=pt(e);
+    ctx.beginPath(); ctx.fillStyle="#141414"; ctx.arc(last.x,last.y,1.4,0,7); ctx.fill(); used=true; });
+  cv.addEventListener("pointermove",e=>{ if(!drawing) return; const p=pt(e);
+    ctx.lineWidth=2.2+p.p*1.6; ctx.beginPath(); ctx.moveTo(last.x,last.y);
+    ctx.quadraticCurveTo(last.x,last.y,(last.x+p.x)/2,(last.y+p.y)/2); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+  const end=()=>{ drawing=false; };
+  ["pointerup","pointercancel","pointerleave"].forEach(t=>cv.addEventListener(t,end));
+  const close=()=>{ m.hidden=true; };
+  $("#bSignDraw").onclick=()=>{ m.hidden=false; requestAnimationFrame(fit); };
+  $("#padClear").onclick=fit; $("#padCancel").onclick=close;
+  m.addEventListener("click",e=>{ if(e.target===m) close(); });
+  $("#padOk").onclick=()=>{
+    if(!used) return alert("사인을 먼저 그려주세요.");
+    const w=cv.width,h=cv.height,p=ctx.getImageData(0,0,w,h).data;
+    let x0=w,y0=h,x1=-1,y1=-1;
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(p[(y*w+x)*4+3]>10){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    if(x1<0) return alert("사인을 먼저 그려주세요.");
+    const pad=10; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
+    const sc=Math.min(1,700/(x1-x0+1)), o=document.createElement("canvas");
+    o.width=Math.round((x1-x0+1)*sc); o.height=Math.round((y1-y0+1)*sc);
+    o.getContext("2d").drawImage(cv,x0,y0,x1-x0+1,y1-y0+1,0,0,o.width,o.height);
+    profile.sign=o.toDataURL("image/png"); saveProfile(); renderSettings(); esMarkStale(); schedule(); close();
+  };
+})();
+
+/* ===== 기존 양식에서 조항 · 안내사항 가져오기 ===== */
+let impKind="terms", impPi=0;
+function openImport(kind,pi){
+  impKind=kind; impPi=pi;
+  $("#impTitle").textContent=kind==="terms"?"기존 계약서에서 조항 가져오기":"기존 견적서에서 안내사항 가져오기";
+  $("#impText").value=""; $("#impPrev").innerHTML=""; $("#impFileR").textContent="";
+  $("#impModal").hidden=false; $("#impText").focus();
+}
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("불러오기 실패")); document.head.appendChild(s); }); }
+async function fileText(f){
+  const n=f.name.toLowerCase();
+  if(n.endsWith(".txt")) return await f.text();
+  if(n.endsWith(".docx")){
+    if(!window.mammoth) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
+    return (await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value;
+  }
+  if(n.endsWith(".pdf")){
+    if(!window.pdfjsLib){ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+      pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }
+    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise; let out=[];
+    for(let i=1;i<=pdf.numPages;i++){
+      const tc=await (await pdf.getPage(i)).getTextContent(); let line="",lastY=null;
+      tc.items.forEach(it=>{ const y=Math.round(it.transform[5]); if(lastY!==null&&Math.abs(y-lastY)>3){ out.push(line); line=""; } line+=it.str; lastY=y; });
+      out.push(line);
+    }
+    return out.join("\n");
+  }
+  throw new Error("PDF · 워드(.docx) · 텍스트(.txt) 파일만 읽을 수 있습니다.");
+}
+function parseTerms(text){
+  const t=String(text).replace(/\r/g,"").replace(/[ \t]+\n/g,"\n");
+  const re=/(?:^|\n)\s*제\s*(\d+)\s*조\s*(?:[【\[(（]\s*([^】\])）\n]{1,40})\s*[】\])）])?\s*/g;
+  const marks=[]; let m;
+  while((m=re.exec(t))) marks.push({i:m.index,end:re.lastIndex,title:(m[2]||"").trim()});
+  const out=[], intro=marks.length?t.slice(0,marks[0].i).trim():"";
+  marks.forEach((k,j)=>{
+    let body=t.slice(k.end,j+1<marks.length?marks[j+1].i:t.length).trim(), title=k.title;
+    if(!title){ const nl=body.indexOf("\n"); const first=nl<0?body:body.slice(0,nl);
+      if(first.length<=30){ title=first.replace(/^[\s:.\-]+|[\s:.\-]+$/g,""); body=nl<0?"":body.slice(nl+1).trim(); } else title="조항"; }
+    body=body.replace(/\n{3,}/g,"\n\n");
+    out.push({title,body});
+  });
+  return {intro,terms:out};
+}
+function parseNotices(text){
+  return String(text).replace(/\r/g,"").split("\n").map(s=>s.trim().replace(/^([-•·*※▶▪◦]|\d+[.)]|[①-⑳])\s*/,"").trim()).filter(Boolean);
+}
+function impParsed(){
+  const t=$("#impText").value;
+  if(impKind==="terms"){ const r=parseTerms(t); return r; }
+  return {notices:parseNotices(t)};
+}
+function renderImpPrev(){
+  const r=impParsed();
+  if(impKind==="terms") $("#impPrev").innerHTML=r.terms.length?r.terms.map((x,i)=>`<div><b>제${i+1}조 ${esc(x.title)}</b> · ${esc(x.body.slice(0,60))}${x.body.length>60?"…":""}</div>`).join("")
+    :($("#impText").value.trim()?`<div>"제1조"처럼 조 번호가 있는 글을 찾지 못했습니다.</div>`:"");
+  else $("#impPrev").innerHTML=r.notices.map(x=>`<div>- ${esc(x)}</div>`).join("");
+}
+$("#impText").addEventListener("input",renderImpPrev);
+$("#impFileBtn").onclick=()=>$("#impFile").click();
+$("#impFile").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  $("#impFileR").textContent="읽는 중…";
+  try{ $("#impText").value=await fileText(f); $("#impFileR").textContent=f.name; renderImpPrev(); }
+  catch(err){ $("#impFileR").textContent="✕ "+err.message; } };
+$("#impCancel").onclick=()=>{ $("#impModal").hidden=true; };
+$("#impOk").onclick=()=>{
+  const r=impParsed(), p=P()[impPi], rep=$("#impReplace").checked;
+  if(impKind==="terms"){
+    if(!r.terms.length) return alert("가져올 조항이 없습니다.");
+    p.terms=rep?r.terms:p.terms.concat(r.terms);
+    if(r.intro&&r.intro.length<400&&(rep||!p.intro)) p.intro=r.intro;
+    openSet.add(`p${p.pid}-tm`);
+  }else{
+    if(!r.notices.length) return alert("가져올 안내사항이 없습니다.");
+    p.notices=rep?r.notices:p.notices.concat(r.notices);
+    openSet.add(`p${p.pid}-nt`);
+  }
+  $("#impModal").hidden=true; renderProds(); esMarkStale(); save(); schedule();
+};
+
+/* ===== 견적 목록 ===== */
+const fmtTime=t=>{const d=new Date(t);return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`};
+let listFilter="all", statusFilter="all";
+const stOf=x=>x.status==="완료"?"완료":"대기";
+const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function dateRange(f){
+  const t=new Date(); t.setHours(0,0,0,0);
+  const add=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+  const ym=(y,m)=>{const s=new Date(y,m,1),e=new Date(y,m+1,0);return [isoOf(s),isoOf(e)]};
+  if(f==="today") return [isoOf(t),isoOf(t)];
+  if(f==="yesterday"){const y=add(t,-1);return [isoOf(y),isoOf(y)]}
+  if(f==="week") return [isoOf(add(t,-6)),isoOf(t)];
+  if(f==="thisMonth") return ym(t.getFullYear(),t.getMonth());
+  if(f==="lastMonth") return ym(t.getFullYear(),t.getMonth()-1);
+  if(f==="month"){const v=$("#lMonth").value; if(!v) return null; const [y,m]=v.split("-").map(Number); return ym(y,m-1)}
+  if(f==="year"){const y=$("#lYear").value; if(!y) return null; return [`${y}-01-01`,`${y}-12-31`]}
+  return null;
+}
+function fillYears(all){
+  const sel=$("#lYear"), cur=sel.value||String(new Date().getFullYear());
+  const ys=[...new Set([String(new Date().getFullYear()),...all.map(x=>(x.quoteDate||"").slice(0,4)).filter(y=>/^\d{4}$/.test(y))])].sort().reverse();
+  sel.innerHTML=ys.map(y=>`<option value="${y}">${y}년</option>`).join("");
+  sel.value=ys.includes(cur)?cur:ys[0];
+}
+function renderList(){
+  const q=$("#lq").value.trim().toLowerCase(), all=loadList();
+  fillYears(all);
+  const rng=dateRange(listFilter);
+  let list=all.filter(x=>(!q||[x.name,x.ceo,x.phone].join(" ").toLowerCase().includes(q))&&(!rng||(x.quoteDate&&x.quoteDate>=rng[0]&&x.quoteDate<=rng[1])));
+  const byStat={대기:list.filter(x=>stOf(x)==="대기").length,완료:list.filter(x=>stOf(x)==="완료").length};
+  $$("#lStat [data-s]").forEach(b=>{b.classList.toggle("on",b.dataset.s===statusFilter);b.textContent=b.dataset.s==="all"?`전체 ${list.length}`:`${b.dataset.s} ${byStat[b.dataset.s]}`});
+  if(statusFilter!=="all") list=list.filter(x=>stOf(x)===statusFilter);
+  if(rng) list=list.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")||(b.updated||0)-(a.updated||0));
+  $$("#lFilter [data-f]").forEach(b=>b.classList.toggle("on",b.dataset.f===listFilter));
+  $("#lCount").textContent=`전체 ${all.length}건`;
+  const sum=list.reduce((s,x)=>s+(x.total||0),0);
+  $("#lSum").innerHTML=`${rng?`${fmtDate(rng[0])}${rng[0]!==rng[1]?" ~ "+fmtDate(rng[1]):""} · `:""}<b>${list.length}건</b>${sum?` · 합계 <b>₩ ${won(sum)}</b>`:""}`;
+  $("#lFootNote").textContent=connected()?"견적서는 입력하는 대로 자동 저장되고 팀원과 함께 보입니다. 서버(구글 시트)에도 보관됩니다.":"서버 미연결: 이 컴퓨터 · 이 브라우저에만 저장됩니다. [회사 설정 → 서버 연결]을 하면 팀이 함께 씁니다.";
+  $("#lBody").innerHTML=list.length?list.map(x=>{
+    const es=x.data&&x.data.esign;
+    return `<div class="lrow${x.id===state.docId?" cur":""}" data-id="${esc(x.id)}" title="눌러서 불러오기">
+      <div class="lmain">
+        <div class="lname">${esc(x.name||"(업체명 없음)")}${x.ceo?` <span style="font-weight:400;color:#333">· ${esc(x.ceo)}</span>`:""}</div>
+        <div class="lsub">${x.id===state.docId?`<span class="tag now">작성 중</span>`:""}${(x.prods||[]).map(n=>`<span class="tag">${esc(n)}</span>`).join("")}${es?(es.status==="signed"?`<span class="tag es ok">서명 완료</span>`:`<span class="tag es">서명 요청됨${es.viewedAt?" · 열람":""}</span>`):""}
+          견적일 ${esc(fmtDate(x.quoteDate))||"-"}${dirty.has(x.id)&&connected()?` · <span class="by">올리는 중</span>`:""}</div>
+      </div>
+      <button type="button" class="lst ${stOf(x)==="완료"?"done":"wait"}" data-lact="status" title="눌러서 ${stOf(x)==="완료"?"대기":"완료"}로 바꾸기">${stOf(x)}</button>
+      <div class="lamt"><b>${x.total?"₩ "+won(x.total):"금액 미입력"}</b>수정 ${fmtTime(x.updated)}${x.by?` · ${esc(x.by)}`:""}</div>
+      <div class="lact">
+        <button class="ib" type="button" data-lact="dup" title="복제해서 새 견적서로">⧉</button>
+        <button class="ib del" type="button" data-lact="del" title="목록에서 삭제">✕</button>
+      </div>
+    </div>`;}).join("")
+    :`<div class="lempty">${all.length?(rng?"이 기간에 견적일이 있는 견적서가 없습니다.":"검색 결과가 없습니다."):"아직 저장된 견적서가 없습니다.<br>업체명이나 대표자를 입력하면 자동으로 이 목록에 저장됩니다."}</div>`;
+}
+function openDoc(data){ saveNow(); state=normDoc(clone(data)); lastSaved=JSON.stringify(state); lsSet(K.doc,state); renderEditor(); renderPreview(); }
+async function openList(){
+  saveNow(); $("#lq").value=""; renderList(); $("#listModal").hidden=false; $("#lq").focus();
+  await pull(); if(!$("#listModal").hidden) renderList();
+  esRefresh(false).then(n=>{ if(n&&!$("#listModal").hidden) renderList(); });
+}
+function closeList(){ $("#listModal").hidden=true; }
+$("#bList").onclick=openList;
+$("#lClose").onclick=closeList;
+$("#listModal").addEventListener("click",e=>{ if(e.target.id==="listModal") closeList(); });
+addEventListener("keydown",e=>{ if(e.key!=="Escape") return; ["#listModal","#setModal","#impModal","#padModal"].forEach(s=>{ if(!$(s).hidden) $(s).hidden=true; }); });
+$("#lq").addEventListener("input",renderList);
+$("#lFilter").addEventListener("click",e=>{
+  const b=e.target.closest("[data-f]"); if(!b) return;
+  if(b.dataset.f==="month"&&!$("#lMonth").value) $("#lMonth").value=isoOf(new Date()).slice(0,7);
+  if(listFilter===b.dataset.f&&b.tagName==="LABEL") return;
+  listFilter=b.dataset.f; renderList();
+});
+$("#lStat").addEventListener("click",e=>{ const b=e.target.closest("[data-s]"); if(!b) return; statusFilter=b.dataset.s; renderList(); });
+$("#lYear").addEventListener("change",()=>{ listFilter="year"; renderList(); });
+$("#lMonth").addEventListener("change",()=>{ listFilter=$("#lMonth").value?"month":"all"; renderList(); });
+$("#lBody").addEventListener("click",e=>{
+  const row=e.target.closest(".lrow"); if(!row) return;
+  const list=loadList(), x=list.find(v=>v.id===row.dataset.id); if(!x) return;
+  const act=e.target.closest("[data-lact]")?.dataset.lact;
+  if(act==="status"){
+    const ns=stOf(x)==="완료"?"대기":"완료";
+    x.status=ns; if(x.data) x.data.status=ns; x.updated=Date.now(); storeList(list);
+    if(x.id===state.docId){ state.status=ns; lastSaved=JSON.stringify(state); lsSet(K.doc,state); }
+    dirty.add(x.id); storeQ(); pushSoon(); renderList(); return;
+  }
+  if(act==="del"){
+    if(!confirm(`'${x.name||"(업체명 없음)"}' 견적서를 목록에서 삭제할까요?${connected()?"\n팀원 목록에서도 함께 사라집니다.":""}\n삭제하면 되돌릴 수 없습니다.`)) return;
+    storeList(list.filter(v=>v.id!==x.id)); dirty.delete(x.id); delQ.add(x.id); storeQ(); pushSoon();
+    if(x.id===state.docId){ state.docId=newId(); lsSet(K.doc,state); }
+    renderList(); return;
+  }
+  if(act==="dup"){
+    const d=clone(x.data); d.docId=newId(); d.client.name=(d.client.name||"")+" (복사)";
+    d.quoteDate=todayISO(); d.date={y:String(new Date().getFullYear()),m:"",d:""}; d.clientSign=""; d.status="대기"; d.esign=null;
+    openDoc(d); saveNow(); closeList(); return;
+  }
+  if(x.id!==state.docId) openDoc(x.data);
+  closeList();
+});
+$("#lBackup").onclick=()=>{
+  saveNow();
+  const blob=new Blob([JSON.stringify({type:"wq-list",saved:new Date().toISOString(),items:loadList()})],{type:"application/json"});
+  const d=new Date(),a=document.createElement("a");a.href=URL.createObjectURL(blob);
+  a.download=`${profile.name||"견적"} 견적목록 백업_${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}.json`;a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+$("#lRestore").onclick=()=>$("#fRestore").click();
+$("#fRestore").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const d=JSON.parse(r.result); if(!d||d.type!=="wq-list"||!Array.isArray(d.items)) throw 0;
+      const list=loadList(); let add=0,upd=0;
+      d.items.forEach(it=>{ const i=list.findIndex(v=>v.id===it.id);
+        if(i<0){list.push(it);add++;dirty.add(it.id)} else if((it.updated||0)>(list[i].updated||0)){list[i]=it;upd++;dirty.add(it.id)} });
+      list.sort((a,b)=>(b.updated||0)-(a.updated||0)); storeList(list); storeQ(); pushSoon(); renderList();
+      alert(`백업을 불러왔습니다. 새로 추가 ${add}건, 최신으로 갱신 ${upd}건.`);
+    }catch(err){ alert("이 작성기의 목록 백업 파일이 아닙니다."); }
+    e.target.value="";
+  };
+  r.readAsText(f);
+};
+
+/* ===== 파일 · 인쇄 ===== */
+function fileName(){return `${(state.client.name||"견적서").replace(/[\\/:*?"<>|]/g,"").trim()}_${(profile.name||"").replace(/[\\/:*?"<>|]/g,"")} 견적서`}
+$("#bNew").onclick=()=>{
+  if(!confirm("새 견적서를 작성할까요?\n지금 견적서는 '견적 목록'에 저장되어 있어 언제든 다시 불러올 수 있습니다.\n(상품 품목 · 안내사항 · 조항은 저장된 기본값으로 시작합니다)"))return;
+  saveNow(); state=newDocFrom(profile); lastSaved=""; renderEditor(); save(); schedule();
+};
+$("#bSave").onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,1)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fileName()+".json";a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+$("#bOpen").onclick=()=>$("#fOpen").click();
+$("#fOpen").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{ const d=JSON.parse(r.result);
+      if(d&&d.type==="wq-list") alert("목록 백업 파일입니다. '견적 목록 → 백업 파일 불러오기'로 열어주세요.");
+      else if(!d||!Array.isArray(d.prods)) alert("이 작성기에서 저장한 견적서 파일이 아닙니다.");
+      else { openDoc(d); saveNow(); } }
+    catch(err){alert("파일을 읽을 수 없습니다.")}
+    e.target.value="";
+  };
+  r.readAsText(f);
+};
+function doPrint(suffix){
+  renderPreview();
+  document.body.dataset.scope=$("#scope").value;
+  const t=document.title; document.title=fileName()+(suffix||"");
+  window.print(); document.title=t;
+}
+$("#bPrint").onclick=()=>doPrint();
+let esignMode=false;
+$("#bEsign").onclick=()=>{ esignMode=true; doPrint("_전자서명용"); esignMode=false; renderPreview(); };
+
+
+/* ===== 전자서명: 서명 요청 → 카카오톡/링크 → 고객 서명 → 양측 메일 → 목록 '완료' ===== */
+const appBase=()=>/^https?:$/.test(location.protocol)&&!/^(localhost|127\.)/.test(location.hostname)?location.href.replace(/[?#].*$/,"").replace(/[^/]*$/,""):APP_URL;
+const deployId=()=>((cfg.url||"").match(/\/macros\/s\/([A-Za-z0-9_-]+)\/exec/)||[])[1]||"";
+const esLink=id=>`${appBase()}sign.html?a=${encodeURIComponent(deployId())}&id=${encodeURIComponent(id)}`;
+function esTitle(){ const on=onProds(); return on.length?on.map(p=>p.contractTitle||p.name).join(" · "):"계약서"; }
+function esSummary(){
+  const items=[],monthly=[];
+  onProds().forEach(p=>{ const t=totals(p);
+    items.push({name:p.name,total:t.total,deposit:t.dep,balance:t.bal,depositRate:t.rate,deliver:p.deliver||""});
+    p.items.filter(it=>it.mode==="monthly"&&has(it.price)).forEach(it=>monthly.push({name:it.desc||it.cat,price:Number(it.price)}));
+  });
+  const s=profile;
+  return {title:esTitle(),client:clone(state.client),
+    supplier:{name:s.name,ceo:s.ceo,phone:s.phone,bizno:s.bizno,email:s.email,web:s.web,address:s.address},
+    brand:{color:s.color,slogan:s.slogan,prefix:s.prefix},
+    mail:clone(s.mail),items,monthly,grandTotal:docTotal(),vatMode:state.vatMode,account:s.account};
+}
+let esBusyMsg="";
+function esBusy(msg){ esBusyMsg=msg||""; renderEsign(); }
+function esMarkStale(){ if(state.esign&&state.esign.status==="sent"&&!state.esign.stale){ state.esign.stale=true; renderEsign(); } }
+async function esCreate(){
+  if(!connected()){ openSettings("conn"); return alert("전자서명은 서버 연결 후에 쓸 수 있습니다. [회사 설정 → 서버 연결]에서 연결해 주세요."); }
+  if(!deployId()) return alert("서버 주소 형식이 올바르지 않습니다. 연결 코드로 다시 연결해 주세요.");
+  if(!profile.name.trim()) { openSettings("co"); return alert("[회사 설정 → 회사 정보]에 상호명을 먼저 입력해 주세요."); }
+  if(!onProds().length) return alert("상품을 하나 이상 선택하세요.");
+  if(!state.client.name.trim()&&!state.client.ceo.trim()) return alert("의뢰자 업체명이나 대표자를 입력하세요.");
+  const em=(state.client.email||"").trim();
+  if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return alert("의뢰자 이메일 주소를 확인해 주세요.");
+  const old=state.esign;
+  if(old&&old.status==="signed") return alert("이미 서명이 완료된 계약서입니다.\n고칠 내용이 있으면 '견적 목록 → 복제'로 새 계약서를 만들어 주세요.");
+  const mailLine=`최종 계약서 받을 이메일: ${em||"(비어 있음 — 고객이 서명할 때 직접 입력)"}`;
+  if(old&&!confirm(`이전 서명 요청은 취소되고(이전 링크로는 서명할 수 없게 됩니다)\n지금 내용으로 새 서명 요청을 만듭니다.\n\n${mailLine}\n\n계속할까요?`)) return;
+  if(!old&&!confirm(`${state.client.name||state.client.ceo} 님께 보낼 서명 요청을 만듭니다.\n요청을 만든 시점의 계약서 내용이 그대로 고정됩니다.\n\n${mailLine}\n\n계속할까요?`)) return;
+  esBusy("서명 요청을 만드는 중…");
+  try{
+    if(old) await api({action:"cancel",id:old.id}).catch(()=>{});
+    esignMode=true; renderPreview();
+    const html=$$("#pages .page").map(p=>p.outerHTML).join("\n");
+    esignMode=false; renderPreview();
+    const css=$("#docCss").textContent+`\n:root{--green:${safeColor()}}`;
+    const r=await api({action:"create",html,css,summary:esSummary(),card:profile.card||"",logo:profile.logo||""});
+    state.esign={id:r.id,docNo:r.docNo,hash:r.hash,requestedAt:r.requestedAt,link:esLink(r.id),status:"sent"};
+    state.status="대기"; state.clientSign="";
+    renderImages(); saveNow(); esBusy("");
+  }catch(e){ esignMode=false; renderPreview(); esBusy(""); alert("서명 요청을 만들지 못했습니다.\n"+e.message); }
+}
+async function esCancel(){
+  const e=state.esign; if(!e) return;
+  if(!confirm("서명 요청을 취소할까요?\n보낸 링크로는 더 이상 서명할 수 없습니다.")) return;
+  esBusy("취소하는 중…");
+  try{ await api({action:"cancel",id:e.id}); state.esign=null; saveNow(); }catch(err){ alert("취소하지 못했습니다.\n"+err.message); }
+  esBusy("");
+}
+async function esCopy(){
+  const link=state.esign&&state.esign.link; if(!link) return;
+  try{ await navigator.clipboard.writeText(link); alert("서명 링크를 복사했습니다.\n카카오톡 · 문자에 붙여넣어 보내세요."); }
+  catch(e){ prompt("아래 링크를 복사해서 보내세요.",link); }
+}
+let kakaoP=null;
+function loadKakao(){
+  if(window.Kakao) return Promise.resolve(window.Kakao);
+  return kakaoP||(kakaoP=new Promise((res,rej)=>{
+    const s=document.createElement("script"); s.src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js"; s.crossOrigin="anonymous";
+    s.onload=()=>res(window.Kakao); s.onerror=()=>{kakaoP=null;rej(new Error("카카오 SDK를 불러오지 못했습니다."))}; document.head.appendChild(s);
+  }));
+}
+async function esKakao(){
+  const e=state.esign; if(!e) return;
+  const fallback=why=>{ if(confirm(`${why}\n\n대신 서명 링크를 복사할까요? (카카오톡 대화창에 붙여넣기)`)) esCopy(); };
+  if(!/^https?:$/.test(location.protocol)) return fallback("카카오톡 보내기는 인터넷 주소로 연 작성기에서만 됩니다.");
+  try{
+    const K_=await loadKakao(), key=(profile.kakao.key||"").trim()||KAKAO_DEFAULT;
+    if(!K_.isInitialized()) K_.init(key);
+    const v=Object.assign(mailVars(),{"대표자":state.client.ceo||state.client.name||"고객","의뢰인":state.client.name||"","문서번호":e.docNo});
+    K_.Share.sendDefault({objectType:"text",text:tpl(profile.kakao.text,v).slice(0,200),
+      link:{mobileWebUrl:e.link,webUrl:e.link},buttonTitle:(profile.kakao.button||"계약서 확인 및 서명").slice(0,14)});
+  }catch(err){ fallback("카카오톡 보내기를 열지 못했습니다. ("+(err.message||err)+")"); }
+}
+function esApply(d,info){
+  Object.assign(d.esign,{status:"signed",signedAt:info.signedAt,signer:info.signer||{},viewedAt:info.viewedAt||d.esign.viewedAt,
+    finalUrl:info.finalUrl||"",finalSentAt:info.finalSentAt||"",stale:false});
+  if(info.signature) d.clientSign=info.signature;
+  d.status="완료";
+  const m=String(info.signedAt||"").match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) d.date={y:m[1],m:String(+m[2]),d:String(+m[3])};
+}
+const esNeedsCheck=e=>e&&e.id&&(e.status==="sent"||(e.status==="signed"&&!e.finalSentAt));
+let esChecking=false;
+async function esRefresh(manual){
+  if(!connected()){ if(manual) alert("서버 연결을 먼저 해 주세요."); return 0; }
+  if(esChecking) return 0;
+  const list=loadList(), map=new Map();
+  list.forEach(x=>{ const e=x.data&&x.data.esign; if(esNeedsCheck(e)) map.set(e.id,x.id); });
+  if(esNeedsCheck(state.esign)) map.set(state.esign.id,state.docId);
+  if(!map.size){ if(manual) renderEsign(); return 0; }
+  esChecking=true; if(manual) esBusy("서명 상태 확인 중…");
+  let r;
+  try{ r=await api({action:"status",ids:[...map.keys()]}); }
+  catch(err){ esChecking=false; if(manual){ esBusy(""); alert("서명 상태를 확인하지 못했습니다.\n"+err.message); } return 0; }
+  let changed=0, cur=null;
+  for(const [eid,info] of Object.entries(r.items||{})){
+    const docId=map.get(eid), x=list.find(v=>v.id===docId);
+    if(x&&x.data&&x.data.esign&&x.data.esign.id===eid){
+      const before=JSON.stringify(x.data.esign);
+      if(info.status==="signed"){ esApply(x.data,info); x.status="완료"; }
+      else if(info.viewedAt) x.data.esign.viewedAt=info.viewedAt;
+      if(JSON.stringify(x.data.esign)!==before){ x.updated=Date.now(); dirty.add(x.id); changed++; }
+    }
+    if(docId===state.docId&&state.esign&&state.esign.id===eid) cur=info;
+  }
+  storeList(list); storeQ(); pushSoon();
+  if(cur){
+    if(cur.status==="signed"){ esApply(state,cur); renderEditor(); renderPreview(); }
+    else if(cur.viewedAt) state.esign.viewedAt=cur.viewedAt;
+    lastSaved=JSON.stringify(state); lsSet(K.doc,state); renderEsign();
+  }
+  esChecking=false; esBusy("");
+  if(manual&&cur&&cur.status!=="signed") alert(cur.viewedAt?"아직 서명 전입니다. (고객이 계약서를 열어봤습니다)":"아직 서명 전입니다. (고객이 아직 열어보지 않았습니다)");
+  return changed;
+}
+function renderEsign(){
+  const e=state.esign, v=$("#esView");
+  let h="";
+  if(esBusyMsg) h=`<div class="es-st"><span class="es-badge none">${esc(esBusyMsg)}</span></div>`;
+  else if(!e){
+    h=`<p class="hint" style="margin:0 0 8px">계약서를 고객 휴대폰으로 보내 서명을 받습니다. 서명이 끝나면 <b>양측 서명이 들어간 동일한 계약서 PDF</b>가 고객과 우리 회사 메일로 자동 발송되고, 목록 진행상태가 <b>완료</b>로 바뀝니다.</p>
+      ${connected()?"":`<div class="es-warn">전자서명은 서버 연결 후에 쓸 수 있습니다. <a href="#" data-es="settings">회사 설정 → 서버 연결</a></div>`}
+      <div class="es-btns"><button type="button" class="btn go" data-es="create">서명 요청 만들기</button></div>`;
+  }else if(e.status==="signed"){
+    const sg=e.signer||{};
+    h=`<div class="es-st"><span class="es-badge signed">서명 완료</span><span>${esc(sg.name||"")}</span></div>
+      <div class="es-meta">문서번호 <b>${esc(e.docNo)}</b><br>계약 체결(서명 완료) <b>${esc(e.signedAt)}</b> · 서버 기준<br>
+      최종본 메일 ${e.finalSentAt?`발송 <b>${esc(e.finalSentAt)}</b> → ${esc(sg.email||"")} · ${esc(profile.name)}`:`<b>발송 확인 전</b> (잠시 후 [서명 확인]을 눌러 주세요)`}</div>
+      <div class="es-btns">${e.finalUrl?`<a class="btn go" href="${esc(e.finalUrl)}" target="_blank" rel="noopener" style="text-align:center;text-decoration:none">최종 계약서 PDF (드라이브)</a>`:""}<button type="button" class="btn" data-es="check">서명 확인</button></div>`;
+  }else{
+    h=`<div class="es-st"><span class="es-badge sent">서명 대기</span><span style="color:var(--ui-sub)">${e.viewedAt?"고객이 열어봄 · "+esc(e.viewedAt):"고객이 아직 열어보지 않음"}</span></div>
+      ${e.stale?`<div class="es-warn">서명 요청을 만든 뒤 견적서 내용이 바뀌었습니다. 고객에게는 <b>요청할 때의 내용</b>이 보입니다. 바뀐 내용으로 서명받으려면 [새로 요청]을 누르세요.</div>`:""}
+      <div class="es-meta">문서번호 <b>${esc(e.docNo)}</b> · 요청 ${esc(e.requestedAt)}<br>서명 링크 <b>${esc(e.link)}</b></div>
+      <div class="es-btns"><button type="button" class="btn kakao" data-es="kakao">카카오톡으로 보내기</button><button type="button" class="btn" data-es="copy">링크 복사</button></div>
+      <div class="es-btns" style="margin-top:6px"><button type="button" class="btn" data-es="check">서명 확인</button><button type="button" class="btn" data-es="create">새로 요청</button><button type="button" class="btn" data-es="cancel">요청 취소</button></div>`;
+  }
+  v.innerHTML=h;
+}
+$("#esView").addEventListener("click",e=>{
+  const a=e.target.closest("[data-es]")?.dataset.es; if(!a) return; e.preventDefault();
+  ({create:esCreate,cancel:esCancel,copy:esCopy,kakao:esKakao,check:()=>esRefresh(true),settings:()=>openSettings("conn")})[a]();
+});
+
+/* ===== 미리보기: 견적서 (원본 디자인 기준, 로고 없음) ===== */
+function quoteBlocks(p){
+  const c=state.client,s=profile,t=totals(p),items=p.items;
+  const out=[];
+  out.push(`<div class="qttl">${esc(p.quoteTitle||"견적서")}</div>
+  <table class="t party">
+    <colgroup><col style="width:5.1%"><col style="width:8.5%"><col style="width:23.5%"><col style="width:5.4%"><col style="width:9%"><col style="width:18.9%"><col style="width:10.5%"><col style="width:19.1%"></colgroup>
+    <tr><td class="vt" rowspan="5">의<br>뢰<br>자</td><td class="lb">업체명</td><td class="val">${esc(c.name)}</td>
+        <td class="vt" rowspan="5">수<br>행<br>자</td><td class="lb">등록번호</td><td class="val" colspan="3">${esc(s.bizno)}</td></tr>
+    <tr><td class="lb">대표자</td><td class="val"><div class="ceo"><span>${esc(c.ceo)}</span><span>귀하</span></div></td>
+        <td class="lb">상호명</td><td class="val" colspan="3">${esc(s.name)}</td></tr>
+    <tr><td class="lb">연락처</td><td class="val">${esc(c.phone)}</td><td class="lb">대표자</td><td class="val" colspan="3">${esc(String(s.ceo).split("").join(" "))}</td></tr>
+    <tr><td class="lb">견적일</td><td class="val">${esc(fmtDate(state.quoteDate))}</td><td class="lb">연락처</td><td class="val" colspan="3">${esc(s.phone)}</td></tr>
+    <tr><td class="lb">납품일</td><td class="val">${esc(p.deliver)}</td><td class="lb">업태</td><td>${esc(s.bizType)}</td><td class="lb">업종</td><td style="font-size:7.8pt">${esc(s.bizItem)}</td></tr>
+  </table>
+  <div class="lead">아래와 같이 견적 드립니다<i>……</i></div>`);
+  const rowsArr=items.slice();
+  while(rowsArr.length<2) rowsArr.push(null);
+  let rows="";
+  rowsArr.forEach((it,i)=>{
+    if(!it){ rows+=`<tr><td class="cat"></td><td class="desc"></td><td class="qty"></td><td></td><td></td></tr>`; return; }
+    let catCell="";
+    if(i===0||!rowsArr[i-1]||rowsArr[i-1].cat!==it.cat){
+      let span=1;while(i+span<rowsArr.length&&rowsArr[i+span]&&rowsArr[i+span].cat===it.cat)span++;
+      catCell=`<td class="cat" rowspan="${span}">${esc(it.cat)}</td>`;
+    }
+    const pr=has(it.price)?won(it.price):"";
+    let amt=pr, note=esc(it.note);
+    if(it.mode==="service") amt=`${pr?`<span class="strike">${pr}</span> `:""}<span class="svc">서비스</span>`;
+    else if(it.mode==="monthly") amt=pr?`월 ${pr}`:"";
+    else if(it.mode==="exclude") amt="별도";
+    else if(has(it.amount)&&has(it.price)&&Number(it.amount)!==Number(it.price)){ amt=`<span class="strike">${pr}</span>`; note=`${note}${note?"<br>":""}${won(it.amount)}`; }
+    else if(has(it.amount)) amt=won(it.amount);
+    rows+=`<tr>${catCell}<td class="desc">${esc(it.desc)}${it.sub?`<small>${esc(it.sub)}</small>`:""}</td><td class="qty"${it.mode==="monthly"?' style="font-weight:700"':""}>${esc(it.qty)}</td><td class="amt">${amt}</td><td class="note">${note}</td></tr>`;
+  });
+  const v=n=>n?won(n):"";
+  out.push(`<table class="t items">
+    <colgroup><col style="width:17%"><col style="width:32.5%"><col style="width:8.5%"><col style="width:22%"><col style="width:20%"></colgroup>
+    <tr><th>구성</th><th>세부항목</th><th>수량</th><th>금액</th><th>비고</th></tr>${rows}</table>`);
+  const extra=[];
+  if(state.showWords&&t.total) extra.push(`일금 ${korWon(t.total)}원정 (₩${won(t.total)})`);
+  if(s.account) extra.push(`<b>입금 계좌</b> : ${esc(s.account)}`);
+  if(p.extra) extra.push(esc(fill(p.extra,p)));
+  out.push(`<div class="totals">
+    <div class="row"><div class="cell">계약금(${t.rate}%).<b>${v(t.dep)}</b></div><div class="cell">잔금(${100-t.rate}%).<b>${v(t.bal)}</b></div></div>
+    ${state.vatMode==="include"
+      ?`<div class="row"><div class="cell">공급가액 .<b>${v(t.supply)}</b></div><div class="cell">부가세 .<b>${v(t.vat)}</b></div></div>
+        <div class="row"><div class="cell"></div><div class="cell">총 액 .<b>${v(t.total)}</b></div></div>`
+      :`<div class="row"><div class="cell">공급가액 .<b>${v(t.supply)}</b></div><div class="cell">총 액 .<b>${v(t.total)}</b></div></div>`}
+  </div>
+  <div class="vatn">${state.vatMode==="include"?"부가세 10%가 포함된 금액입니다.":"계산서 발행시 VAT 10% 발생됩니다."}</div>
+  ${extra.map(x=>`<div class="qx">${x}</div>`).join("")}`);
+  const list=p.notices.filter(x=>String(x).trim());
+  if(p.noticeIntro||list.length) out.push(`<fieldset class="notice"><legend>작업안내 및 안내사항.</legend>
+    ${p.noticeIntro?`<p>${bold(esc(fill(p.noticeIntro,p))).replace(/\n/g,"<br>")}</p>`:""}
+    <ul>${list.map(x=>`<li>- ${bold(esc(fill(x,p)))}</li>`).join("")}</ul></fieldset>`);
+  return out;
+}
+/* ===== 미리보기: 계약서 ===== */
+function termBody(text,p){
+  return esc(fill(text,p)).split("\n").map(l=>{
+    if(!l.trim()) return `<div class="ln gap"></div>`;
+    const cls=/^\s*-\s/.test(l)?" d":/^\s*\d+\.\s/.test(l)?" n":"";
+    return `<div class="ln${cls}">${l}</div>`;
+  }).join("");
+}
+function contractBlocks(p){
+  const c=state.client,s=profile,out=[];
+  const ttl=p.contractTitle||"계약서";
+  out.push(`<div class="cttl${ttl.length>18?" sm":""}">${esc(ttl)}</div>`);
+  if(p.intro) out.push(`<div class="intro">${blankLine(esc(fill(p.intro,p,true))).replace(/\n/g,"<br>")}</div>`);
+  p.terms.forEach((tm,i)=>out.push(`<div class="art"><b>제${i+1}조 【${esc(tm.title)}】</b>${blankLine(termBody(tm.body,p))}</div>`));
+  const d=esignMode?{y:"",m:"",d:""}:state.date,bl="&nbsp;&nbsp;&nbsp;";
+  const cs=state.clientSign&&!esignMode?`<img src="${state.clientSign}" alt="">`:"";
+  const ss=s.sign?`<img src="${s.sign}" alt="">`:"";
+  out.push(`<div>
+    <div class="closing">본 계약의 성립을 증명하기 위하여 계약서 2부를 작성하고, 의뢰자와 수행자가 서명 날인한 후 각 1부씩 보관한다.</div>
+    <div class="cdate" data-cdate data-blank="${d.y&&d.m&&d.d?0:1}">${esc(d.y)||bl} 년 ${esc(d.m)||bl} 월 ${esc(d.d)||bl} 일</div>
+    <table class="t sg">
+      <colgroup><col style="width:18%"><col style="width:32%"><col style="width:17.5%"><col style="width:32.5%"></colgroup>
+      <tr><th colspan="2">의뢰자</th><th colspan="2">수행자</th></tr>
+      <tr><td>상호명</td><td>${esc(c.name)}</td><td>상호명</td><td>${esc(s.name)}</td></tr>
+      <tr><td>대표자</td><td><div class="nm"><span>${esc(c.ceo)}</span><span class="seal" data-client-seal>${cs}(인)</span></div></td>
+          <td>대표자</td><td><div class="nm"><span>${esc(s.ceo)}</span><span class="seal">${ss}(인)</span></div></td></tr>
+    </table></div>`);
+  return out;
+}
+/* ===== 페이지 나누기 ===== */
+function newPage(kind){
+  const p=document.createElement("div");p.className="page";p.dataset.kind=kind;
+  const head=profile.logo?`<img class="logo" src="${profile.logo}" alt="">`:`<div class="logo-t">${esc(profile.name)}</div>`;
+  p.innerHTML=head+`<div class="rule"></div><div class="slogan">${esc(profile.slogan)}</div><div class="pb"></div>`;
+  $("#pages").appendChild(p);return p.querySelector(".pb");
+}
+function flow(kind,blocks){
+  let body=newPage(kind);
+  for(const html of blocks){
+    const tmp=document.createElement("div");tmp.innerHTML=html;
+    const nodes=[...tmp.childNodes];
+    nodes.forEach(nd=>body.appendChild(nd));
+    if(body.scrollHeight>body.clientHeight+1&&body.childNodes.length>nodes.length){
+      nodes.forEach(nd=>nd.remove()); body=newPage(kind); nodes.forEach(nd=>body.appendChild(nd));
+    }
+  }
+}
+function renderPreview(){
+  $("#pages").innerHTML="";
+  onProds().forEach(p=>{ flow("quote",quoteBlocks(p)); flow("contract",contractBlocks(p)); });
+  if(!onProds().length) $("#pages").innerHTML=`<div class="lempty" style="background:#fff;border-radius:10px;padding:40px">왼쪽 [상품 선택]에서 상품을 하나 이상 고르세요.</div>`;
+  const pages=$$(".page"); pages.forEach((p,i)=>p.classList.toggle("last",i===pages.length-1));
+  updateSums(); applyZoom();
+}
+let rT; function schedule(){clearTimeout(rT);rT=setTimeout(renderPreview,120);}
+function applyZoom(){
+  document.documentElement.style.setProperty("--topbar-h",$(".topbar").offsetHeight+"px");
+  const z=$("#zoom").value,pages=$("#pages");
+  if(z==="fit"){
+    const pv=$("#preview"),cs=getComputedStyle(pv);
+    const w=pv.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight)-4,pw=210*96/25.4;
+    pages.style.zoom=Math.min(1,Math.max(.35,w/pw));
+  }else pages.style.zoom=z;
+}
+$("#zoom").onchange=applyZoom;
+addEventListener("resize",applyZoom);
+
+/* ===== 회사 색상 · 상단 표시 ===== */
+const safeColor=()=>/^#[0-9a-fA-F]{6}$/.test(profile.color||"")?profile.color:"#17320B";
+function applyBrand(){
+  document.documentElement.style.setProperty("--green",safeColor());
+  $("#topLogoBox").innerHTML=profile.logo?`<img src="${profile.logo}" alt="">`:`<span class="logo-t">${esc(profile.name||"견적")}</span>`;
+  $("#topName").textContent=`${profile.name?profile.name+" ":""}견적서 작성기`;
+  document.title=`${profile.name?profile.name+" ":""}견적서 작성기`;
+}
+
+/* ===== 시작 ===== */
+(async()=>{
+  applyBrand(); renderSync(); renderEditor(); renderPreview();
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(renderPreview);
+  // 초대 링크 (#connect=…) 로 열었을 때 자동 연결
+  const hc=location.hash.match(/connect=([^&]+)/);
+  if(hc){
+    const c=parseCode(hc[1]); history.replaceState(null,"",location.pathname+location.search);
+    if(c){
+      openSettings("conn");
+      if(!cfg.user){ const n=prompt("팀 공유 견적서에 연결합니다.\n목록에 '수정한 사람'으로 표시될 내 이름을 입력하세요.",""); if(n) cfg.user=n.trim(); $("#cUser").value=cfg.user||""; }
+      await doConnect(c.url,c.key,cfg.user);
+    }else alert("초대 링크가 올바르지 않습니다. 링크 전체를 다시 복사해서 열어 주세요.");
+  }else if(connected()) await syncAll();
+  if(!connected()&&!profile.name&&!lsGet(K.welcome,false)) $("#welcome").hidden=false;
+  esRefresh(false);
+  setInterval(async()=>{ if(document.hidden||!connected()) return; const n=await pull(); const m=await esRefresh(false); if((n||m)&&!$("#listModal").hidden) renderList(); },45000);
+  setInterval(()=>{ if(!document.hidden&&connected()) pullProfile(); },180000);
+})();
+$("#wGo").onclick=()=>{ $("#welcome").hidden=true; openSettings(profile.name?"conn":"co"); };
+$("#wClose").onclick=()=>{ $("#welcome").hidden=true; lsSet(K.welcome,true); };
+
+</script>
+</body>
+</html>

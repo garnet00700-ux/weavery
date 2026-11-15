@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>계약서 확인 및 서명</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--green:#17320B;--g1:#D9D9D9;--g2:#EDEDED;--body:#545454;--ui-border:#dcd8d0;--ui-sub:#6f6a64}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{background:#efede8;color:#222;font-family:"Noto Sans KR","맑은 고딕","Malgun Gothic",sans-serif;font-size:15px;-webkit-text-size-adjust:100%}
+.sg-top{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--ui-border)}
+.sg-top .bn{font-weight:800;color:var(--green);font-size:15px;max-width:40vw;line-height:1.2}
+.sg-top .t{font-weight:700;color:var(--green);font-size:15px;flex:1;line-height:1.3}
+.sg-top .t small{display:block;font-weight:400;color:var(--ui-sub);font-size:12px}
+.sg-wrap{max-width:840px;margin:0 auto;padding:16px}
+.sg-card{background:#fff;border:1px solid var(--ui-border);border-radius:12px;padding:18px 16px;margin-bottom:14px}
+.sg-card h2{margin:0 0 6px;font-size:17px;color:var(--green)}
+.sg-card p{margin:0 0 8px;line-height:1.65;font-size:14px;color:#333}
+.sg-meta{font-size:12.5px;color:var(--ui-sub);line-height:1.7}
+.sg-meta b{color:#222;font-weight:500}
+#doc{display:flex;flex-direction:column;align-items:center;gap:12px;margin:0 auto 14px}
+#doc .page{box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.sg-f{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;font-size:13px;color:var(--ui-sub)}
+.sg-f input{font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--ui-border);border-radius:8px;color:#111;width:100%}
+.sg-f input:focus{outline:2px solid #a9b89a;border-color:transparent}
+.sg-agree{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:8px;background:#f4f6f1;font-size:14px;line-height:1.6;color:#222;margin:4px 0 14px;cursor:pointer}
+.sg-agree input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--green)}
+.pad-box{position:relative;border:1.5px dashed #b9b4aa;border-radius:10px;background:#fff;touch-action:none}
+.pad-box canvas{display:block;width:100%;height:190px;border-radius:10px;cursor:crosshair}
+.pad-box .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#b3ada3;font-size:15px;pointer-events:none}
+.pad-tools{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:12.5px;color:var(--ui-sub)}
+.btn{border:1px solid var(--ui-border);background:#fff;color:#222;padding:8px 14px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer;white-space:nowrap;flex:none}
+.btn.big{width:100%;padding:15px;font-size:16px;font-weight:700;background:var(--green);color:#fff;border-color:var(--green);border-radius:10px;margin-top:14px}
+.btn.big:disabled{opacity:.45}
+.btn.line{background:#fff;color:var(--green);border-color:var(--green)}
+.sg-err{color:#b3261e;font-size:13.5px;margin-top:10px;min-height:1em}
+.sg-float{position:fixed;left:0;right:0;bottom:0;z-index:15;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(transparent,rgba(239,237,232,.96) 30%)}
+.sg-float .btn{width:100%;max-width:520px;display:block;margin:0 auto;padding:14px;font-size:16px;font-weight:700;background:var(--green);color:#fff;border-color:var(--green);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+.sg-done{text-align:center}
+.sg-done .ok{width:58px;height:58px;border-radius:50%;background:var(--green);color:#fff;font-size:30px;line-height:58px;margin:4px auto 10px}
+.sg-busy{position:fixed;inset:0;z-index:40;background:rgba(255,255,255,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;font-size:15px;color:#222;text-align:center;padding:20px}
+.sg-busy .spin{width:38px;height:38px;border:4px solid #d8dccf;border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+[hidden]{display:none!important}
+#render{position:fixed;left:-12000px;top:0;width:210mm}
+/* 전자서명 확인서 페이지 */
+.audit td,.audit th{font-size:9pt;height:9mm;text-align:left!important;padding:3px 8px!important}
+.audit th{background:var(--g2)!important;color:#000!important;font-weight:700;width:30%}
+.audit .hash{font-family:Consolas,monospace;font-size:8pt;word-break:break-all}
+.fstamp{position:absolute;left:0;right:0;bottom:3mm;text-align:center;font-size:6.8pt;color:#8a8a8a}
+</style>
+<style id="docCss"></style>
+</head>
+<body>
+<div class="sg-top"><span class="bn" id="topBrand"></span><div class="t">계약서 확인 및 서명<small id="topSub">불러오는 중…</small></div></div>
+
+<div class="sg-wrap">
+  <div class="sg-card" id="msg" hidden></div>
+
+  <div id="intro" class="sg-card" hidden>
+    <h2 id="introTitle">계약서를 확인해 주세요</h2>
+    <p>아래 계약서 전체 내용을 확인하신 뒤, 맨 아래에서 서명해 주세요. 서명이 끝나면 <b>양측 서명이 들어간 동일한 최종 계약서</b>가 입력하신 이메일과 <span class="supn">보낸 회사</span>에 함께 발송됩니다.</p>
+    <div class="sg-meta" id="introMeta"></div>
+  </div>
+
+  <div id="doc"></div>
+
+  <div id="signCard" class="sg-card" hidden>
+    <h2>서명하기</h2>
+    <p class="sg-meta" style="margin-bottom:12px">최종 계약서를 받으실 이메일이 맞는지 확인해 주세요. 다르면 고쳐서 입력하시면 됩니다.</p>
+    <label class="sg-f">서명자 이름 (대표자)<input id="fName" autocomplete="name"></label>
+    <label class="sg-f">연락처<input id="fPhone" type="tel" autocomplete="tel"></label>
+    <label class="sg-f">이메일 (최종 계약서 수신)<input id="fEmail" type="email" autocomplete="email" inputmode="email" placeholder="example@email.com"></label>
+    <label class="sg-agree"><input type="checkbox" id="fAgree"><span>위 계약서 전체 내용을 확인하였으며, 이 전자서명이 <b>자필 서명과 동일한 효력</b>을 가지는 것에 동의합니다.</span></label>
+    <div class="pad-box"><canvas id="pad"></canvas><div class="ph" id="padPh">여기에 손가락(마우스)으로 서명해 주세요</div></div>
+    <div class="pad-tools"><span>서명은 계약서의 의뢰자 (인) 자리에 들어갑니다.</span><button class="btn" type="button" id="padClear">다시 쓰기</button></div>
+    <button class="btn big" type="button" id="bSubmit" disabled>서명 완료하기</button>
+    <div class="sg-err" id="err"></div>
+  </div>
+
+  <div id="doneCard" class="sg-card sg-done" hidden>
+    <div class="ok">✓</div>
+    <h2>서명이 완료되었습니다</h2>
+    <p id="doneText"></p>
+    <div class="sg-meta" id="doneMeta" style="text-align:left;margin:12px 0"></div>
+    <button class="btn line" type="button" id="bDown" hidden>최종 계약서 PDF 내려받기</button>
+  </div>
+</div>
+
+<div class="sg-float" id="float" hidden><button class="btn" type="button" id="goSign">계약서 확인 후 서명하기 ↓</button></div>
+<div class="sg-busy" id="busy" hidden><div class="spin"></div><div id="busyText">처리 중…</div></div>
+<div id="render"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const API=(()=>{ const q=new URLSearchParams(location.search), a=q.get("a")||""; if(location.hostname==="localhost"&&q.get("api")) return q.get("api"); return /^[A-Za-z0-9_-]{20,}$/.test(a)?"https://script.google.com/macros/s/"+a+"/exec":""; })();
+const SUP=()=>(DOC&&DOC.supplier&&DOC.supplier.name)||"보낸 회사";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const id=new URLSearchParams(location.search).get("id")||"";
+let DOC=null, pdfBlob=null;
+
+function busy(t){ $("#busy").hidden=!t; if(t) $("#busyText").innerHTML=t; }
+function message(html){ $("#msg").innerHTML=html; $("#msg").hidden=false; $("#topSub").textContent=""; }
+async function api(body){
+  const r=await fetch(API,{method:"POST",body:JSON.stringify(body)});
+  const j=await r.json(); if(!j.ok) throw new Error(j.error||"요청 실패"); return j;
+}
+// 계약서 HTML 안의 로고 자리표시를 이 사이트의 로고 파일로
+const fixAssets=h=>String(h).replace(/__LOGO__/g,"logo.png").replace(/__LOGO_ICON__/g,"logo-icon.png");
+
+function fitDoc(){
+  const wrap=$(".sg-wrap"), cs=getComputedStyle(wrap);
+  const w=wrap.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight), pw=210*96/25.4;
+  $("#doc").style.zoom=Math.min(1,w/pw);
+}
+addEventListener("resize",fitDoc);
+
+async function load(){
+  if(!API){ message("<h2>잘못된 링크입니다</h2><p>받으신 링크 전체를 다시 확인해 주세요.</p>"); return; }
+  if(!id){ message("<h2>잘못된 링크입니다</h2><p>받으신 링크를 다시 확인해 주세요.</p>"); return; }
+  busy("계약서를 불러오는 중…");
+  try{
+    const r=await fetch(API+"?action=doc&id="+encodeURIComponent(id));
+    DOC=await r.json();
+    if(!DOC.ok) throw new Error(DOC.error);
+  }catch(e){ busy(); message(`<h2>계약서를 열 수 없습니다</h2><p>${esc(e.message)}</p>`); return; }
+  busy();
+  $("#docCss").textContent=DOC.css;
+  const col=(DOC.brand&&DOC.brand.color)||""; if(/^#[0-9a-fA-F]{6}$/.test(col)) document.documentElement.style.setProperty("--green",col);
+  $("#topBrand").textContent=SUP(); document.querySelectorAll(".supn").forEach(e=>e.textContent=SUP()); document.title=`${SUP()} · 계약서 확인 및 서명`;
+  $("#doc").innerHTML=fixAssets(DOC.html);
+  fitDoc();
+  $("#topSub").textContent=`${DOC.client.name||""} · 문서번호 ${DOC.docNo}`;
+  $("#introTitle").textContent=DOC.title||"계약서를 확인해 주세요";
+  $("#introMeta").innerHTML=`문서번호 <b>${esc(DOC.docNo)}</b><br>서명 요청 <b>${esc(DOC.requestedAt)}</b><br>문서 고유번호 <b style="font-family:Consolas,monospace;font-size:11px;word-break:break-all">${esc(DOC.hash)}</b>`;
+  $("#intro").hidden=false;
+  if(DOC.status==="signed"){ showSigned(); return; }
+  $("#fName").value=DOC.client.ceo||""; $("#fPhone").value=DOC.client.phone||""; $("#fEmail").value=DOC.client.email||"";
+  $("#signCard").hidden=false; $("#float").hidden=false;
+  initPad();
+}
+
+/* ===== 서명 패드 ===== */
+let pad,ctx,drawing=false,hasInk=false,last=null;
+function initPad(){
+  pad=$("#pad"); ctx=pad.getContext("2d");
+  const size=()=>{ const r=pad.getBoundingClientRect(),dpr=devicePixelRatio||1; const keep=hasInk?pad.toDataURL():null;
+    pad.width=r.width*dpr; pad.height=r.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.lineWidth=2.6; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#111";
+    if(keep){const i=new Image();i.onload=()=>ctx.drawImage(i,0,0,r.width,r.height);i.src=keep;} };
+  size(); addEventListener("resize",size);
+  const pos=e=>{const r=pad.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}};
+  pad.addEventListener("pointerdown",e=>{ drawing=true; last=pos(e); pad.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last.x,last.y,1.2,0,7); ctx.fillStyle="#111"; ctx.fill(); ink(); });
+  pad.addEventListener("pointermove",e=>{ if(!drawing) return; const p=pos(e); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+  const end=()=>{drawing=false}; pad.addEventListener("pointerup",end); pad.addEventListener("pointercancel",end);
+  $("#padClear").onclick=()=>{ ctx.clearRect(0,0,pad.width,pad.height); hasInk=false; $("#padPh").hidden=false; check(); };
+  ["fName","fEmail","fAgree"].forEach(k=>$("#"+k).addEventListener("input",check));
+  $("#fAgree").addEventListener("change",check);
+  $("#bSubmit").onclick=submit;
+  $("#goSign").onclick=()=>$("#signCard").scrollIntoView({behavior:"smooth"});
+  new IntersectionObserver(es=>{ $("#float").hidden=es[0].isIntersecting||!$("#doneCard").hidden; }).observe($("#signCard"));
+}
+function ink(){ hasInk=true; $("#padPh").hidden=true; check(); }
+function check(){ $("#bSubmit").disabled=!(hasInk&&$("#fName").value.trim()&&$("#fEmail").value.trim()&&$("#fAgree").checked); }
+function sigPng(){                       // 여백을 잘라낸 투명 PNG
+  const w=pad.width,h=pad.height,d=ctx.getImageData(0,0,w,h).data;
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){ if(d[(y*w+x)*4+3]>10){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; } }
+  const p=12; x0=Math.max(0,x0-p); y0=Math.max(0,y0-p); x1=Math.min(w-1,x1+p); y1=Math.min(h-1,y1+p);
+  const o=document.createElement("canvas"); o.width=x1-x0+1; o.height=y1-y0+1;
+  o.getContext("2d").drawImage(pad,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return o.toDataURL("image/png");
+}
+
+/* ===== 제출 → 서버 시각 기록 → 최종 PDF → 양측 메일 ===== */
+async function submit(){
+  $("#err").textContent="";
+  const email=$("#fEmail").value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ $("#err").textContent="이메일 주소를 확인해 주세요."; return; }
+  if(!confirm("서명을 완료할까요?\n완료 후에는 수정할 수 없습니다.")) return;
+  const signature=sigPng();
+  busy("서명을 저장하는 중…");
+  let res;
+  try{
+    res=await api({action:"sign",id,name:$("#fName").value.trim(),phone:$("#fPhone").value.trim(),email,agree:true,signature,ua:navigator.userAgent});
+  }catch(e){ busy(); $("#err").textContent=e.message; return; }
+  Object.assign(DOC,{status:"signed",signedAt:res.signedAt,viewedAt:res.viewedAt||DOC.viewedAt,
+    signer:{name:$("#fName").value.trim(),email,phone:$("#fPhone").value.trim(),ua:navigator.userAgent},signature});
+  await finalize(true);
+}
+
+async function finalize(fresh){
+  let sent=false;
+  try{
+    busy("양측 서명이 들어간 최종 계약서를 만드는 중…<br><small>잠시만 기다려 주세요</small>");
+    const pdf=await buildPdf();
+    pdfBlob=pdf.output("blob");
+    busy("최종 계약서를 메일로 보내는 중…");
+    const b64=pdf.output("datauristring");
+    const r=await api({action:"final",id,pdf:b64});
+    sent=true;
+  }catch(e){ console.error(e); }
+  busy();
+  showDone(sent,fresh);
+}
+
+function showSigned(){
+  $("#signCard").hidden=true; $("#float").hidden=true;
+  renderSignedView();
+  if(!DOC.finalSent){ finalize(false); return; }      // 서명은 됐는데 최종본이 아직이면 다시 만들어 발송
+  showDone(true,false);
+}
+function showDone(sent,fresh){
+  $("#signCard").hidden=true; $("#float").hidden=true; $("#doneCard").hidden=false;
+  renderSignedView();
+  const s=DOC.signer||{};
+  $("#doneText").innerHTML=sent
+    ? `양측 서명이 들어간 <b>동일한 최종 계약서</b>가<br><b>${esc(s.email)}</b> 과 ${esc(SUP())}에 메일로 발송되었습니다.`
+    : `서명은 정상 저장되었습니다.<br>최종 계약서 메일 발송 중 문제가 생겨 ${esc(SUP())}에서 확인 후 보내드리겠습니다.`;
+  $("#doneMeta").innerHTML=`문서번호 <b>${esc(DOC.docNo)}</b><br>계약 체결(서명 완료) <b>${esc(DOC.signedAt)}</b> <span>· 서버 기준</span><br>서명자 <b>${esc(s.name)}</b>`;
+  $("#bDown").hidden=!pdfBlob;
+  $("#bDown").onclick=()=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(pdfBlob); a.download=`${DOC.docNo}_계약서(서명완료).pdf`; a.click(); };
+  if(fresh) $("#doneCard").scrollIntoView({behavior:"smooth"});
+}
+
+/* 화면에 서명된 계약서 표시 */
+function renderSignedView(){
+  const box=document.createElement("div"); box.innerHTML=fixAssets(DOC.html);
+  applySignature(box,false);
+  $("#doc").innerHTML=box.innerHTML; fitDoc();
+}
+
+/* 계약서에 의뢰자 서명 · 계약일(서버 기준) 넣기 */
+function applySignature(root,forPdf){
+  root.querySelectorAll("[data-client-seal]").forEach(s=>{ s.innerHTML=`<img src="${DOC.signature}" alt="">(인)`; });
+  const m=String(DOC.signedAt||"").match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m) root.querySelectorAll("[data-cdate]").forEach(d=>{
+    if(d.dataset.blank==="1") d.innerHTML=`${m[1]} 년 &nbsp; ${+m[2]} 월 &nbsp; ${+m[3]} 일`;
+  });
+  if(forPdf){
+    const pages=[...root.querySelectorAll(".page")], N=pages.length+1;
+    pages.forEach((p,i)=>p.insertAdjacentHTML("beforeend",stamp(i+1,N)));
+    root.insertAdjacentHTML("beforeend",auditPage(pages[0],N));
+  }
+}
+const stamp=(i,N)=>`<div class="fstamp">문서번호 ${esc(DOC.docNo)} · 계약 체결(서명 완료) ${esc(DOC.signedAt)} 서버 기준 · ${i} / ${N}</div>`;
+function auditPage(first,N){
+  const head=first?[...first.querySelectorAll(".logo,.rule,.slogan")].map(e=>e.outerHTML).join(""):"";
+  const s=DOC.signer||{};
+  const tr=(k,v)=>`<tr><th>${k}</th><td>${v}</td></tr>`;
+  return `<div class="page" data-kind="audit">${head}<div class="pb">
+    <div class="cttl" style="margin-top:2mm">전자서명 확인서</div>
+    <table class="t audit">
+      ${tr("문서번호",esc(DOC.docNo))}
+      ${tr("계약서",esc(DOC.title||""))}
+      ${tr("문서 고유번호<br><small>SHA-256 · 서명 요청 시 원본</small>",`<span class="hash">${esc(DOC.hash)}</span>`)}
+      ${tr("서명 요청 일시",esc(DOC.requestedAt)+" · 서버 기준")}
+      ${tr("계약서 열람 일시",esc(DOC.viewedAt||"-")+" · 서버 기준")}
+      ${tr("<b>계약 체결(서명 완료) 일시</b>",`<b>${esc(DOC.signedAt)}</b> · 서버 기준`)}
+      ${tr("의뢰자",esc(DOC.client.name||""))}
+      ${tr("서명자",`${esc(s.name)}${s.phone?" · "+esc(s.phone):""}<br>${esc(s.email)}`)}
+      ${tr("서명 기기",`<span style="font-size:7.5pt;color:#545454">${esc((s.ua||"").slice(0,180))}</span>`)}
+      ${tr("의뢰자 서명",`<img src="${DOC.signature}" alt="" style="height:16mm;vertical-align:middle">`)}
+      ${tr("수행자",`${esc(SUP())}${DOC.supplier&&DOC.supplier.ceo?" · 대표 "+esc(DOC.supplier.ceo):""} (서명 요청 시 서명 날인)`)}
+    </table>
+    <p style="margin:6mm 2mm 0;font-size:9pt;line-height:1.7;color:#333">
+      의뢰자는 위 일시에 계약서 전체 내용을 확인하고 「위 계약서 전체 내용을 확인하였으며, 이 전자서명이 자필 서명과 동일한 효력을 가지는 것에 동의합니다」에 동의한 뒤 전자서명하였습니다.<br>
+      모든 일시는 서버(Google) 기준 한국 표준시(KST)입니다. 문서 고유번호는 서명 요청 시점의 계약서 원본으로 계산되며, 내용이 한 글자라도 바뀌면 번호가 달라집니다.<br>
+      본 계약서는 양측 서명 완료 즉시 의뢰자와 ${esc(SUP())}에 동일한 파일로 발송되었습니다.
+    </p></div>${stamp(N,N)}</div>`;
+}
+
+async function buildPdf(){
+  if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+  const box=$("#render"); box.innerHTML=fixAssets(DOC.html);
+  applySignature(box,true);
+  await Promise.all([...box.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  const { jsPDF }=window.jspdf;
+  const pdf=new jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+  const pages=[...box.querySelectorAll(".page")];
+  for(let i=0;i<pages.length;i++){
+    const c=await html2canvas(pages[i],{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false});
+    if(i) pdf.addPage();
+    pdf.addImage(c.toDataURL("image/jpeg",0.9),"JPEG",0,0,210,297,undefined,"FAST");
+  }
+  pdf.setProperties({title:`${DOC.docNo} ${DOC.title||"계약서"} (서명완료)`,subject:"SHA-256 "+DOC.hash,author:SUP(),creator:"전자계약"});
+  box.innerHTML="";
+  return pdf;
+}
+
+load();
+</script>
+</body>
+</html>
