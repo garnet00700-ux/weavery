@@ -1147,7 +1147,7 @@ $("#editor").addEventListener("click",e=>{
 $("#bAddProd").onclick=()=>{
   const name=prompt("새 상품 종류 이름을 입력하세요.\n(예: 인테리어 시공, 촬영, 디자인, 컨설팅)");
   if(!name||!name.trim()) return;
-  const p=GENERIC_PRODUCT(); p.name=name.trim(); p.quoteTitle=`${p.name} 견적서`; p.contractTitle=`${p.name} 계약서`;
+  const p=GENERIC_PRODUCT(); p.name=name.trim(); p.quoteTitle=DOC_NAME.test(p.name)?p.name:`${p.name} 견적서`; p.contractTitle=`${p.name} 계약서`;
   p.items=[ITEM(p.name,"","","1식","","normal")];
   P().push(p); profile.templates.push(clone(p)); saveProfile();
   openSet.add(`p${p.pid}-cfg`);
@@ -1778,11 +1778,17 @@ $("#esView").addEventListener("click",e=>{
   ({create:esCreate,cancel:esCancel,copy:esCopy,kakao:esKakao,check:()=>esRefresh(true),settings:()=>openSettings("conn")})[a]();
 });
 
+// 상품 이름이 이미 문서 이름(거래명세서 · 청구서 …)이면 뒤에 '견적서'를 붙이지 않고 그대로 제목으로
+const DOC_NAME=/(명세서|명세표|견적서|계약서|청구서|계산서|영수증|확인서|제안서|내역서|발주서|주문서|의뢰서|요청서|신청서)$/;
+function quoteTitleOf(p){
+  const t=(p.quoteTitle||"견적서").trim(), n=(p.name||"").trim();
+  return n&&DOC_NAME.test(n)&&t===`${n} 견적서`?n:t;
+}
 /* ===== 미리보기: 견적서 (원본 디자인 기준, 로고 없음) ===== */
 function quoteBlocks(p){
   const c=state.client,s=profile,t=totals(p),items=p.items;
   const out=[];
-  out.push(`<div class="qttl">${esc(p.quoteTitle||"견적서")}</div>
+  out.push(`<div class="qttl">${esc(quoteTitleOf(p))}</div>
   <table class="t party">
     <colgroup><col style="width:5.1%"><col style="width:8.5%"><col style="width:23.5%"><col style="width:5.4%"><col style="width:9%"><col style="width:18.9%"><col style="width:10.5%"><col style="width:19.1%"></colgroup>
     <tr><td class="vt" rowspan="5">의<br>뢰<br>자</td><td class="lb">업체명</td><td class="val">${esc(c.name)}</td>
@@ -2064,16 +2070,18 @@ function qiParseClient(text){
   const own=v=>v&&[profile.name,profile.ceo,profile.phone,profile.email].some(o=>o&&String(o).replace(/\s|-/g,"")===String(v).replace(/\s|-/g,""));
   const clean=s=>String(s||"").replace(/\t.*/,"").replace(/\(인\)|\(서명\)|귀\s*하|귀\s*중|님$/g,"").replace(/^[\s:：]+|[\s:：]+$/g,"").trim();
   const c={name:"",ceo:"",phone:"",email:"",date:""};
+  // 칸 이름표(대표자 · 업체명 · 귀하 …)를 값으로 잘못 읽지 않게
+  const lbl=v=>/^(대\s*표\s*(자|이사)?|업\s*체\s*명?|상\s*호(\s*명)?|회\s*사\s*명|연\s*락\s*처|전\s*화(\s*번\s*호)?|성\s*명|담\s*당\s*자?|주\s*소|이\s*메\s*일|견\s*적\s*일|납\s*품\s*일|귀\s*하|귀\s*중|님|의\s*뢰\s*자|수\s*행\s*자)$/.test(String(v||"").trim());
   let m=text.match(/(?:^|\n|\t)\s*([^\t\n:：]{2,40}?)\s*(?:님\s*)?(?:귀\s*하|귀\s*중|貴\s*中|貴\s*下)/);
-  if(m&&!own(clean(m[1]))) c.name=clean(m[1]);
+  if(m&&!own(clean(m[1]))&&!lbl(clean(m[1]))) c.name=clean(m[1]);
   if(!c.name){
     // 받는 쪽을 뜻하는 이름표를 먼저 보고, 없으면 상호 · 회사명 (보내는 쪽 상호일 수 있어 나중에)
     const res=[/(?:수\s*신(?:\s*처)?|고\s*객\s*명|의\s*뢰\s*(?:인|처|자)|발\s*주\s*처|거\s*래\s*처|client|customer|bill\s*to)\s*[:：]?\s*\t?\s*([^\t\n]{1,40})/gi,
       /(?:업\s*체\s*명|회\s*사\s*명|상\s*호(?:\s*명)?)\s*[:：]?\s*\t?\s*([^\t\n]{1,40})/g];
-    for(const re of res){ while((m=re.exec(text))){ const v=clean(m[1]); if(v&&!own(v)&&!/^(대\s*표|전\s*화|주\s*소|성\s*명)/.test(v)){ c.name=v; break; } } if(c.name) break; }
+    for(const re of res){ while((m=re.exec(text))){ const v=clean(m[1]); if(v&&!own(v)&&!lbl(v)&&!/^(대\s*표|전\s*화|주\s*소|성\s*명)/.test(v)){ c.name=v; break; } } if(c.name) break; }
   }
   const rc=/(?:대\s*표\s*(?:자|이사)?|담\s*당\s*자?|성\s*명|받\s*는\s*분)\s*[:：]?\s*\t?\s*([가-힣]{2,4})(?![가-힣])/g;
-  while((m=rc.exec(text))){ if(!own(m[1])&&!/^(이사|님)$/.test(m[1])){ c.ceo=m[1]; break; } }
+  while((m=rc.exec(text))){ if(!own(m[1])&&!lbl(m[1])&&!/^(이사|님)$/.test(m[1])){ c.ceo=m[1]; break; } }
   for(const p of text.match(/0\d{1,2}[-.)\s]?\d{3,4}[-.\s]?\d{4}/g)||[]) if(!own(p)){ c.phone=p.replace(/[.)\s]/g,"-").replace(/-+/g,"-"); break; }
   for(const e of text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g)||[]) if(!own(e)){ c.email=e; break; }
   const dRe=/(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/;
