@@ -2275,10 +2275,9 @@ async function qiDesign(f){
   return out.logo||out.seal||out.color||out.tbl?out:null;
 }
 
-/* ===== 초대 코드: weavery lab이 발급한 코드가 있어야 작성기를 씁니다 =====
-   - 처음 입장할 때 코드를 묻되, 작성기 화면을 뒤에 흐리게 보여 주고 weavery lab 이름 · 설명 · 안내서 링크를 함께 둡니다.
-     (예전처럼 빈 화면에 코드 칸만 두면 크롬이 피싱 화면으로 오해해 '위험한 사이트' 경고를 띄웠음)
-   - PDF · 인쇄 직전에도 한 번 더 확인합니다 (중지된 코드 막기).
+/* ===== 초대 코드: weavery lab이 발급한 코드가 있어야 PDF 다운로드 · 인쇄를 할 수 있습니다 =====
+   - 작성기 화면은 바로 열리고, 견적서를 밖으로 내보낼 때(PDF · 전자서명용 PDF · 인쇄)만 코드를 묻습니다.
+     (입장할 때 코드 창을 띄우면 빈 화면이든 작성기를 뒤에 보여 주든 크롬이 피싱으로 오해해 '위험한 사이트' 경고를 띄웠음 — 2026-11-16 두 번 확인)
    - 컴퓨터(브라우저)마다 처음 한 번만 넣고, 그 뒤로는 하루 한 번 몰래 확인만 합니다.
    - 같은 팀 서버에 연결된 직원은 대표가 넣은 코드를 자동으로 함께 씁니다.
    - 확인 서버에는 코드 · 상호 · 연결된 서버 주소만 보냅니다 (견적서 내용은 보내지 않음).
@@ -2310,9 +2309,9 @@ async function licGate(){
     }catch(e){}
     return;
   }
-  // 코드가 없으면: 같은 팀 서버에 등록된 코드(또는 기존 사용자 자동 등록)가 있는지 먼저 보고, 없으면 코드 입력 창
-  if(!st.stop){ try{ const r=await licCheck("",server); if(r.ok){ licSave({code:r.code,at:Date.now()}); return; } }catch(e){} }
-  await licAsk(st.stop==="stopped"?"사용이 중지된 코드입니다. weavery lab에 문의해 주세요.":"",true);
+  // 코드가 없으면: 같은 팀 서버에 등록된 코드(또는 기존 사용자 자동 등록)가 있는지만 조용히 확인.
+  // 입장할 때 코드 창을 띄우면 (작성기를 뒤에 보여 줘도) 크롬이 '위험한 사이트'로 막아서, 코드는 PDF · 인쇄 때만 묻습니다.
+  if(!st.stop){ try{ const r=await licCheck("",server); if(r.ok) licSave({code:r.code,at:Date.now()}); }catch(e){} }
 }
 // 내보내기(PDF · 인쇄) 직전에 부릅니다. 쓸 수 있으면 true, 사용자가 닫으면 false.
 async function licRequire(){
