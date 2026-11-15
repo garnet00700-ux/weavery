@@ -230,6 +230,8 @@ textarea{resize:vertical;line-height:1.5}
 .qi-mode{font-size:12px;color:var(--ui-sub);padding:0 6px}
 .qi-ok{color:#1e6b2a;font-weight:500;font-size:12.5px;margin-left:8px}
 .qi-warn{color:#9a5b00;font-weight:500;font-size:12.5px;margin-left:8px}
+/* 상단바는 회사 대표 색 · 로고가 바뀌어도 원래 모양 그대로 */
+.topbar{--green:#17320B}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -481,6 +483,14 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         <label class="f" style="margin-top:10px">주소<input data-c="address"></label>
         <label class="f" style="margin-top:10px">입금 계좌 <span style="font-weight:400">(견적서 VAT 문구 아래에 표시)</span><input data-c="account" placeholder="예: 은행 000-0000-0000 (예금주 : 홍길동)"></label>
         <label class="f" style="margin-top:10px">상단 슬로건 <span style="font-weight:400">(견적서·계약서 오른쪽 위)</span><input data-c="slogan"></label>
+        <div class="sub" style="margin-top:14px">회사 로고 <span style="font-weight:400;color:var(--ui-sub)">(견적서·계약서 왼쪽 위, 메일 머리)</span></div>
+        <div class="signbox">
+          <div class="signprev cardprev" id="logoPrev2"></div>
+          <div class="btncol">
+            <button class="btn" type="button" onclick="document.getElementById('fLogo').click()">로고 이미지 올리기</button>
+            <button class="btn" type="button" onclick="document.getElementById('bLogoDel').click()">로고 없이 (상호 글자)</button>
+          </div>
+        </div>
         <div class="grid3" style="margin-top:10px">
           <label class="f">대표 색상<input type="color" data-c="color"></label>
           <label class="f">표 머리 색<input type="color" data-c="tbl"></label>
@@ -1149,7 +1159,7 @@ $("#sClose").onclick=closeSettings;
 $("#setModal").addEventListener("click",e=>{ if(e.target.id==="setModal") closeSettings(); });
 function renderSettings(){
   $$("#setModal [data-c]").forEach(el=>{ const v=getAt(profile,el.dataset.c); if(el.type==="checkbox") el.checked=!!v; else el.value=v??""; });
-  $("#logoPrev").innerHTML=profile.logo?`<img src="${profile.logo}" alt="로고">`:"로고 없음 (상호 글자)";
+  $("#logoPrev").innerHTML=$("#logoPrev2").innerHTML=profile.logo?`<img src="${profile.logo}" alt="로고">`:"로고 없음 (상호 글자)";
   $("#signPrev").innerHTML=profile.sign?`<img src="${profile.sign}" alt="사인">`:"사인 없음";
   $("#cardPrev").innerHTML=profile.card?`<img src="${profile.card}" alt="명함">`:"기본 명함 사용";
   $("#cUser").value=cfg.user||""; $("#cUrl").value=cfg.url||""; $("#cKey").value=cfg.key||"";
@@ -1889,7 +1899,7 @@ function applyBrand(){
   document.documentElement.style.setProperty("--green",safeColor());
   document.documentElement.style.setProperty("--g1",safeTbl());
   document.documentElement.style.setProperty("--g2",tblLight(safeTbl()));
-  $("#topLogoBox").innerHTML=profile.logo?`<img src="${profile.logo}" alt="">`:`<span class="logo-t">${esc(profile.name||"견적")}</span>`;
+  $("#topLogoBox").innerHTML=`<span class="logo-t">견적</span>`;   // 상단바는 회사 로고 · 색과 상관없이 늘 같은 모양
   $("#topName").textContent=`${profile.name?profile.name+" ":""}견적서 작성기`;
   document.title=`${profile.name?profile.name+" ":""}견적서 작성기`;
 }
