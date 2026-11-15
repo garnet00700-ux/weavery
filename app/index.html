@@ -234,7 +234,7 @@ textarea{resize:vertical;line-height:1.5}
 /* 상단바는 회사 대표 색 · 로고가 바뀌어도 원래 모양 그대로 */
 .topbar{--green:#17320B}
 /* 초대 코드 입력 화면 (작성기 전체를 덮음) */
-#licGate{position:fixed;inset:0;z-index:200;background:rgba(20,24,18,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+#licGate{position:fixed;inset:0;z-index:200;background:rgba(20,24,18,.45);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px}
 #licGate .lic-box{position:relative;width:min(460px,100%);background:#fff;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.2);padding:26px 26px 22px;text-align:center}
 #licGate .lic-x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:22px;line-height:1;color:#888;cursor:pointer;padding:4px 8px}
 #licGate .lic-brand{font-size:12.5px;color:var(--ui-sub);margin-bottom:10px;letter-spacing:.02em}
@@ -2275,9 +2275,10 @@ async function qiDesign(f){
   return out.logo||out.seal||out.color||out.tbl?out:null;
 }
 
-/* ===== 초대 코드: weavery lab이 발급한 코드가 있어야 PDF 다운로드 · 인쇄를 할 수 있습니다 =====
-   - 작성기 화면은 누구나 바로 열리고, 견적서를 밖으로 내보낼 때(PDF · 전자서명용 PDF · 인쇄)만 코드를 묻습니다.
-     (처음 화면을 코드 입력창으로 덮으면 크롬이 피싱 화면으로 오해해 '위험한 사이트' 경고를 띄웠기 때문)
+/* ===== 초대 코드: weavery lab이 발급한 코드가 있어야 작성기를 씁니다 =====
+   - 처음 입장할 때 코드를 묻되, 작성기 화면을 뒤에 흐리게 보여 주고 weavery lab 이름 · 설명 · 안내서 링크를 함께 둡니다.
+     (예전처럼 빈 화면에 코드 칸만 두면 크롬이 피싱 화면으로 오해해 '위험한 사이트' 경고를 띄웠음)
+   - PDF · 인쇄 직전에도 한 번 더 확인합니다 (중지된 코드 막기).
    - 컴퓨터(브라우저)마다 처음 한 번만 넣고, 그 뒤로는 하루 한 번 몰래 확인만 합니다.
    - 같은 팀 서버에 연결된 직원은 대표가 넣은 코드를 자동으로 함께 씁니다.
    - 확인 서버에는 코드 · 상호 · 연결된 서버 주소만 보냅니다 (견적서 내용은 보내지 않음).
@@ -2309,8 +2310,9 @@ async function licGate(){
     }catch(e){}
     return;
   }
-  // 코드가 없으면: 같은 팀 서버에 등록된 코드(또는 기존 사용자 자동 등록)가 있는지만 조용히 확인
-  try{ const r=await licCheck("",server); if(r.ok) licSave({code:r.code,at:Date.now()}); }catch(e){}
+  // 코드가 없으면: 같은 팀 서버에 등록된 코드(또는 기존 사용자 자동 등록)가 있는지 먼저 보고, 없으면 코드 입력 창
+  if(!st.stop){ try{ const r=await licCheck("",server); if(r.ok){ licSave({code:r.code,at:Date.now()}); return; } }catch(e){} }
+  await licAsk(st.stop==="stopped"?"사용이 중지된 코드입니다. weavery lab에 문의해 주세요.":"",true);
 }
 // 내보내기(PDF · 인쇄) 직전에 부릅니다. 쓸 수 있으면 true, 사용자가 닫으면 false.
 async function licRequire(){
@@ -2327,15 +2329,16 @@ async function licRequire(){
   if(!st.stop){ try{ const r=await licCheck("",licServer()); if(r.ok){ licSave({code:r.code,at:Date.now()}); return true; } }catch(e){} }
   return licAsk(st.stop==="stopped"?"사용이 중지된 코드입니다. weavery lab에 문의해 주세요.":"");
 }
-function licAsk(msg){
+// entry=true: 처음 입장할 때 (닫기 없음, 맞는 코드를 넣어야 쓸 수 있음). 작성기 화면은 뒤에 흐리게 보이게 둡니다.
+function licAsk(msg,entry){
   return new Promise(done=>{
     const old=document.getElementById("licGate"); if(old) old.remove();
     const w=document.createElement("div"); w.id="licGate";
     w.innerHTML=`<div class="lic-box" role="dialog" aria-modal="true" aria-labelledby="licT">
-      <button class="lic-x" type="button" aria-label="닫기">×</button>
+      ${entry?"":`<button class="lic-x" type="button" aria-label="닫기">×</button>`}
       <div class="lic-brand"><b>weavery lab</b> 견적서 작성기</div>
-      <h2 id="licT">PDF로 받으려면 초대 코드가 필요해요</h2>
-      <p>견적서 작성과 미리보기는 자유롭게 해 보실 수 있어요.<br>PDF 다운로드와 인쇄는 weavery lab에서 <b>초대 코드</b>를 받은 분만 쓸 수 있습니다.<br>이 컴퓨터에서는 처음 한 번만 넣으면 됩니다.</p>
+      <h2 id="licT">${entry?"초대받은 분만 쓸 수 있어요":"PDF로 받으려면 초대 코드가 필요해요"}</h2>
+      <p>${entry?"weavery lab이 거래처에 드리는 견적서 · 계약서 작성 도구입니다.<br>받으신 <b>초대 코드</b>를 넣어 주세요.":"PDF 다운로드와 인쇄는 weavery lab에서 <b>초대 코드</b>를 받은 분만 쓸 수 있습니다."}<br>이 컴퓨터에서는 처음 한 번만 넣으면 됩니다.</p>
       <form id="licF"><input id="licC" placeholder="WV-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="20" aria-label="초대 코드">
       <button class="btn go" id="licB" type="submit">확인</button></form>
       <div class="lic-msg" id="licM" role="alert"></div>
@@ -2343,10 +2346,10 @@ function licAsk(msg){
     document.body.appendChild(w);
     const inp=w.querySelector("#licC"), btn=w.querySelector("#licB"), m=w.querySelector("#licM");
     const close=ok=>{ w.remove(); document.removeEventListener("keydown",esc); done(ok); };
-    const esc=e=>{ if(e.key==="Escape") close(false); };
+    const esc=e=>{ if(e.key==="Escape"&&!entry) close(false); };
     document.addEventListener("keydown",esc);
-    w.querySelector(".lic-x").onclick=()=>close(false);
-    w.addEventListener("click",e=>{ if(e.target===w) close(false); });
+    if(!entry){ w.querySelector(".lic-x").onclick=()=>close(false);
+      w.addEventListener("click",e=>{ if(e.target===w) close(false); }); }
     m.textContent=msg||""; inp.focus();
     inp.addEventListener("input",()=>{ const p=inp.selectionStart, v=inp.value.toUpperCase(); if(v!==inp.value){ inp.value=v; try{ inp.setSelectionRange(p,p); }catch(e){} } });
     w.querySelector("#licF").onsubmit=async e=>{
