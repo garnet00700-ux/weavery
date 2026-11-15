@@ -40,6 +40,12 @@ body{background:var(--ui-bg);color:var(--ui-text);font-family:"Noto Sans KR","�
 /* ===== 견적 목록 창 ===== */
 .modal{position:fixed;inset:0;z-index:50;background:rgba(20,24,16,.45);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px}
 .modal[hidden]{display:none}
+.padbox{width:min(620px,100%);padding:0 16px 16px}
+.padbox .mhead{padding:14px 0;margin-bottom:10px}
+#padCv{width:100%;height:240px;border:1.5px dashed #B8B8B8;border-radius:10px;background:#fff;touch-action:none;cursor:crosshair;display:block}
+.padbtns{display:flex;gap:8px;margin-top:12px}
+.cardprev{width:170px;height:100px}
+.cardprev img{max-width:96%;max-height:92%}
 .mbox{background:#fff;border-radius:12px;width:min(760px,100%);max-height:86vh;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.3)}
 .mhead{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--ui-border)}
 .mhead b{color:var(--green);font-size:16px;white-space:nowrap}
@@ -274,6 +280,19 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 </div>
 
 <!-- 견적 목록 -->
+<div class="modal" id="padModal" hidden>
+  <div class="mbox padbox" role="dialog" aria-label="사인 직접 그리기">
+    <div class="mhead"><b>대표 사인 직접 그리기</b></div>
+    <p class="hint" style="margin:0 0 8px">마우스나 터치패드, 펜으로 아래 칸에 사인해 주세요.</p>
+    <canvas id="padCv"></canvas>
+    <div class="padbtns">
+      <button class="btn" id="padClear" type="button">다시 쓰기</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="padCancel" type="button">취소</button>
+      <button class="btn go" id="padOk" type="button">이 사인 사용</button>
+    </div>
+  </div>
+</div>
 <div class="modal" id="listModal" hidden>
   <div class="mbox" role="dialog" aria-label="견적 목록">
     <div class="mhead">
@@ -355,12 +374,13 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         <div class="signbox">
           <div class="signprev" id="signPrev"></div>
           <div class="btncol">
+            <button class="btn" id="bSignDraw" type="button">직접 그리기</button>
             <button class="btn" id="bSignUp" type="button">사인 이미지 올리기</button>
             <button class="btn" id="bSignDel" type="button">사인 없이</button>
           </div>
           <input type="file" id="fSign" accept="image/*" hidden>
         </div>
-        <p class="hint">흰 배경에 쓴 사인 사진을 올리면 배경을 자동으로 투명하게 바꿉니다.</p>
+        <p class="hint">한 번 넣어두면 새 견적서에도 계속 들어갑니다. 사진은 흰 배경에 쓴 사인을 올리면 배경을 자동으로 투명하게 바꿉니다.</p>
       </div>
     </details>
 
@@ -478,6 +498,16 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
             </div>
             <p class="hint">이 설정은 이 컴퓨터의 브라우저에만 저장되며, 견적서 파일·목록 백업에는 들어가지 않습니다. <button class="btn" type="button" id="esTest" style="padding:3px 8px">연결 확인</button> <span id="esTestR"></span></p>
           </details>
+          <div class="sub">완료 메일에 넣을 명함</div>
+          <div class="signbox">
+            <div class="signprev cardprev" id="cardPrev"></div>
+            <div class="btncol">
+              <button class="btn" id="bCardUp" type="button">명함 이미지 올리기</button>
+              <button class="btn" id="bCardDel" type="button">기본 명함 쓰기</button>
+            </div>
+            <input type="file" id="fCard" accept="image/*" hidden>
+          </div>
+          <p class="hint">올려두면 서명 완료 메일 하단에 이 명함 이미지가 들어갑니다. 비워두면 이름·연락처로 만든 기본 명함이 들어갑니다. (이 브라우저에 저장)</p>
         </div>
         <button class="btn" id="bEsign" type="button" style="width:100%;margin-top:10px">전자서명용 PDF 저장 (의뢰자 사인 칸 비움)</button>
         <p class="hint">다른 전자서명 서비스(모두싸인 등)를 쓸 때만 사용하세요.</p>
@@ -943,7 +973,66 @@ function upload(btn,input,key){
 }
 upload("#bSignUp","#fSign","sign");
 upload("#bCSignUp","#fCSign","clientSign");
-$("#bSignDel").onclick=()=>{state.sign="";renderImages();save();schedule();};
+$("#bSignDel").onclick=()=>{state.sign="";esMarkStale();renderImages();save();schedule();};
+
+/* ===== 대표 사인 직접 그리기 ===== */
+(()=>{
+  const m=$("#padModal"), cv=$("#padCv"), ctx=cv.getContext("2d");
+  let drawing=false, last=null, used=false;
+  const fit=()=>{ const r=cv.getBoundingClientRect(), dpr=Math.max(1,devicePixelRatio||1);
+    cv.width=Math.round(r.width*dpr); cv.height=Math.round(r.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#141414"; used=false; };
+  const pt=e=>{ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top,p:e.pressure&&e.pointerType==="pen"?e.pressure:.5}; };
+  cv.addEventListener("pointerdown",e=>{ e.preventDefault(); cv.setPointerCapture(e.pointerId); drawing=true; last=pt(e);
+    ctx.beginPath(); ctx.fillStyle="#141414"; ctx.arc(last.x,last.y,1.4,0,7); ctx.fill(); used=true; });
+  cv.addEventListener("pointermove",e=>{ if(!drawing) return; const p=pt(e);
+    ctx.lineWidth=2.2+p.p*1.6; ctx.beginPath(); ctx.moveTo(last.x,last.y);
+    const mx=(last.x+p.x)/2, my=(last.y+p.y)/2; ctx.quadraticCurveTo(last.x,last.y,mx,my); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; });
+  const end=()=>{ drawing=false; };
+  cv.addEventListener("pointerup",end); cv.addEventListener("pointercancel",end); cv.addEventListener("pointerleave",end);
+  const close=()=>{ m.hidden=true; };
+  $("#bSignDraw").onclick=()=>{ m.hidden=false; requestAnimationFrame(fit); };
+  $("#padClear").onclick=fit;
+  $("#padCancel").onclick=close;
+  m.addEventListener("click",e=>{ if(e.target===m) close(); });
+  addEventListener("keydown",e=>{ if(e.key==="Escape"&&!m.hidden) close(); });
+  $("#padOk").onclick=()=>{
+    if(!used) return alert("사인을 먼저 그려주세요.");
+    // 여백 자르기 → 투명 PNG
+    const w=cv.width,h=cv.height,p=ctx.getImageData(0,0,w,h).data;
+    let x0=w,y0=h,x1=-1,y1=-1;
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(p[(y*w+x)*4+3]>10){ if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    if(x1<0) return alert("사인을 먼저 그려주세요.");
+    const pad=10; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
+    const sc=Math.min(1,700/(x1-x0+1)), o=document.createElement("canvas");
+    o.width=Math.round((x1-x0+1)*sc); o.height=Math.round((y1-y0+1)*sc);
+    o.getContext("2d").drawImage(cv,x0,y0,x1-x0+1,y1-y0+1,0,0,o.width,o.height);
+    state.sign=o.toDataURL("image/png"); esMarkStale(); renderImages(); save(); schedule(); close();
+  };
+})();
+
+/* ===== 완료 메일 명함 이미지 (이 브라우저에 저장) ===== */
+const CARD_KEY="weavery-card-image";
+const cardGet=()=>{ try{ return localStorage.getItem(CARD_KEY)||""; }catch(e){ return ""; } };
+function renderCard(){ const c=cardGet(); $("#cardPrev").innerHTML=c?`<img src="${c}" alt="명함">`:"기본 명함 사용"; }
+$("#bCardUp").onclick=()=>$("#fCard").click();
+$("#fCard").onchange=e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{ const img=new Image();
+    img.onload=()=>{ // 메일용으로 가로 900px 이내 JPEG로 줄여서 저장
+      const sc=Math.min(1,900/img.width), c=document.createElement("canvas");
+      c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc);
+      const x=c.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height);
+      try{ localStorage.setItem(CARD_KEY,c.toDataURL("image/jpeg",.88)); renderCard(); }
+      catch(err){ alert("이미지가 너무 커서 저장하지 못했습니다. 더 작은 이미지를 올려주세요."); }
+    };
+    img.onerror=()=>alert("이미지를 읽지 못했습니다. JPG나 PNG 파일을 올려주세요.");
+    img.src=r.result; };
+  r.readAsDataURL(f);
+};
+$("#bCardDel").onclick=()=>{ if(cardGet()&&!confirm("올린 명함을 지우고 기본 명함을 쓸까요?")) return; try{ localStorage.removeItem(CARD_KEY); }catch(e){} renderCard(); };
+renderCard();
 $("#bCSignDel").onclick=()=>{ if(state.clientSign&&!confirm("고객 사인을 지울까요?"))return; state.clientSign="";renderImages();save();schedule();};
 
 /* ===== 파일 · 인쇄 ===== */
@@ -1119,7 +1208,7 @@ async function esCreate(){
     const html=[...document.querySelectorAll("#pages .page")].map(p=>p.outerHTML).join("\n")
       .split(LOGO).join("__LOGO__").split(LOGO_ICON).join("__LOGO_ICON__");
     esignMode=false; renderPreview();
-    const r=await esApi({action:"create",html,css:$("#docCss").textContent,summary:esSummary()});
+    const r=await esApi({action:"create",html,css:$("#docCss").textContent,summary:esSummary(),card:cardGet()});
     state.esign={id:r.id,docNo:r.docNo,hash:r.hash,requestedAt:r.requestedAt,link:esLink(r.id),status:"sent"};
     state.status="대기"; state.clientSign="";
     renderImages(); saveNow();
