@@ -204,6 +204,27 @@ textarea{resize:vertical;line-height:1.5}
 .guidebox{width:min(1000px,100%);height:92vh;max-height:none}
 .guidebox iframe{flex:1;width:100%;border:0;border-radius:0 0 12px 12px;background:#f4f2ee}
 .guidebox .mhead a.btn{text-decoration:none}
+/* 기존 견적서 불러오기 */
+.qibox{width:min(900px,100%)}
+.qibox .mbody{padding:14px 16px;overflow:auto}
+.qi-client{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 12px;margin-bottom:6px}
+.qi-cf{display:grid;grid-template-columns:auto 52px minmax(0,1fr);align-items:center;gap:6px;font-size:13px}
+.qi-cf input:not([type=checkbox]){width:100%;min-width:0}
+.qi-tw{overflow-x:auto;border:1px solid var(--ui-border);border-radius:8px}
+.qi-t{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}
+.qi-t th{background:#f6f5f2;color:var(--ui-sub);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--ui-border)}
+.qi-t td{padding:3px 4px;border-bottom:1px solid #eee}
+.qi-t td:first-child{width:28px;text-align:center}
+.qi-t td:nth-child(4){width:80px}.qi-t td:nth-child(5){width:130px}
+.qi-t input:not([type=checkbox]){width:100%;min-width:0;border:1px solid transparent;background:transparent;padding:4px 6px;border-radius:5px;font:inherit}
+.qi-t input:not([type=checkbox]):hover,.qi-t input:not([type=checkbox]):focus{border-color:var(--ui-border);background:#fff}
+.qi-t input[type=number]{text-align:right}
+.qi-t tr.off td{opacity:.4}
+.qi-t tfoot td{font-weight:700;text-align:right;padding:8px;background:#fafaf8}
+.qi-t tfoot td:first-child{text-align:right;width:auto}
+.qi-mode{font-size:12px;color:var(--ui-sub);padding:0 6px}
+.qi-ok{color:#1e6b2a;font-weight:500;font-size:12.5px;margin-left:8px}
+.qi-warn{color:#9a5b00;font-weight:500;font-size:12.5px;margin-left:8px}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -365,6 +386,32 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       <span style="flex:1"></span>
       <button class="btn" id="impCancel" type="button">취소</button>
       <button class="btn go" id="impOk" type="button">넣기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 기존 견적서 불러오기 (품목 · 금액 · 의뢰자) -->
+<div class="modal" id="qiModal" hidden>
+  <div class="mbox qibox" role="dialog" aria-label="기존 견적서 불러오기">
+    <div class="mhead"><b>기존 견적서 불러오기</b><span class="mcount" id="qiTo"></span><span style="flex:1"></span><button class="btn" id="qiCancel" type="button">닫기</button></div>
+    <div class="mbody">
+      <p class="hint" style="margin:0 0 8px">예전에 쓰던 견적서 파일을 올리면 <b>품목 · 수량 · 금액</b>과 <b>의뢰자 정보</b>를 찾아 옵니다.
+        엑셀(.xlsx · .csv)이 가장 정확하고, PDF · 워드(.docx)도 됩니다. 스캔한 사진 PDF는 읽을 수 없습니다.<br>
+        넣기 전에 아래 표에서 확인하고 고칠 수 있습니다. 체크를 끄면 그 줄은 빠집니다.</p>
+      <div class="padbtns" style="margin:0 0 8px">
+        <button class="btn go" type="button" id="qiFileBtn">견적서 파일 올리기</button>
+        <input type="file" id="qiFile" accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" hidden>
+        <span class="hint" id="qiFileR" style="margin:0;align-self:center"></span>
+      </div>
+      <details class="es-set" id="qiRawBox"><summary>읽은 글자 보기 · 직접 붙여넣기</summary>
+        <textarea id="qiText" rows="7" placeholder="견적서 내용을 복사해서 붙여넣어도 됩니다. (엑셀에서 표를 복사해 붙여넣으면 칸이 그대로 들어옵니다)"></textarea>
+      </details>
+      <div id="qiOut"></div>
+    </div>
+    <div class="mfoot">
+      <label class="chk"><input type="checkbox" id="qiReplace" checked>기존 품목을 지우고 바꾸기</label>
+      <span style="flex:1"></span>
+      <button class="btn go" id="qiOk" type="button">불러오기</button>
     </div>
   </div>
 </div>
@@ -972,7 +1019,8 @@ function prodCardHtml(p,pi){
       </details>
       <div class="sub" style="margin-top:4px">견적 품목</div>
       <div>${itemsHtml(pi)}</div>
-      <button class="btn" type="button" data-add="prods.${pi}.items">+ 품목 추가</button>
+      <div class="pbtns"><button class="btn" type="button" data-add="prods.${pi}.items">+ 품목 추가</button>
+        <button class="btn" type="button" data-imp="quote" data-pi="${pi}" title="기존 견적서(엑셀 · PDF · 워드)에서 품목 · 금액 · 의뢰자 정보를 불러옵니다">기존 견적서 불러오기</button></div>
       <p class="hint">할인 후 금액을 넣으면 <b>금액 칸은 정가 취소선</b>, <b>비고 칸은 할인 내용 + 할인가</b>로 표시됩니다. 같은 구성명이 이어지면 한 칸으로 묶입니다.</p>
       <label class="f" style="margin-top:10px">기타 안내 (VAT 문구 아래 한 줄)<input data-p="prods.${pi}.extra"></label>
       <div class="sum-box"><span>${esc(p.name)} 총액</span><span data-sum="${pi}"></span></div>
@@ -1071,7 +1119,7 @@ $("#editor").addEventListener("click",e=>{
       if(!profile.templates.length) profile.templates=[GENERIC_PRODUCT()];
       saveProfile();
     }
-  }else if(b.dataset.imp){ openImport(b.dataset.imp,+b.dataset.pi); return; }
+  }else if(b.dataset.imp){ if(b.dataset.imp==="quote") openQuoteImport(+b.dataset.pi); else openImport(b.dataset.imp,+b.dataset.pi); return; }
   else return;
   renderProds(); esMarkStale(); save(); schedule();
 });
@@ -1274,25 +1322,51 @@ function openImport(kind,pi){
   $("#impModal").hidden=false; $("#impText").focus();
 }
 function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=src; s.onload=res; s.onerror=()=>rej(new Error("불러오기 실패")); document.head.appendChild(s); }); }
+// 파일 → 글자. 표의 칸은 탭(\t)으로 나눠서 돌려줍니다 (품목 불러오기에서 칸 구분에 씀)
 async function fileText(f){
   const n=f.name.toLowerCase();
   if(n.endsWith(".txt")) return await f.text();
+  if(/\.(xlsx|xls|csv)$/.test(n)){
+    if(!window.XLSX) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+    const wb=n.endsWith(".csv")?XLSX.read(await f.text(),{type:"string",cellDates:true}):XLSX.read(await f.arrayBuffer(),{type:"array",cellDates:true});
+    const out=[];
+    wb.SheetNames.slice(0,3).forEach(sn=>{
+      XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:false,blankrows:false,defval:"",dateNF:"yyyy-mm-dd"})
+        .forEach(r=>{ const cells=r.map(c=>String(c).replace(/\s+/g," ").trim()); while(cells.length&&!cells[cells.length-1]) cells.pop(); if(cells.some(Boolean)) out.push(cells.join("\t")); });
+    });
+    return out.join("\n");
+  }
   if(n.endsWith(".docx")){
     if(!window.mammoth) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js");
-    return (await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()})).value;
+    const html=(await mammoth.convertToHtml({arrayBuffer:await f.arrayBuffer()})).value;
+    const doc=new DOMParser().parseFromString(html,"text/html"), out=[];
+    const walk=el=>{ for(const c of el.children){
+      if(c.tagName==="TABLE"){ c.querySelectorAll("tr").forEach(tr=>{ const cells=[...tr.children].map(td=>td.textContent.replace(/\s+/g," ").trim()); if(cells.some(Boolean)) out.push(cells.join("\t")); }); }
+      else if(/^(P|H\d|LI)$/.test(c.tagName)) out.push(c.textContent.trim());
+      else walk(c);
+    } };
+    walk(doc.body);
+    return out.join("\n");
   }
   if(n.endsWith(".pdf")){
     if(!window.pdfjsLib){ await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
       pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"; }
-    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise; let out=[];
+    const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise; const out=[];
     for(let i=1;i<=pdf.numPages;i++){
-      const tc=await (await pdf.getPage(i)).getTextContent(); let line="",lastY=null;
-      tc.items.forEach(it=>{ const y=Math.round(it.transform[5]); if(lastY!==null&&Math.abs(y-lastY)>3){ out.push(line); line=""; } line+=it.str; lastY=y; });
-      out.push(line);
+      const tc=await (await pdf.getPage(i)).getTextContent();
+      // 같은 높이의 글자를 한 줄로 묶고, 왼쪽부터 정렬. 간격이 넓으면 칸이 바뀐 것으로 봅니다
+      const rows=[];
+      tc.items.filter(it=>it.str&&it.str.trim()).forEach(it=>{ const y=it.transform[5], x=it.transform[4];
+        let r=rows.find(r=>Math.abs(r.y-y)<=3); if(!r){ r={y,items:[]}; rows.push(r); } r.items.push({x,w:it.width||0,s:it.str,h:Math.abs(it.transform[0])||10}); });
+      rows.sort((a,b)=>b.y-a.y).forEach(r=>{
+        r.items.sort((a,b)=>a.x-b.x); let line="", end=null;
+        r.items.forEach(t=>{ if(end!==null){ const gap=t.x-end; line+=gap>t.h*1.2?"\t":(gap>t.h*0.15&&!/\s$/.test(line)&&!/^\s/.test(t.s)?" ":""); } line+=t.s; end=t.x+t.w; });
+        out.push(line.trim());
+      });
     }
     return out.join("\n");
   }
-  throw new Error("PDF · 워드(.docx) · 텍스트(.txt) 파일만 읽을 수 있습니다.");
+  throw new Error("엑셀(.xlsx · .csv) · PDF · 워드(.docx) · 텍스트(.txt) 파일만 읽을 수 있습니다.");
 }
 function parseTerms(text){
   const t=String(text).replace(/\r/g,"").replace(/[ \t]+\n/g,"\n");
@@ -1313,7 +1387,7 @@ function parseNotices(text){
   return String(text).replace(/\r/g,"").split("\n").map(s=>s.trim().replace(/^([-•·*※▶▪◦]|\d+[.)]|[①-⑳])\s*/,"").trim()).filter(Boolean);
 }
 function impParsed(){
-  const t=$("#impText").value;
+  const t=$("#impText").value.replace(/\t+/g," ");
   if(impKind==="terms"){ const r=parseTerms(t); return r; }
   return {notices:parseNotices(t)};
 }
@@ -1820,6 +1894,204 @@ document.addEventListener("click",e=>{ if(e.target.closest("[data-guide]")){ e.p
 $("#guideClose").onclick=()=>{ $("#guideModal").hidden=true; };
 $("#guideModal").addEventListener("click",e=>{ if(e.target.id==="guideModal") $("#guideModal").hidden=true; });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#guideModal").hidden) $("#guideModal").hidden=true; });
+
+/* ===== 기존 견적서 불러오기: 품목 · 수량 · 금액 · 의뢰자 정보 ===== */
+let qiPi=0, qiRes=null;
+const QI_TOTAL=/합\s*계|총\s*액|총\s*계|소\s*계|부\s*가\s*세|부가가치세|V\.?A\.?T|공\s*급\s*가|견\s*적\s*금\s*액|총\s*금\s*액|합계\s*금액|^계$|total|sum|할인\s*합계|결제\s*금액/i;
+const QI_HEAD=/^(no\.?|번호|순번|구\s*분|구\s*성|품\s*명|품\s*목|항\s*목|내\s*역|내\s*용|규\s*격|사\s*양|수\s*량|단\s*위|단\s*가|금\s*액|공급\s*가액|세\s*액|비\s*고|작업\s*내용|세부\s*항목)$/i;
+const QI_UNIT="식|개|ea|건|회|set|세트|대|평|㎡|m2|m|장|권|부|명|일|개월|월|시간|hr|롤|박스|box|kg|컷|p|page|페이지|종|점|본|매|팩|병|캔|ml|l";
+const QI_QTY=new RegExp(`^(\\d+(?:\\.\\d+)?)\\s*(${QI_UNIT})$`,"i");
+const qiMoney=s=>{ s=String(s).trim().replace(/^[(（]\s*|\s*[)）]$/g,""); if(!/\d/.test(s)) return null;
+  const m=s.match(/^[₩\\￦]?\s*(-?\d{1,3}(?:,\d{3})+|-?\d{4,})(?:\.\d+)?\s*(원|won|krw)?$/i)||s.match(/^[₩\\￦]?\s*(-?\d{1,3})\s*(원)$/);
+  return m?Number(m[1].replace(/,/g,"")):null; };
+const qiSmallNum=s=>/^\d{1,3}(\.\d+)?$/.test(String(s).trim());
+const qiFlag=s=>/^(별도|서비스|무상|무료|포함|-)$/.test(String(s).trim());
+
+// 한 줄 → 칸 목록. 탭 · 두 칸 이상 공백 · | 로 나누고, 글자 칸 끝에 붙은 숫자(수량 · 금액)는 떼어냅니다
+function qiCells(line){
+  const raw=line.split(/\t|\s{2,}|\s\|\s|\|/).map(s=>s.trim()).filter(Boolean), out=[];
+  raw.forEach(c=>{
+    if(qiMoney(c)!==null||QI_QTY.test(c)||qiSmallNum(c)||qiFlag(c)){ out.push(c); return; }
+    const tk=c.split(/\s+/), tail=[];
+    while(tk.length>1){ const t=tk[tk.length-1], t2=tk.length>2?tk[tk.length-2]+" "+t:"";
+      if(qiMoney(t)!==null||QI_QTY.test(t)||qiFlag(t)) tail.unshift(tk.pop());
+      else if(t2&&QI_QTY.test(t2.replace(/\s+/,""))&&/^\d/.test(tk[tk.length-2])){ tk.pop(); tk.pop(); tail.unshift(t2.replace(/\s+/,"")); }
+      else break; }
+    const head=tk.join(" "); if(head) out.push(head); out.push(...tail);
+  });
+  return out;
+}
+
+// 표 머리줄(구분 · 품명 · 수량 · 단가 · 금액 …)을 찾으면 칸 위치로 정확하게 읽습니다 (엑셀 · 워드 표)
+const QI_COLS=[["no",/^(no\.?|번호|순번)$/i],["cat",/^(구분|구성|분류|공종|카테고리)$/],["desc",/^(품명|품목|항목|내역|내용|작업내용|세부항목|품명및규격|상품명|서비스명)$/],
+  ["spec",/^(규격|사양|옵션)$/],["qty",/^(수량)$/],["unit",/^(단위)$/],["uprice",/^(단가)$/],["amount",/^(금액|공급가액|공급가|합계금액|견적금액)$/],["vat",/^(세액|부가세)$/],["note",/^(비고|참고)$/]];
+function qiHeader(cells){
+  const h={}; let n=0;
+  cells.forEach((c,i)=>{ const k=c.replace(/\s+/g,""); for(const [key,re] of QI_COLS) if(re.test(k)&&h[key]==null){ h[key]=i; n++; break; } });
+  return n>=3&&(h.desc!=null||h.cat!=null)&&(h.amount!=null||h.uprice!=null)?h:null;
+}
+function qiTotal(totals,label,ns){
+  ns=ns.filter(v=>v!=null); if(!ns.length) return;
+  let v=ns[ns.length-1];
+  if(ns.length>=2){ const b=ns[ns.length-2]; if(b>0&&Math.abs(v-b*0.1)<=Math.max(1,b*0.001)){ totals.vat=totals.vat??v; totals.supply=totals.supply??b; return; } }
+  if(/부\s*가|V\.?A\.?T|세\s*액/i.test(label)) totals.vat=totals.vat??v;
+  else if(/공\s*급\s*가|소\s*계/.test(label)) totals.supply=totals.supply??v;
+  else totals.total=totals.total??v;
+}
+function qiParseItems(lines){
+  const items=[], totals={}; let curCat="", hdr=null;
+  lines.forEach(line=>{
+    if(line.includes("\t")){
+      const cs=line.split("\t").map(s=>s.trim()), h=qiHeader(cs);
+      if(h){ hdr=h; curCat=""; return; }
+      if(hdr){
+        const g=k=>hdr[k]!=null?(cs[hdr[k]]||""):"";
+        const texts=cs.filter(c=>c&&qiMoney(c)===null&&!qiSmallNum(c)), label=texts.join(" ");
+        const amountRaw=qiMoney(g("amount")), up=qiMoney(g("uprice")), vat=qiMoney(g("vat"));
+        if(QI_TOTAL.test(label)){ qiTotal(totals,label,cs.map(qiMoney)); return; }
+        let cat=g("cat"), desc=g("desc");
+        if(hdr.cat!=null){ if(cat) curCat=cat; else cat=curCat; }
+        if(!desc&&cat&&hdr.desc==null){ desc=cat; cat=""; }
+        if(!desc&&!g("cat")) return;
+        let qty=g("qty"); const unit=g("unit"); if(qty&&unit&&/^\d+(\.\d+)?$/.test(qty)) qty+=unit;
+        const q=parseFloat(qty);
+        let amount=amountRaw; if(amount==null&&up!=null) amount=Math.round(up*(q||1));
+        let mode="normal";
+        if(amount==null){ const f=cs.find(qiFlag); if(!f) return; mode=/별도/.test(f)?"exclude":/서비스|무상|무료/.test(f)?"service":"normal"; if(mode==="normal") return; }
+        if(!qty&&up&&amount&&amount%up===0&&amount/up<=999) qty=String(amount/up);
+        items.push({on:true,cat,desc:desc||cat,qty:qty?qty.replace(/\s+/g,""):"1식",price:mode==="normal"?amount:"",mode,sub:[g("spec"),g("note")].filter(Boolean).join(" · ")});
+        return;
+      }
+    }
+    const cells=qiCells(line); if(!cells.length) return;
+    const txt=[], nums=[], flags=[], after=[]; let qty="", seenNum=false;
+    cells.forEach((c,i)=>{
+      const mv=qiMoney(c);
+      if(mv!==null){ nums.push(mv); seenNum=true; }
+      else if(QI_QTY.test(c)){ if(!qty) qty=c.replace(/\s+/g,""); seenNum=true; }
+      else if(qiSmallNum(c)){ if(!seenNum&&!txt.length&&i<cells.length-1) return;   // 맨 앞 줄 번호
+        if(!qty) qty=c; seenNum=true; }
+      else if(qiFlag(c)){ flags.push(c); seenNum=true; }
+      else (seenNum?after:txt).push(c);
+    });
+    const label=txt.join(" ");
+    // 합계 · 부가세 줄은 품목이 아니라 확인용 숫자로 보관
+    if(QI_TOTAL.test(label)||(!label&&nums.length&&QI_TOTAL.test(line))){ qiTotal(totals,label,nums); return; }
+    if(!txt.length) return;
+    if(cells.every(c=>QI_HEAD.test(c.replace(/\s+/g,"")))) return;         // 표 머리줄
+    if(txt.filter(t=>QI_HEAD.test(t.replace(/\s+/g,""))).length>=2&&!nums.length) return;
+    if(!nums.length&&!flags.length) return;                                  // 금액이 없는 줄은 설명 글
+    if(label.length>60&&!qty) return;                                        // 긴 문장 속 숫자
+    let mode="normal", price="";
+    if(nums.length){
+      const ns=nums.slice();
+      // 공급가액 | 세액(10%) 칸이 있는 양식: 마지막 숫자가 바로 앞 숫자의 10%면 세액으로 보고 뺍니다
+      if(ns.length>=2){ const a=ns[ns.length-1], b=ns[ns.length-2]; if(b>0&&Math.abs(a-b*0.1)<=Math.max(1,b*0.001)) ns.pop(); }
+      const amount=ns[ns.length-1], unit=ns.length>=2?ns[ns.length-2]:null;
+      price=amount;
+      if(!qty&&unit&&amount&&amount%unit===0&&amount/unit<=999) qty=String(amount/unit);
+    }else{
+      const f=flags[0]; mode=/별도/.test(f)?"exclude":/서비스|무상|무료/.test(f)?"service":"normal";
+      if(mode==="normal") return;
+    }
+    let cat="", desc=label;
+    const leadEmpty=/^(\d{1,3}\t)?\t/.test(line);                          // 앞 칸이 비어 있으면 위 줄의 구성을 이어받음 (병합 칸)
+    if(txt.length>=2){ cat=txt[0]; desc=txt.slice(1).join(" "); curCat=cat; }
+    else if(curCat&&leadEmpty) cat=curCat;
+    else curCat="";
+    items.push({on:true,cat,desc,qty:qty||"1식",price,mode,sub:after.join(" ")});
+  });
+  return {items,totals};
+}
+
+function qiParseClient(text){
+  const own=v=>v&&[profile.name,profile.ceo,profile.phone,profile.email].some(o=>o&&String(o).replace(/\s|-/g,"")===String(v).replace(/\s|-/g,""));
+  const clean=s=>String(s||"").replace(/\t.*/,"").replace(/\(인\)|\(서명\)|귀\s*하|귀\s*중|님$/g,"").replace(/^[\s:：]+|[\s:：]+$/g,"").trim();
+  const c={name:"",ceo:"",phone:"",email:"",date:""};
+  let m=text.match(/(?:^|\n|\t)\s*([^\t\n:：]{2,40}?)\s*(?:님\s*)?(?:귀\s*하|귀\s*중|貴\s*中|貴\s*下)/);
+  if(m&&!own(clean(m[1]))) c.name=clean(m[1]);
+  if(!c.name){
+    const re=/(?:수\s*신(?:\s*처)?|고\s*객\s*명|업\s*체\s*명|의\s*뢰\s*(?:인|처|자)|발\s*주\s*처|거\s*래\s*처|회\s*사\s*명|상\s*호(?:\s*명)?)\s*[:：]?\s*\t?\s*([^\t\n]{1,40})/g;
+    while((m=re.exec(text))){ const v=clean(m[1]); if(v&&!own(v)&&!/^(대\s*표|전\s*화|주\s*소)/.test(v)){ c.name=v; break; } }
+  }
+  const rc=/(?:대\s*표\s*(?:자|이사)?|담\s*당\s*자?|성\s*명|받\s*는\s*분)\s*[:：]?\s*\t?\s*([가-힣]{2,4})(?![가-힣])/g;
+  while((m=rc.exec(text))){ if(!own(m[1])&&!/^(이사|님)$/.test(m[1])){ c.ceo=m[1]; break; } }
+  for(const p of text.match(/0\d{1,2}[-.)\s]?\d{3,4}[-.\s]?\d{4}/g)||[]) if(!own(p)){ c.phone=p.replace(/[.)\s]/g,"-").replace(/-+/g,"-"); break; }
+  for(const e of text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g)||[]) if(!own(e)){ c.email=e; break; }
+  const dRe=/(\d{4})\s*[.\-\/년]\s*(\d{1,2})\s*[.\-\/월]\s*(\d{1,2})/;
+  m=text.match(new RegExp("(?:견\\s*적\\s*일(?:\\s*자)?|작\\s*성\\s*일(?:\\s*자)?|발\\s*행\\s*일|일\\s*자|날\\s*짜)\\s*[:：]?\\s*\\t?\\s*"+dRe.source))||text.match(dRe);
+  if(!m){ const u=text.match(/(?:^|[\s\t])(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})(?![\d\/])/); if(u) m=[u[0],u[3].length===2?"20"+u[3]:u[3],u[1],u[2]]; }   // 엑셀식 월/일/연도
+  if(m){ const y=+m[1], mo=+m[2], d=+m[3]; if(y>2000&&mo>=1&&mo<=12&&d>=1&&d<=31) c.date=`${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`; }
+  return c;
+}
+
+function qiParse(text){
+  const lines=String(text).replace(/\r/g,"").split("\n").map(s=>s.trim()).filter(Boolean);
+  const r=qiParseItems(lines);
+  return {items:r.items,totals:r.totals,client:qiParseClient(text)};
+}
+
+const QI_CF=[["name","업체명"],["ceo","대표자"],["phone","연락처"],["email","이메일"],["date","견적일"]];
+function qiRender(){
+  const o=$("#qiOut"), r=qiRes;
+  if(!r){ o.innerHTML=""; return; }
+  const sum=r.items.filter(x=>x.on&&x.mode==="normal").reduce((s,x)=>s+(Number(x.price)||0),0);
+  const t=r.totals, ref=t.supply??(t.total!=null&&t.vat!=null?t.total-t.vat:null)??t.total;
+  let chk="";
+  if(r.items.length&&ref!=null){
+    const ok=Math.abs(ref-sum)<1||(t.total!=null&&Math.abs(t.total-sum)<1);
+    chk=ok?`<span class="qi-ok">✓ 원본 합계 ${won(ref)}원과 같습니다</span>`:`<span class="qi-warn">원본 합계 ${won(ref)}원 · 불러온 품목 합 ${won(sum)}원 — 빠지거나 잘못 읽힌 줄이 있는지 확인해 주세요</span>`;
+  }
+  const client=QI_CF.map(([k,lb])=>`<label class="qi-cf"><input type="checkbox" data-qc="${k}" ${r.client[k]?"checked":""}><span>${lb}</span>
+    <input ${k==="date"?'type="date"':""} data-qv="${k}" value="${esc(r.client[k]||"")}" placeholder="못 찾음"></label>`).join("");
+  const rows=r.items.map((x,i)=>`<tr class="${x.on?"":"off"}">
+    <td><input type="checkbox" data-qi="${i}" data-k="on" ${x.on?"checked":""} aria-label="이 줄 넣기"></td>
+    <td><input data-qi="${i}" data-k="cat" value="${esc(x.cat)}" aria-label="구성"></td>
+    <td><input data-qi="${i}" data-k="desc" value="${esc(x.desc)}" aria-label="세부항목"></td>
+    <td><input data-qi="${i}" data-k="qty" value="${esc(x.qty)}" aria-label="수량"></td>
+    <td>${x.mode==="normal"?`<input type="number" data-qi="${i}" data-k="price" value="${x.price}" aria-label="금액">`:`<span class="qi-mode">${x.mode==="service"?"서비스":"별도"}</span>`}</td></tr>`).join("");
+  o.innerHTML=`<div class="sub">의뢰자 정보 <span class="hint" style="margin:0;font-weight:400">— 체크한 칸만 넣습니다</span></div>
+    <div class="qi-client">${client}</div>
+    <div class="sub">품목 ${r.items.length}줄 ${chk}</div>
+    ${r.items.length?`<div class="qi-tw"><table class="qi-t"><thead><tr><th></th><th>구성</th><th>세부항목</th><th>수량</th><th>금액 (원)</th></tr></thead><tbody>${rows}</tbody>
+      <tfoot><tr><td colspan="4">합계 (체크한 줄, 합계 포함 품목)</td><td>${won(sum)}원</td></tr></tfoot></table></div>`
+      :`<p class="hint">품목을 찾지 못했습니다. 품목 이름과 금액이 한 줄에 있는지 확인하거나, 엑셀 파일로 올려 보세요.</p>`}`;
+}
+
+function openQuoteImport(pi){
+  qiPi=pi; qiRes=null;
+  $("#qiTo").textContent=`→ ${P()[pi].name||"상품"}`;
+  $("#qiText").value=""; $("#qiFileR").textContent=""; $("#qiRawBox").open=false;
+  qiRender(); $("#qiModal").hidden=false;
+}
+function qiFromText(){ const t=$("#qiText").value; qiRes=t.trim()?qiParse(t):null; qiRender(); }
+$("#qiFileBtn").onclick=()=>$("#qiFile").click();
+$("#qiFile").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  $("#qiFileR").textContent="읽는 중…";
+  try{ $("#qiText").value=await fileText(f); $("#qiFileR").textContent=f.name; qiFromText(); }
+  catch(err){ $("#qiFileR").textContent="✕ "+err.message; } };
+let qiT; $("#qiText").addEventListener("input",()=>{ clearTimeout(qiT); qiT=setTimeout(qiFromText,250); });
+$("#qiOut").addEventListener("input",e=>{
+  const el=e.target; if(!qiRes) return;
+  if(el.dataset.qi!==undefined){ const x=qiRes.items[+el.dataset.qi], k=el.dataset.k;
+    if(k==="on"){ x.on=el.checked; el.closest("tr").classList.toggle("off",!el.checked); }
+    else x[k]=k==="price"?(el.value===""?"":Number(el.value)):el.value;
+    if(k==="on"||k==="price"){ const pos=el.selectionStart; qiRender(); const n=$(`#qiOut [data-qi="${el.dataset.qi}"][data-k="${k}"]`); if(n){ n.focus(); try{ if(pos!=null) n.setSelectionRange(pos,pos); }catch(_){} } }
+  }else if(el.dataset.qv){ qiRes.client[el.dataset.qv]=el.value; const c=$(`#qiOut [data-qc="${el.dataset.qv}"]`); if(c) c.checked=!!el.value; }
+});
+$("#qiCancel").onclick=()=>{ $("#qiModal").hidden=true; };
+$("#qiOk").onclick=()=>{
+  if(!qiRes) return alert("먼저 견적서 파일을 올리거나 내용을 붙여넣어 주세요.");
+  const items=qiRes.items.filter(x=>x.on&&(x.desc||x.cat)).map(x=>{ const it=ITEM(x.cat,x.desc,x.sub||"",x.qty||"1식",x.price===""?"":Number(x.price),x.mode); return it; });
+  const picks=QI_CF.filter(([k])=>{ const c=$(`#qiOut [data-qc="${k}"]`); return c&&c.checked&&qiRes.client[k]; });
+  if(!items.length&&!picks.length) return alert("넣을 품목이나 의뢰자 정보가 없습니다.");
+  const p=P()[qiPi];
+  if(items.length){ p.items=$("#qiReplace").checked?items:p.items.concat(items); openSet.add("items"); }
+  picks.forEach(([k])=>{ if(k==="date") state.quoteDate=qiRes.client.date; else state.client[k]=qiRes.client[k]; });
+  $("#qiModal").hidden=true;
+  renderEditor(); esMarkStale(); save(); schedule();
+};
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#qiModal").hidden) $("#qiModal").hidden=true; });
 
 </script>
 </body>

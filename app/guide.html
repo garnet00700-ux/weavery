@@ -152,6 +152,7 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
   <li><a href="#s5"><b>5</b>작성기에 연결</a></li>
   <li><a href="#s6"><b>6</b>회사 정보 · 팀 초대</a></li>
 </ol>
+<p class="cap" style="margin-top:4px">설치 후: <a href="#s7">기존 견적서 · 계약서 불러오기</a></p>
 <p class="cap">팀에서 <b>한 사람(대표 계정)</b>만 1~4단계를 하면 됩니다. 팀원은 5단계의 초대 링크만 받으면 바로 연결됩니다.</p>
 
 <!-- 1 -->
@@ -399,6 +400,55 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
       <li><b>팀원 초대:</b> [서버 연결 · 팀]의 <b>팀원 초대 링크</b>를 복사해 팀원에게 보내면, 팀원은 링크만 열면 바로 연결됩니다.</li>
     </ul>
     <div class="note">이제 견적서를 만들고 <b>[전자서명 요청]</b>을 누르면 카카오톡으로 서명 링크를 보낼 수 있습니다. 고객이 서명하면 고객과 우리 회사 메일로 같은 계약서 PDF가 가고, 견적 목록의 상태가 <b>완료</b>로 바뀝니다.</div>
+  </div>
+</section>
+
+<section class="step" id="s7">
+  <div class="n">+</div>
+  <div class="body">
+    <h2>기존 견적서 · 계약서 불러오기</h2>
+    <p class="lead">예전에 쓰던 양식이 있으면 처음부터 다시 칠 필요 없이 파일을 올려 가져올 수 있습니다. 서버 연결과 상관없이 언제든 쓸 수 있습니다.</p>
+
+    <div class="sub"><i>1</i>품목 · 금액 · 의뢰자 정보 — [견적 품목] 아래 [기존 견적서 불러오기]</div>
+    <ol class="do">
+      <li>견적서 편집 화면의 상품 칸에서 <b>[+ 품목 추가]</b> 옆 <b>[기존 견적서 불러오기]</b>를 누릅니다.</li>
+      <li><b>[견적서 파일 올리기]</b>로 예전 견적서를 고릅니다.</li>
+      <li>찾아온 <b>의뢰자 정보</b>와 <b>품목표</b>를 확인합니다. 칸을 눌러 바로 고칠 수 있고, 체크를 끄면 그 줄은 빠집니다.</li>
+      <li><b>[불러오기]</b>를 누르면 견적서에 들어가고 오른쪽 미리보기에 바로 보입니다.</li>
+    </ol>
+    <div class="shot" role="img" aria-label="기존 견적서 불러오기 창: 의뢰자 정보와 품목표를 확인하고 불러오기를 누릅니다">
+      <div class="app-top"><b style="font-size:14px">기존 견적서 불러오기</b><span style="margin-left:auto">닫기</span></div>
+      <div class="app-card" style="border:0;margin:0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mark" style="background:var(--green);color:#fff;border-radius:6px;padding:5px 12px;font-weight:700">견적서 파일 올리기<span class="tag">1</span></span><span style="color:#888;font-size:12px">예전견적서_바다커피.xlsx</span></div>
+        <div style="font-weight:700;color:var(--green);margin:12px 0 6px;font-size:12.5px">의뢰자 정보</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;font-size:12px">
+          <div>☑ 업체명 <b>(주)바다커피</b></div><div>☑ 대표자 <b>이바다</b></div><div>☑ 연락처 <b>02-345-6789</b></div><div>☑ 견적일 <b>2026-10-03</b></div></div>
+        <div class="mark" style="margin-top:12px;padding:2px">
+          <div style="font-weight:700;color:var(--green);font-size:12.5px;padding:4px 6px">품목 3줄 <span style="color:#1e6b2a;font-weight:500">✓ 원본 합계 1,900,000원과 같습니다</span></div>
+          <div class="scroll"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
+            <tr style="color:#888;text-align:left"><th></th><th>구성</th><th>세부항목</th><th>수량</th><th style="text-align:right">금액</th></tr>
+            <tr><td>☑</td><td>디자인</td><td>로고 디자인</td><td>1식</td><td style="text-align:right">500,000</td></tr>
+            <tr><td>☑</td><td>디자인</td><td>명함 디자인</td><td>2</td><td style="text-align:right">200,000</td></tr>
+            <tr><td>☑</td><td>시공</td><td>간판 제작</td><td>1식</td><td style="text-align:right">1,200,000</td></tr></table></div>
+          <span class="tag">2</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;flex-wrap:wrap;gap:8px"><span>☑ 기존 품목을 지우고 바꾸기</span><span class="mark" style="background:var(--green);color:#fff;border-radius:6px;padding:5px 14px;font-weight:700">불러오기<span class="tag">3</span></span></div>
+      </div>
+    </div>
+    <div class="note"><b>합계 확인:</b> 원본에 합계 · 공급가액이 적혀 있으면 불러온 품목의 합과 비교해서 <b>✓ 같습니다</b> 또는 <b>차이</b>를 알려 줍니다. 차이가 나면 빠진 줄이나 잘못 읽힌 금액이 있는지 표에서 확인하세요.</div>
+    <div class="scroll"><table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 4px;min-width:460px">
+      <tr style="text-align:left;border-bottom:1px solid var(--line)"><th style="padding:6px 8px">파일</th><th style="padding:6px 8px">정확도</th></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px">엑셀 (.xlsx · .csv)</td><td style="padding:6px 8px"><b>가장 정확</b> — 표 머리줄(품명 · 수량 · 단가 · 금액)을 보고 칸 그대로 읽습니다</td></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px">워드 (.docx)</td><td style="padding:6px 8px">표로 만든 견적서는 잘 읽습니다</td></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px">PDF</td><td style="padding:6px 8px">대부분 됩니다. 칸이 붙어 읽히면 표에서 고쳐 주세요</td></tr>
+      <tr><td style="padding:6px 8px">스캔 · 사진 PDF</td><td style="padding:6px 8px">글자가 아니라 그림이라 읽을 수 없습니다</td></tr></table></div>
+    <p class="cap">엑셀에서 표를 복사(<kbd>Ctrl</kbd>+<kbd>C</kbd>)해서 [읽은 글자 보기 · 직접 붙여넣기] 칸에 붙여넣어도 됩니다. 우리 회사 정보(상호 · 대표 · 연락처)는 의뢰자로 잘못 들어가지 않게 자동으로 뺍니다.</p>
+
+    <div class="sub"><i>2</i>계약 조항 · 안내사항 — 각 칸의 [기존 계약서에서 가져오기]</div>
+    <ul class="do">
+      <li><b>계약 조항:</b> 상품 칸의 [계약서 조항] → <b>[기존 계약서에서 가져오기]</b> → 계약서 파일(PDF · 워드)을 올리거나 붙여넣기. "제1조 (목적)"처럼 조 번호를 기준으로 나눠 넣습니다.</li>
+      <li><b>안내사항:</b> [견적서 안내사항] → <b>[기존 양식에서 가져오기]</b>. 줄마다 한 항목으로 넣습니다.</li>
+    </ul>
+    <div class="note">한 번 맞춰 둔 품목 · 조항은 상품 칸의 <b>[이 상품을 기본값으로 저장]</b>을 누르면 다음 견적서부터 자동으로 들어갑니다. 서버에 연결돼 있으면 팀원도 같은 기본값을 씁니다.</div>
   </div>
 </section>
 
