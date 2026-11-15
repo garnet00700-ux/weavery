@@ -342,7 +342,8 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <select id="scope" title="인쇄 범위">
     <option value="all">전체 인쇄</option><option value="quote">견적서만</option><option value="contract">계약서만</option>
   </select>
-  <button class="btn primary" id="bPrint">인쇄 / PDF 저장</button>
+  <button class="btn" id="bPrint" title="프린터로 인쇄 (인쇄 창에서 PDF로 저장도 됩니다)">인쇄</button>
+  <button class="btn primary" id="bPdf" title="고른 범위를 PDF 파일로 바로 내려받습니다">PDF 다운로드</button>
 </div>
 
 <!-- 첫 화면 안내 -->
@@ -646,7 +647,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <div class="sub" style="margin-top:0">전자서명 요청 (카카오톡 · 링크)</div>
           <div id="esView"></div>
         </div>
-        <button class="btn" id="bEsign" type="button" style="width:100%;margin-top:10px">전자서명용 PDF 저장 (의뢰자 사인 칸 비움)</button>
+        <button class="btn" id="bEsign" type="button" style="width:100%;margin-top:10px">전자서명용 PDF 다운로드 (의뢰자 사인 칸 비움)</button>
         <p class="hint">다른 전자서명 서비스(모두싸인 등)를 쓸 때만 사용하세요.</p>
       </div>
     </details>
@@ -1577,7 +1578,48 @@ function doPrint(suffix){
 }
 $("#bPrint").onclick=()=>doPrint();
 let esignMode=false;
-$("#bEsign").onclick=()=>{ esignMode=true; doPrint("_전자서명용"); esignMode=false; renderPreview(); };
+$("#bEsign").onclick=()=>downloadPdf("_전자서명용",true);
+$("#bPdf").onclick=()=>downloadPdf();
+
+/* ===== PDF 바로 내려받기 (인쇄 창 없이) =====
+   미리보기 쪽(.page)을 화면 밖에 100% 크기로 복사해 한 장씩 그림으로 찍고, A4 PDF로 묶습니다. */
+let pdfBusy=false;
+async function downloadPdf(suffix,esign){
+  if(pdfBusy) return; pdfBusy=true;
+  const btns=[$("#bPdf"),$("#bEsign")].filter(Boolean), labels=btns.map(b=>b.textContent);
+  btns.forEach(b=>{b.disabled=true;b.textContent="PDF 만드는 중…";});
+  let box=null;
+  try{
+    if(!window.html2canvas) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    esignMode=!!esign; renderPreview();
+    const scope=$("#scope").value;
+    const src=$$("#pages .page").filter(p=>scope==="all"||p.dataset.kind===scope);
+    if(!src.length){ alert("PDF로 만들 쪽이 없습니다. 상품을 고르거나 범위를 확인해 주세요."); return; }
+    box=document.createElement("div");
+    box.style.cssText="position:fixed;left:-30000px;top:0;width:210mm;zoom:1;pointer-events:none";
+    src.forEach(p=>{ const c=p.cloneNode(true); c.style.boxShadow="none"; c.style.margin="0"; box.appendChild(c); });
+    document.body.appendChild(box);
+    if(document.fonts&&document.fonts.ready) await document.fonts.ready;
+    await Promise.all([...box.querySelectorAll("img")].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+    const pdf=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+    const pages=[...box.children];
+    for(let i=0;i<pages.length;i++){
+      btns.forEach(b=>b.textContent=`PDF 만드는 중… ${i+1}/${pages.length}`);
+      const cv=await html2canvas(pages[i],{scale:2,backgroundColor:"#ffffff",useCORS:true,logging:false});
+      if(i) pdf.addPage("a4","portrait");
+      pdf.addImage(cv.toDataURL("image/jpeg",0.92),"JPEG",0,0,210,297,undefined,"FAST");
+    }
+    pdf.save(fileName()+(suffix||"")+".pdf");
+  }catch(e){
+    alert("PDF를 만들지 못했습니다: "+(e&&e.message||e)+"\n[인쇄] 버튼을 눌러 인쇄 창에서 'PDF로 저장'을 골라도 됩니다.");
+  }finally{
+    if(box) box.parentNode.removeChild(box);
+    if(esignMode){ esignMode=false; renderPreview(); }
+    btns.forEach((b,i)=>{b.disabled=false;b.textContent=labels[i];});
+    pdfBusy=false;
+  }
+}
 
 
 /* ===== 전자서명: 서명 요청 → 카카오톡/링크 → 고객 서명 → 양측 메일 → 목록 '완료' ===== */
