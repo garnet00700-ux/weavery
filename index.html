@@ -1240,8 +1240,13 @@ $("#esView").addEventListener("click",e=>{
 $("#esTest").onclick=async()=>{
   const u=esCfg().apiUrl; if(!u) return $("#esTestR").textContent="서버 주소가 없습니다.";
   $("#esTestR").textContent="확인 중…";
-  try{ const j=await (await fetch(u+(u.includes("?")?"&":"?")+"action=ping")).json(); $("#esTestR").textContent=j.ok?`연결됨 · 서버 시각 ${j.time}`:"응답 오류"; }
-  catch(err){ $("#esTestR").textContent="연결 실패 — 주소와 배포(액세스: 모든 사용자)를 확인하세요."; }
+  let j;
+  try{ j=await (await fetch(u+(u.includes("?")?"&":"?")+"action=ping")).json(); }
+  catch(err){ return $("#esTestR").textContent="연결 실패 — 주소와 배포(액세스: 모든 사용자)를 확인하세요."; }
+  if(!j.ok) return $("#esTestR").textContent="응답 오류";
+  if(!esCfg().adminKey) return $("#esTestR").textContent=`서버 연결됨 · 관리자 키를 입력하세요`;
+  try{ await esApi({action:"status",ids:[]}); $("#esTestR").textContent=`✓ 연결·관리자 키 확인 완료 · 서버 시각 ${j.time}`; }
+  catch(err){ $("#esTestR").textContent=`서버는 연결됐지만 ${err.message} 다시 복사해 붙여넣어 보세요.`; }
 };
 setInterval(()=>{ if(!document.hidden) esRefresh(false).then(n=>{ if(n&&!$("#listModal").hidden) renderList(); }); },60000);
 
