@@ -222,6 +222,11 @@ textarea{resize:vertical;line-height:1.5}
 .qi-t tr.off td{opacity:.4}
 .qi-t tfoot td{font-weight:700;text-align:right;padding:8px;background:#fafaf8}
 .qi-t tfoot td:first-child{text-align:right;width:auto}
+.qi-dz{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.qi-dc>span{white-space:nowrap}
+.qi-dc{display:flex;align-items:center;gap:8px;border:1px solid var(--ui-border);border-radius:8px;padding:6px 10px;font-size:13px;background:#fff;cursor:pointer}
+.qi-dc img{max-height:40px;max-width:160px;display:block;background:repeating-conic-gradient(#f3f3f3 0 25%,#fff 0 50%) 0 0/10px 10px}
+.qi-dc input[type=color]{flex:none;width:38px!important;height:28px;padding:0;border:1px solid var(--ui-border);border-radius:5px;background:none}
 .qi-mode{font-size:12px;color:var(--ui-sub);padding:0 6px}
 .qi-ok{color:#1e6b2a;font-weight:500;font-size:12.5px;margin-left:8px}
 .qi-warn{color:#9a5b00;font-weight:500;font-size:12.5px;margin-left:8px}
@@ -394,7 +399,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
     <div class="mhead"><b>기존 견적서 불러오기</b><span class="mcount" id="qiTo"></span><span style="flex:1"></span><button class="btn" id="qiCancel" type="button">닫기</button></div>
     <div class="mbody">
       <p class="hint" style="margin:0 0 8px">예전에 쓰던 견적서 파일을 올리면 <b>품목 · 수량 · 금액</b>과 <b>의뢰자 정보</b>를 찾아 옵니다.
-        엑셀(.xlsx · .csv)이 가장 정확하고, PDF · 워드(.docx)도 됩니다. 스캔한 사진 PDF는 읽을 수 없습니다.<br>
+        엑셀(.xlsx · .csv)이 가장 정확하고, PDF · 워드(.docx)도 됩니다. 스캔한 사진 PDF는 읽을 수 없습니다.<br>PDF로 올리면 <b>로고 · 도장 · 대표 색 · 표 머리 색</b>도 찾아서 우리 견적서 디자인에 넣을 수 있습니다.<br>
         넣기 전에 아래 표에서 확인하고 고칠 수 있습니다. 체크를 끄면 그 줄은 빠집니다.</p>
       <div class="padbtns" style="margin:0 0 8px">
         <button class="btn go" type="button" id="qiFileBtn">견적서 파일 올리기</button>
@@ -478,6 +483,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         <label class="f" style="margin-top:10px">상단 슬로건 <span style="font-weight:400">(견적서·계약서 오른쪽 위)</span><input data-c="slogan"></label>
         <div class="grid3" style="margin-top:10px">
           <label class="f">대표 색상<input type="color" data-c="color"></label>
+          <label class="f">표 머리 색<input type="color" data-c="tbl"></label>
           <label class="f">문서번호 앞글자 <span style="font-weight:400">(영문)</span><input data-c="prefix" maxlength="6" placeholder="DOC"></label>
           <label class="f">계약금 기본 비율 (%)<input type="number" min="0" max="100" data-c="depositRate" data-num></label>
         </div>
@@ -723,7 +729,7 @@ const MAIL_DEFAULT={
 const KAKAO_MSG={text:"[{상호}] {대표자} 님, 계약서 서명 요청드립니다.\n{계약명}\n문서번호 {문서번호} · 내용 확인 후 서명해 주세요.",button:"계약서 확인 및 서명",key:""};
 const PROFILE_DEFAULT={
   name:"",ceo:"",bizno:"",phone:"",email:"",bizType:"",bizItem:"",address:"",web:"",account:"",slogan:"",
-  color:"#17320B",prefix:"DOC",depositRate:30,
+  color:"#17320B",tbl:"#D9D9D9",prefix:"DOC",depositRate:30,
   logo:"",sign:"",card:"",
   mail:MAIL_DEFAULT, kakao:KAKAO_MSG,
   templates:null, _updated:0
@@ -1639,7 +1645,7 @@ async function esCreate(){
     esignMode=true; renderPreview();
     const html=$$("#pages .page").map(p=>p.outerHTML).join("\n");
     esignMode=false; renderPreview();
-    const css=$("#docCss").textContent+`\n:root{--green:${safeColor()}}`;
+    const css=$("#docCss").textContent+`\n:root{${brandVars()}}`;
     const r=await api({action:"create",html,css,summary:esSummary(),card:profile.card||"",logo:profile.logo||""});
     state.esign={id:r.id,docNo:r.docNo,hash:r.hash,requestedAt:r.requestedAt,link:esLink(r.id),status:"sent"};
     state.status="대기"; state.clientSign="";
@@ -1875,8 +1881,14 @@ addEventListener("resize",applyZoom);
 
 /* ===== 회사 색상 · 상단 표시 ===== */
 const safeColor=()=>/^#[0-9a-fA-F]{6}$/.test(profile.color||"")?profile.color:"#17320B";
+// 표 머리 색 (--g1) 과 그보다 연한 칸 색 (--g2)
+const safeTbl=()=>/^#[0-9a-fA-F]{6}$/.test(profile.tbl||"")?profile.tbl:"#D9D9D9";
+function tblLight(h){ const n=parseInt(h.slice(1),16); return "#"+[n>>16,(n>>8)&255,n&255].map(v=>Math.round(v+(255-v)*.55).toString(16).padStart(2,"0")).join(""); }
+const brandVars=()=>`--green:${safeColor()};--g1:${safeTbl()};--g2:${tblLight(safeTbl())}`;
 function applyBrand(){
   document.documentElement.style.setProperty("--green",safeColor());
+  document.documentElement.style.setProperty("--g1",safeTbl());
+  document.documentElement.style.setProperty("--g2",tblLight(safeTbl()));
   $("#topLogoBox").innerHTML=profile.logo?`<img src="${profile.logo}" alt="">`:`<span class="logo-t">${esc(profile.name||"견적")}</span>`;
   $("#topName").textContent=`${profile.name?profile.name+" ":""}견적서 작성기`;
   document.title=`${profile.name?profile.name+" ":""}견적서 작성기`;
@@ -1916,7 +1928,7 @@ $("#guideModal").addEventListener("click",e=>{ if(e.target.id==="guideModal") $(
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#guideModal").hidden) $("#guideModal").hidden=true; });
 
 /* ===== 기존 견적서 불러오기: 품목 · 수량 · 금액 · 의뢰자 정보 ===== */
-let qiPi=0, qiRes=null;
+let qiPi=0, qiRes=null, qiDes=null;
 const QI_TOTAL=/합\s*계|총\s*액|총\s*계|소\s*계|부\s*가\s*세|부가가치세|V\.?A\.?T|공\s*급\s*가|견\s*적\s*금\s*액|총\s*금\s*액|합계\s*금액|^계$|total|sum|할인\s*합계|결제\s*금액/i;
 const QI_HEAD=/^(no\.?|번호|순번|구\s*분|구\s*성|품\s*명|품\s*목|항\s*목|내\s*역|내\s*용|규\s*격|사\s*양|수\s*량|단\s*위|단\s*가|금\s*액|공급\s*가액|세\s*액|비\s*고|작업\s*내용|세부\s*항목)$/i;
 const QI_UNIT="식|개|ea|건|회|set|세트|대|평|㎡|m2|m|장|권|부|명|일|개월|월|시간|hr|롤|박스|box|kg|컷|p|page|페이지|종|점|본|매|팩|병|캔|ml|l";
@@ -1943,8 +1955,8 @@ function qiCells(line){
 }
 
 // 표 머리줄(구분 · 품명 · 수량 · 단가 · 금액 …)을 찾으면 칸 위치로 정확하게 읽습니다 (엑셀 · 워드 표)
-const QI_COLS=[["no",/^(no\.?|번호|순번)$/i],["cat",/^(구분|구성|분류|공종|카테고리)$/],["desc",/^(품명|품목|항목|내역|내용|작업내용|세부항목|품명및규격|상품명|서비스명)$/],
-  ["spec",/^(규격|사양|옵션)$/],["qty",/^(수량)$/],["unit",/^(단위)$/],["uprice",/^(단가)$/],["amount",/^(금액|공급가액|공급가|합계금액|견적금액)$/],["vat",/^(세액|부가세)$/],["note",/^(비고|참고)$/]];
+const QI_COLS=[["no",/^(no\.?|번호|순번)$/i],["cat",/^(구분|구성|분류|공종|카테고리|item|category)$/i],["desc",/^(품명|품목|항목|내역|내용|작업내용|세부항목|품명및규격|상품명|서비스명|description|품목명)$/i],
+  ["spec",/^(규격|사양|옵션)$/],["qty",/^(수량|qty|quantity)$/i],["unit",/^(단위)$/],["uprice",/^(단가|unitprice)$/i],["amount",/^(금액|공급가액|공급가|합계금액|견적금액|amount|price)$/i],["vat",/^(세액|부가세)$/],["note",/^(비고|참고|remarks?|notes?)$/i]];
 function qiHeader(cells){
   const h={}; let n=0;
   cells.forEach((c,i)=>{ const k=c.replace(/\s+/g,""); for(const [key,re] of QI_COLS) if(re.test(k)&&h[key]==null){ h[key]=i; n++; break; } });
@@ -1964,7 +1976,7 @@ function qiParseItems(lines){
     if(line.includes("\t")){
       const cs=line.split("\t").map(s=>s.trim()), h=qiHeader(cs);
       if(h){ hdr=h; curCat=""; return; }
-      if(hdr){
+      if(hdr&&cs.length>=Object.keys(hdr).length){            // PDF처럼 빈 칸이 사라진 줄은 칸 위치를 믿을 수 없어 아래 일반 규칙으로 읽음
         const g=k=>hdr[k]!=null?(cs[hdr[k]]||""):"";
         const texts=cs.filter(c=>c&&qiMoney(c)===null&&!qiSmallNum(c)), label=texts.join(" ");
         const amountRaw=qiMoney(g("amount")), up=qiMoney(g("uprice")), vat=qiMoney(g("vat"));
@@ -1996,7 +2008,7 @@ function qiParseItems(lines){
     });
     const label=txt.join(" ");
     // 합계 · 부가세 줄은 품목이 아니라 확인용 숫자로 보관
-    if(QI_TOTAL.test(label)||(!label&&nums.length&&QI_TOTAL.test(line))){ qiTotal(totals,label,nums); return; }
+    if(QI_TOTAL.test(label)||(!label&&nums.length&&QI_TOTAL.test(line))){ qiTotal(totals,label||line,nums); return; }
     if(!txt.length) return;
     if(cells.every(c=>QI_HEAD.test(c.replace(/\s+/g,"")))) return;         // 표 머리줄
     if(txt.filter(t=>QI_HEAD.test(t.replace(/\s+/g,""))).length>=2&&!nums.length) return;
@@ -2031,8 +2043,10 @@ function qiParseClient(text){
   let m=text.match(/(?:^|\n|\t)\s*([^\t\n:：]{2,40}?)\s*(?:님\s*)?(?:귀\s*하|귀\s*중|貴\s*中|貴\s*下)/);
   if(m&&!own(clean(m[1]))) c.name=clean(m[1]);
   if(!c.name){
-    const re=/(?:수\s*신(?:\s*처)?|고\s*객\s*명|업\s*체\s*명|의\s*뢰\s*(?:인|처|자)|발\s*주\s*처|거\s*래\s*처|회\s*사\s*명|상\s*호(?:\s*명)?)\s*[:：]?\s*\t?\s*([^\t\n]{1,40})/g;
-    while((m=re.exec(text))){ const v=clean(m[1]); if(v&&!own(v)&&!/^(대\s*표|전\s*화|주\s*소)/.test(v)){ c.name=v; break; } }
+    // 받는 쪽을 뜻하는 이름표를 먼저 보고, 없으면 상호 · 회사명 (보내는 쪽 상호일 수 있어 나중에)
+    const res=[/(?:수\s*신(?:\s*처)?|고\s*객\s*명|의\s*뢰\s*(?:인|처|자)|발\s*주\s*처|거\s*래\s*처|client|customer|bill\s*to)\s*[:：]?\s*\t?\s*([^\t\n]{1,40})/gi,
+      /(?:업\s*체\s*명|회\s*사\s*명|상\s*호(?:\s*명)?)\s*[:：]?\s*\t?\s*([^\t\n]{1,40})/g];
+    for(const re of res){ while((m=re.exec(text))){ const v=clean(m[1]); if(v&&!own(v)&&!/^(대\s*표|전\s*화|주\s*소|성\s*명)/.test(v)){ c.name=v; break; } } if(c.name) break; }
   }
   const rc=/(?:대\s*표\s*(?:자|이사)?|담\s*당\s*자?|성\s*명|받\s*는\s*분)\s*[:：]?\s*\t?\s*([가-힣]{2,4})(?![가-힣])/g;
   while((m=rc.exec(text))){ if(!own(m[1])&&!/^(이사|님)$/.test(m[1])){ c.ceo=m[1]; break; } }
@@ -2053,8 +2067,8 @@ function qiParse(text){
 
 const QI_CF=[["name","업체명"],["ceo","대표자"],["phone","연락처"],["email","이메일"],["date","견적일"]];
 function qiRender(){
-  const o=$("#qiOut"), r=qiRes;
-  if(!r){ o.innerHTML=""; return; }
+  const o=$("#qiOut"), r=qiRes||{items:[],client:{},totals:{}};
+  if(!qiRes&&!qiDes){ o.innerHTML=""; return; }
   const sum=r.items.filter(x=>x.on&&x.mode==="normal").reduce((s,x)=>s+(Number(x.price)||0),0);
   const t=r.totals, ref=t.supply??(t.total!=null&&t.vat!=null?t.total-t.vat:null)??t.total;
   let chk="";
@@ -2070,7 +2084,10 @@ function qiRender(){
     <td><input data-qi="${i}" data-k="desc" value="${esc(x.desc)}" aria-label="세부항목"></td>
     <td><input data-qi="${i}" data-k="qty" value="${esc(x.qty)}" aria-label="수량"></td>
     <td>${x.mode==="normal"?`<input type="number" data-qi="${i}" data-k="price" value="${x.price}" aria-label="금액">`:`<span class="qi-mode">${x.mode==="service"?"서비스":"별도"}</span>`}</td></tr>`).join("");
-  o.innerHTML=`<div class="sub">의뢰자 정보 <span class="hint" style="margin:0;font-weight:400">— 체크한 칸만 넣습니다</span></div>
+  const D=qiDes, dz=D?`<div class="sub">디자인 <span class="hint" style="margin:0;font-weight:400">— 원본 PDF에서 찾았습니다. 체크한 것만 [회사 설정]에 넣습니다 (팀 전체에 적용)</span></div>
+    <div class="qi-dz">${[["logo","로고"],["seal","도장 → 대표 사인"]].filter(([k])=>D[k]).map(([k,lb])=>`<label class="qi-dc"><input type="checkbox" data-qd="${k}" ${D.on[k]?"checked":""}><span>${lb}</span><img src="${D[k]}" alt=""></label>`).join("")}
+    ${[["color","대표 색"],["tbl","표 머리 색"]].filter(([k])=>D[k]).map(([k,lb])=>`<label class="qi-dc"><input type="checkbox" data-qd="${k}" ${D.on[k]?"checked":""}><span>${lb}</span><input type="color" data-qdv="${k}" value="${D[k]}"></label>`).join("")}</div>`:"";
+  o.innerHTML=dz+`<div class="sub">의뢰자 정보 <span class="hint" style="margin:0;font-weight:400">— 체크한 칸만 넣습니다</span></div>
     <div class="qi-client">${client}</div>
     <div class="sub">품목 ${r.items.length}줄 ${chk}</div>
     ${r.items.length?`<div class="qi-tw"><table class="qi-t"><thead><tr><th></th><th>구성</th><th>세부항목</th><th>수량</th><th>금액 (원)</th></tr></thead><tbody>${rows}</tbody>
@@ -2079,7 +2096,7 @@ function qiRender(){
 }
 
 function openQuoteImport(pi){
-  qiPi=pi; qiRes=null;
+  qiPi=pi; qiRes=null; qiDes=null;
   $("#qiTo").textContent=`→ ${P()[pi].name||"상품"}`;
   $("#qiText").value=""; $("#qiFileR").textContent=""; $("#qiRawBox").open=false;
   qiRender(); $("#qiModal").hidden=false;
@@ -2088,11 +2105,15 @@ function qiFromText(){ const t=$("#qiText").value; qiRes=t.trim()?qiParse(t):nul
 $("#qiFileBtn").onclick=()=>$("#qiFile").click();
 $("#qiFile").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return;
   $("#qiFileR").textContent="읽는 중…";
-  try{ $("#qiText").value=await fileText(f); $("#qiFileR").textContent=f.name; qiFromText(); }
+  try{ $("#qiText").value=await fileText(f); $("#qiFileR").textContent=f.name; qiDes=null; qiFromText();
+    try{ qiDes=await qiDesign(f); }catch(_){ qiDes=null; } if(qiDes){ qiDes.on={logo:!!qiDes.logo,seal:!!qiDes.seal&&!profile.sign,color:!!qiDes.color,tbl:!!qiDes.tbl}; qiRender(); } }
   catch(err){ $("#qiFileR").textContent="✕ "+err.message; } };
 let qiT; $("#qiText").addEventListener("input",()=>{ clearTimeout(qiT); qiT=setTimeout(qiFromText,250); });
 $("#qiOut").addEventListener("input",e=>{
-  const el=e.target; if(!qiRes) return;
+  const el=e.target;
+  if(el.dataset.qd&&qiDes){ qiDes.on[el.dataset.qd]=el.checked; return; }
+  if(el.dataset.qdv&&qiDes){ qiDes[el.dataset.qdv]=el.value; const c=$(`#qiOut [data-qd="${el.dataset.qdv}"]`); if(c){ c.checked=true; qiDes.on[el.dataset.qdv]=true; } return; }
+  if(!qiRes) return;
   if(el.dataset.qi!==undefined){ const x=qiRes.items[+el.dataset.qi], k=el.dataset.k;
     if(k==="on"){ x.on=el.checked; el.closest("tr").classList.toggle("off",!el.checked); }
     else x[k]=k==="price"?(el.value===""?"":Number(el.value)):el.value;
@@ -2101,10 +2122,14 @@ $("#qiOut").addEventListener("input",e=>{
 });
 $("#qiCancel").onclick=()=>{ $("#qiModal").hidden=true; };
 $("#qiOk").onclick=()=>{
-  if(!qiRes) return alert("먼저 견적서 파일을 올리거나 내용을 붙여넣어 주세요.");
+  if(!qiRes&&!qiDes) return alert("먼저 견적서 파일을 올리거나 내용을 붙여넣어 주세요.");
+  const dk=qiDes?Object.keys(qiDes.on).filter(k=>qiDes.on[k]&&qiDes[k]):[];
+  if(!qiRes) qiRes={items:[],client:{},totals:{}};
   const items=qiRes.items.filter(x=>x.on&&(x.desc||x.cat)).map(x=>{ const it=ITEM(x.cat,x.desc,x.sub||"",x.qty||"1식",x.price===""?"":Number(x.price),x.mode); return it; });
   const picks=QI_CF.filter(([k])=>{ const c=$(`#qiOut [data-qc="${k}"]`); return c&&c.checked&&qiRes.client[k]; });
-  if(!items.length&&!picks.length) return alert("넣을 품목이나 의뢰자 정보가 없습니다.");
+  if(!items.length&&!picks.length&&!dk.length) return alert("넣을 품목이나 의뢰자 정보가 없습니다.");
+  if(dk.length){ dk.forEach(k=>{ if(k==="seal") profile.sign=qiDes.seal; else profile[k]=qiDes[k]; });
+    saveProfile(); applyBrand(); renderSettings(); }
   const p=P()[qiPi];
   if(items.length){ p.items=$("#qiReplace").checked?items:p.items.concat(items); openSet.add("items"); }
   picks.forEach(([k])=>{ if(k==="date") state.quoteDate=qiRes.client.date; else state.client[k]=qiRes.client[k]; });
@@ -2112,6 +2137,84 @@ $("#qiOk").onclick=()=>{
   renderEditor(); esMarkStale(); save(); schedule();
 };
 addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#qiModal").hidden) $("#qiModal").hidden=true; });
+
+/* ===== 기존 견적서의 디자인 가져오기 (PDF): 로고 · 도장 · 대표 색 · 표 머리 색 =====
+   양식마다 배치가 달라서 특정 양식에 맞추지 않고, 페이지 안의 그림 위치와 색 분포로 고릅니다.
+   - 그림: 위쪽에 있는 가장 큰 그림 = 로고, 작고 붉은 그림 = 도장
+   - 대표 색: 로고에서 가장 많이 쓰인 색 (로고가 없으면 페이지의 진한 색)
+   - 표 머리 색: 페이지에서 넓게 칠해진 연한 색 */
+const qiLum=(r,g,b)=>(r*299+g*587+b*114)/1000;
+const qiSat=(r,g,b)=>{ const mx=Math.max(r,g,b), mn=Math.min(r,g,b); return mx?(mx-mn)/mx:0; };
+const qiHex=([r,g,b])=>"#"+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,"0")).join("");
+function qiRelLum([r,g,b]){ const f=v=>{ v/=255; return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4); }; return .2126*f(r)+.7152*f(g)+.0722*f(b); }
+// 흰 글자가 잘 보이도록 (상단 띠 · 합계 띠에 쓰임) 대비 4.5 이상이 될 때까지 어둡게
+function qiDarkEnough(c){ c=c.slice(); for(let i=0;i<30&&(1.05/(qiRelLum(c)+.05))<4.5;i++) c=c.map(v=>v*.92); return c; }
+// 검은 글자가 잘 보이도록 (표 머리) 충분히 밝게
+function qiLightEnough(c){ c=c.slice(); for(let i=0;i<30&&qiRelLum(c)<.45;i++) c=c.map(v=>v+(255-v)*.15); return c; }
+// 가장 많이 쓰인 색 (비슷한 색끼리 묶어서 셈)
+function qiDominant(data,ok){
+  const bins=new Map();
+  for(let i=0;i<data.length;i+=4){ const r=data[i],g=data[i+1],b=data[i+2]; if(data[i+3]<128||!ok(r,g,b)) continue;
+    const k=(r>>4)<<8|(g>>4)<<4|(b>>4); let e=bins.get(k); if(!e){ e=[0,0,0,0]; bins.set(k,e); } e[0]++; e[1]+=r; e[2]+=g; e[3]+=b; }
+  let best=null; bins.forEach(e=>{ if(!best||e[0]>best[0]) best=e; });
+  return best?{n:best[0],rgb:[best[1]/best[0],best[2]/best[0],best[3]/best[0]]}:null;
+}
+// 캔버스 일부를 잘라 흰 배경은 투명하게, 둘레 여백은 잘라냄
+function qiCrop(cv,x,y,w,h,maxW){
+  x=Math.max(0,Math.floor(x)); y=Math.max(0,Math.floor(y)); w=Math.min(cv.width-x,Math.ceil(w)); h=Math.min(cv.height-y,Math.ceil(h));
+  if(w<4||h<4) return null;
+  const d=cv.getContext("2d").getImageData(x,y,w,h), p=d.data; let x0=w,y0=h,x1=-1,y1=-1;
+  for(let i=0;i<p.length;i+=4){ const l=qiLum(p[i],p[i+1],p[i+2]);
+    if(l>=245&&qiSat(p[i],p[i+1],p[i+2])<.06) p[i+3]=0;
+    else { const k=i/4,px=k%w,py=(k/w)|0; if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py; } }
+  if(x1<0) return null;
+  const t=document.createElement("canvas"); t.width=w; t.height=h; t.getContext("2d").putImageData(d,0,0);
+  const sc=Math.min(1,maxW/(x1-x0+1)), o=document.createElement("canvas");
+  o.width=Math.max(1,Math.round((x1-x0+1)*sc)); o.height=Math.max(1,Math.round((y1-y0+1)*sc));
+  o.getContext("2d").drawImage(t,x0,y0,x1-x0+1,y1-y0+1,0,0,o.width,o.height);
+  return {url:o.toDataURL("image/png"),data:o.getContext("2d").getImageData(0,0,o.width,o.height).data};
+}
+async function qiDesign(f){
+  if(!/\.pdf$/i.test(f.name)||!window.pdfjsLib) return null;
+  const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise, page=await pdf.getPage(1);
+  const vp=page.getViewport({scale:2.5}), cv=document.createElement("canvas");
+  cv.width=Math.round(vp.width); cv.height=Math.round(vp.height);
+  const ctx=cv.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,cv.width,cv.height);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+  // 그림이 그려진 자리 찾기 (변환 행렬을 따라가며 단위 사각형을 페이지 좌표로)
+  const ops=await page.getOperatorList(), O=pdfjsLib.OPS, mul=(m,n)=>[m[0]*n[0]+m[2]*n[1],m[1]*n[0]+m[3]*n[1],m[0]*n[2]+m[2]*n[3],m[1]*n[2]+m[3]*n[3],m[0]*n[4]+m[2]*n[5]+m[4],m[1]*n[4]+m[3]*n[5]+m[5]];
+  let ctm=[1,0,0,1,0,0]; const st=[], boxes=[];
+  const IMG=[O.paintImageXObject,O.paintInlineImageXObject,O.paintImageXObjectRepeat,O.paintJpegXObject].filter(v=>v!=null);
+  for(let i=0;i<ops.fnArray.length;i++){ const fn=ops.fnArray[i], a=ops.argsArray[i];
+    if(fn===O.save) st.push(ctm);
+    else if(fn===O.restore) ctm=st.pop()||ctm;
+    else if(fn===O.transform) ctm=mul(ctm,a);
+    else if(fn===O.paintFormXObjectBegin){ st.push(ctm); if(a&&a[0]) ctm=mul(ctm,a[0]); }
+    else if(fn===O.paintFormXObjectEnd) ctm=st.pop()||ctm;
+    else if(IMG.includes(fn)){ const m=mul(vp.transform,ctm), pts=[[0,0],[1,0],[0,1],[1,1]].map(([u,v])=>[m[0]*u+m[2]*v+m[4],m[1]*u+m[3]*v+m[5]]);
+      const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]), x=Math.min(...xs), y=Math.min(...ys);
+      boxes.push({x,y,w:Math.max(...xs)-x,h:Math.max(...ys)-y}); }
+  }
+  const W=cv.width, H=cv.height, out={logo:null,seal:null,color:null,tbl:null};
+  const imgs=boxes.filter(b=>b.w>W*.012&&b.h>H*.008&&b.w*b.h<W*H*.5)            // 너무 작거나, 페이지 전체를 덮는 그림(스캔본)은 제외
+    .map(b=>({...b,c:qiCrop(cv,b.x,b.y,b.w,b.h,600)})).filter(b=>b.c);
+  imgs.forEach(b=>{ const p=b.c.data; let red=0,ink=0;
+    for(let i=0;i<p.length;i+=4){ if(p[i+3]<128) continue; ink++; if(p[i]>110&&p[i]-p[i+1]>25&&p[i]-p[i+2]>15) red++; }
+    b.red=ink?red/ink:0; });
+  const seal=imgs.filter(b=>b.red>.35&&b.w<W*.15&&b.h<H*.12&&Math.abs(b.w/b.h-1)<.6).sort((a,b)=>b.w*b.h-a.w*a.h)[0];
+  if(seal) out.seal=seal.c.url;
+  const logo=imgs.filter(b=>b!==seal&&b.y<H*.4&&b.w/b.h<12&&b.h/b.w<3).sort((a,b)=>b.w*b.h-a.w*a.h)[0];
+  if(logo){ out.logo=logo.c.url;
+    const d=qiDominant(logo.c.data,(r,g,b)=>qiLum(r,g,b)<225); if(d) out.color=qiHex(qiDarkEnough(d.rgb)); }
+  // 그림 자리는 빼고 페이지 색을 셈
+  const pd=ctx.getImageData(0,0,W,H).data;
+  imgs.forEach(b=>{ for(let y=Math.max(0,b.y|0);y<Math.min(H,b.y+b.h);y++) for(let x=Math.max(0,b.x|0);x<Math.min(W,b.x+b.w);x++) pd[(y*W+x)*4+3]=0; });
+  if(!out.color){ const d=qiDominant(pd,(r,g,b)=>{ const l=qiLum(r,g,b); return l>30&&l<215&&qiSat(r,g,b)>.25; });
+    if(d&&d.n>W*H*.0005) out.color=qiHex(qiDarkEnough(d.rgb)); }
+  const t=qiDominant(pd,(r,g,b)=>{ const l=qiLum(r,g,b); return l>=120&&l<=238; });
+  if(t&&t.n>W*H*.003) out.tbl=qiHex(qiLightEnough(t.rgb));
+  return out.logo||out.seal||out.color||out.tbl?out:null;
+}
 
 </script>
 </body>
