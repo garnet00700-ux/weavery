@@ -176,6 +176,7 @@ textarea{resize:vertical;line-height:1.5}
 .welcome{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff8e6;border-bottom:1px solid #ecd9a8;padding:10px 16px;font-size:13px}
 .welcome b{color:#7a5300}
 .welcome span{flex:1;min-width:220px}
+.welcome .su-steps{flex-basis:100%;margin:4px 0 0;padding-left:22px;line-height:1.7}
 .setbox{width:min(820px,100%)}
 .stabs{display:flex;gap:4px;padding:8px 16px 0;border-bottom:1px solid var(--ui-border);flex-wrap:wrap}
 .stabs button{border:1px solid var(--ui-border);border-bottom:none;background:#f6f4f0;border-radius:8px 8px 0 0;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer;color:var(--ui-sub)}
@@ -378,6 +379,20 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <button class="btn" type="button" data-guide>설치 안내서</button>
   <button class="btn go" type="button" id="wGo">회사 설정 열기</button>
   <button class="ib" type="button" id="wClose" title="닫기">✕</button>
+</div>
+<!-- 서버 업데이트 알림 (연결된 서버 코드가 예전 버전일 때) -->
+<div class="welcome" id="srvUpd" hidden>
+  <b>서버 업데이트가 있어요</b>
+  <span>연결된 서버(구글 시트의 Apps Script) 코드가 예전 버전입니다. 서버를 만든 분이 한 번만 바꿔 주면 팀 전체에 적용됩니다. (약 5분)</span>
+  <button class="btn" type="button" id="suHow">방법 보기</button>
+  <button class="btn go" type="button" id="suCopy">새 서버 코드 복사</button>
+  <button class="ib" type="button" id="suClose" title="이번 업데이트 알림 닫기">✕</button>
+  <ol class="su-steps" id="suSteps" hidden>
+    <li>[새 서버 코드 복사]를 누릅니다.</li>
+    <li>서버 시트에서 <b>[확장 프로그램 → Apps Script]</b>를 열고, Code.gs 내용을 모두 지운 뒤(<kbd>Ctrl</kbd>+<kbd>A</kbd>) 붙여넣고 저장(<kbd>Ctrl</kbd>+<kbd>S</kbd>)합니다.</li>
+    <li><b>[배포 → 배포 관리]</b> → 연필(수정) → 버전 <b>'새 버전'</b> → <b>[배포]</b>. ('새 배포'가 아니라 '배포 관리'여야 주소가 그대로입니다)</li>
+    <li>작성기를 새로고침하면 이 알림이 사라집니다.</li>
+  </ol>
 </div>
 
 <!-- 사인 직접 그리기 -->
@@ -2374,6 +2389,35 @@ function licAsk(msg,entry){
 // PDF 다운로드 · 전자서명용 PDF · 인쇄 버튼 앞에 코드 확인을 끼워 넣습니다
 ["#bPdf","#bEsign","#bPrint"].forEach(s=>{ const b=$(s); if(!b||!b.onclick) return; const f=b.onclick;
   b.onclick=async e=>{ if(await licRequire()) f.call(b,e); }; });
+
+/* ===== 서버 업데이트 알림 =====
+   서버 코드(공용 작성기/서버/Code.gs)를 고치면 그 파일의 SERVER_VER와 아래 SERVER_LATEST를 같이 1씩 올립니다.
+   연결된 서버가 예전 버전이면 작성기 위쪽에 알림과 [새 서버 코드 복사] 버튼이 뜹니다.
+   새 코드는 작성기 옆의 server-code.txt (build.js가 Code.gs를 복사해 둠)에서 가져옵니다.
+   SERVER_VER 줄이 없는 예전 서버는 1로 봅니다. */
+var SERVER_LATEST = 1;
+var SU_KEY = "wq-srvupd-closed";
+async function serverVerCheck(){
+  if(typeof connected!=="function"||!connected()||!cfg.url) return;
+  let ver=1;
+  try{ const r=await (await fetch(cfg.url+(cfg.url.includes("?")?"&":"?")+"action=ping")).json(); if(!r||!r.ok) return; ver=Number(r.ver)||1; }
+  catch(e){ return; }                                         // 연결 문제는 다른 곳에서 알려 줌
+  let closed=0; try{ closed=Number(localStorage.getItem(SU_KEY))||0; }catch(e){}
+  $("#srvUpd").hidden = !(ver<SERVER_LATEST && closed<SERVER_LATEST);
+}
+$("#suHow").onclick=()=>{ $("#suSteps").hidden=!$("#suSteps").hidden; };
+$("#suClose").onclick=()=>{ $("#srvUpd").hidden=true; try{ localStorage.setItem(SU_KEY,String(SERVER_LATEST)); }catch(e){} };
+$("#suCopy").onclick=async()=>{
+  const b=$("#suCopy"), t=b.textContent;
+  try{
+    const code=await (await fetch("server-code.txt?v="+SERVER_LATEST,{cache:"no-store"})).text();
+    if(!/SERVER_VER\s*=/.test(code)) throw new Error("bad");
+    await navigator.clipboard.writeText(code);
+    b.textContent="복사됨 ✓"; $("#suSteps").hidden=false;
+  }catch(e){ b.textContent="복사 실패 — 다시 눌러 주세요"; }
+  setTimeout(()=>{ b.textContent=t; },2500);
+};
+setTimeout(serverVerCheck,1500);
 
 </script>
 </body>

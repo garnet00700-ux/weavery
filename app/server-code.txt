@@ -1,0 +1,471 @@
+/**
+ * 견적서 · 전자계약 서버 (구글 시트에 붙어 있는 Apps Script)
+ * ------------------------------------------------------------
+ * 이 시트를 '사본 만들기'로 복사하면 서버도 함께 복사됩니다. 코드는 고칠 필요가 없습니다.
+ *  1) 시트 메뉴 [전자계약 → 처음 설정] → 권한 허용
+ *  2) [확장 프로그램 → Apps Script] → [배포 → 새 배포] → 유형 '웹 앱',
+ *     실행 사용자 '나', 액세스 권한 '모든 사용자' → 배포
+ *     → 배포 완료 화면의 '웹 앱 URL' 복사
+ *  3) 시트 메뉴 [전자계약 → 연결 코드 보기] → 웹 앱 URL 붙여넣기 → 나온 연결 코드를 작성기에 붙여넣기
+ *
+ * 하는 일
+ *  - 팀이 함께 쓰는 견적 목록 · 회사 설정 보관 (이 시트 + 내 구글 드라이브)
+ *  - 서명 요청 원본 잠금(SHA-256), 고객 서명 저장 (모든 시각은 서버 기준 KST)
+ *  - 서명이 끝나면 최종 계약서 PDF를 드라이브에 저장하고 고객과 우리 회사에 같은 PDF를 메일로 발송
+ * 회사 정보 · 로고 · 메일 문구는 모두 작성기 화면의 [회사 설정]에서 바꿉니다.
+ */
+const TZ = 'Asia/Seoul';
+const APP_URL = 'https://garnet00700-ux.github.io/weavery/app/';   // 공용 작성기 주소
+// 서버 코드 버전. 서버 코드를 고칠 때마다 1씩 올리고, 작성기(app6.js)의 SERVER_LATEST도 같은 숫자로 맞춥니다.
+// 그러면 예전 버전 서버에 연결된 작성기에 "서버 업데이트" 알림이 뜹니다. (이 줄이 없는 예전 서버는 1로 봅니다)
+const SERVER_VER = 1;
+
+/* ============================================================ */
+
+const COLS = ['id','docNo','title','client','ceo','phone','status','requestedAt','viewedAt','signedAt',
+  'signerName','signerEmail','signerPhone','hash','snapshotFileId','signatureFileId','finalFileId','finalSentAt','userAgent','summary'];
+const C = {}; COLS.forEach((k, i) => C[k] = i);
+const LCOLS = ['id', 'updated', 'by', 'deleted', 'name', 'ceo', 'status', 'total', 'quoteDate'];   // 견적목록 시트 (뒤에 data 조각)
+const CHUNK = 45000;
+
+function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function nowKst_(d) { d = d || new Date(); return Utilities.formatDate(d, TZ, 'yyyy-MM-dd HH:mm:ss') + ' (KST)'; }
+function props_() { return PropertiesService.getScriptProperties(); }
+function sha256_(s) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, s, Utilities.Charset.UTF_8)
+    .map(b => ('0' + (b & 255).toString(16)).slice(-2)).join('');
+}
+function esc_(t) { return String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function won_(n) { n = Math.round(Number(n) || 0); return n ? n.toLocaleString('ko-KR') + '원' : '-'; }
+
+/* ----- 저장소: 이 시트 + 드라이브 폴더 ----- */
+function ss_() {
+  const id = props_().getProperty('SS_ID');
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) {} }
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) throw new Error('서버 시트를 찾을 수 없습니다. 시트 메뉴 [전자계약 → 처음 설정]을 실행해 주세요.');
+  props_().setProperty('SS_ID', ss.getId());
+  return ss;
+}
+function tab_(name, head) {
+  const ss = ss_();
+  let sh = ss.getSheetByName(name);
+  if (!sh) { sh = ss.insertSheet(name); sh.appendRow(head); sh.setFrozenRows(1); sh.getRange(1, 1, 1, head.length).setFontWeight('bold'); }
+  return sh;
+}
+function sheet_() {
+  return tab_('전자계약', ['요청ID','문서번호','계약명','의뢰자','대표자','연락처','상태','서명요청(서버)','열람(서버)','서명완료(서버)',
+    '서명자','서명자 이메일','서명자 연락처','문서 고유번호(SHA-256)','원본 파일','서명 이미지','최종본 파일','최종본 발송(서버)','서명 기기','요약']);
+}
+function listSheet_() { return tab_('견적목록', ['ID','수정(ms)','수정한 사람','삭제','업체명','대표자','진행상태','총액','견적일','데이터…']); }
+function folder_() {
+  const id = props_().getProperty('FOLDER_ID');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
+  const f = DriveApp.createFolder((ss_().getName() || '전자계약') + ' 보관함');
+  props_().setProperty('FOLDER_ID', f.getId());
+  return f;
+}
+function find_(id) {
+  if (!id) return null;
+  const sh = sheet_();
+  const vals = sh.getDataRange().getValues();
+  for (let r = 1; r < vals.length; r++) if (vals[r][C.id] === id) return { sh, row: r + 1, v: vals[r] };
+  return null;
+}
+function set_(f, key, val) { f.sh.getRange(f.row, C[key] + 1).setValue(val); f.v[C[key]] = val; }
+
+/* ----- 연결 키 ----- */
+function adminKey_() { return props_().getProperty('ADMIN_KEY') || ''; }
+function needKey_(b) { const k = adminKey_(); if (!k || !b.key || b.key !== k) throw new Error('연결 코드(키)가 맞지 않습니다.'); }
+function newKey_() { return 'k-' + Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '').slice(0, 8); }
+
+/* ----- 시트 메뉴 ----- */
+function onOpen() {
+  SpreadsheetApp.getUi().createMenu('전자계약')
+    .addItem('① 처음 설정 (권한 허용)', 'setup')
+    .addItem('② 연결 코드 보기', 'showConnect')
+    .addSeparator()
+    .addItem('연결 코드 새로 만들기 (기존 팀원 연결 끊김)', 'resetKey')
+    .addToUi();
+}
+function setup() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss) props_().setProperty('SS_ID', ss.getId());
+  sheet_(); listSheet_(); folder_();
+  if (!adminKey_()) props_().setProperty('ADMIN_KEY', newKey_());
+  try { MailApp.getRemainingDailyQuota(); } catch (e) {}   // 메일 보내기 권한도 미리 받기
+  const msg = '설정이 끝났습니다.\n\n다음 단계: [확장 프로그램 → Apps Script] → [배포 → 새 배포]\n' +
+    '유형 "웹 앱", 다음 사용자로 실행 "나", 액세스 권한 "모든 사용자" → 배포\n' +
+    '배포 완료 화면의 "웹 앱 URL"을 복사해 두세요.\n\n그다음 [전자계약 → ② 연결 코드 보기]에서 그 주소를 붙여넣으면 연결 코드가 나옵니다.';
+  try { SpreadsheetApp.getUi().alert('전자계약 서버', msg, SpreadsheetApp.getUi().ButtonSet.OK); } catch (e) { Logger.log(msg); }
+}
+// 웹 앱 주소: 구글의 getUrl()은 사본 프로젝트에서 틀린 주소를 돌려줄 때가 있어, 배포 화면의 주소를 한 번 붙여넣어 저장합니다.
+const URL_RE = /^https:\/\/script\.google\.com\/(?:a\/[^\/]+\/)?macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
+function webUrl_() { return props_().getProperty('WEBAPP_URL') || ''; }
+function saveWebUrl(u) {
+  u = String(u || '').trim().replace(/[?#].*$/, '');
+  if (!URL_RE.test(u)) throw new Error('웹 앱 주소가 아닙니다. 배포 화면의 "웹 앱 URL"(…/exec로 끝나는 주소)을 붙여넣어 주세요.');
+  props_().setProperty('WEBAPP_URL', u);
+  return true;
+}
+function connectCode_() {
+  const url = webUrl_();
+  if (!URL_RE.test(url)) return { url: '', code: '' };
+  const code = 'WQ1.' + Utilities.base64EncodeWebSafe(JSON.stringify({ u: url, k: adminKey_() }), Utilities.Charset.UTF_8).replace(/=+$/, '');
+  return { url, code };
+}
+function showConnect() {
+  if (!adminKey_()) setup();
+  const c = connectCode_();
+  const urlForm =
+    '<p style="margin:0 0 6px"><b>웹 앱 주소</b>를 붙여넣어 주세요. (배포 → 새 배포 → 배포 완료 화면의 <b>웹 앱 URL</b> → 복사)<br>' +
+    '<span style="color:#666">주소를 새로 배포했다면 여기서 다시 넣으면 됩니다. 처음 한 번만 하면 됩니다.</span></p>' +
+    '<input id="u" placeholder="https://script.google.com/macros/s/…/exec" style="width:100%;box-sizing:border-box;padding:8px;font:13px monospace">' +
+    '<p style="margin:8px 0 0"><button id="ub" onclick="var b=this;b.disabled=true;b.textContent=\'저장 중…\';google.script.run' +
+    '.withSuccessHandler(function(){google.script.run.showConnect();})' +
+    '.withFailureHandler(function(e){b.disabled=false;b.textContent=\'저장\';document.getElementById(\'ue\').textContent=e.message;})' +
+    '.saveWebUrl(document.getElementById(\'u\').value)">저장</button> <span id="ue" style="color:#b00"></span></p>';
+  let html, h = 300;
+  if (!c.code) {
+    html = '<div style="font:14px/1.7 sans-serif">' +
+      '<p style="margin:0 0 10px">아직 웹 앱으로 배포하지 않았다면 먼저: [확장 프로그램 → Apps Script] → [배포 → 새 배포] → 유형 <b>웹 앱</b>, ' +
+      '다음 사용자로 실행 <b>나</b>, 액세스 권한 <b>모든 사용자</b> → 배포</p>' + urlForm + '</div>';
+  } else {
+    h = 420;
+    html = '<div style="font:14px/1.6 sans-serif">' +
+      '<p style="margin:0 0 8px">아래 <b>연결 코드</b>를 복사해서 작성기 <b>[회사 설정 → 서버 연결]</b>에 붙여넣으세요.<br>' +
+      '<span style="color:#b00">이 코드는 비밀번호와 같습니다.</span> 우리 팀원에게만 주세요.</p>' +
+      '<textarea id="c" readonly style="width:100%;height:100px;font:12px monospace" onclick="this.select()">' + esc_(c.code) + '</textarea>' +
+      '<p style="margin:10px 0 0"><button onclick="var t=document.getElementById(\'c\');t.select();document.execCommand(\'copy\');this.textContent=\'복사됨\'">복사</button> ' +
+      '<a href="' + APP_URL + '#connect=' + encodeURIComponent(c.code) + '" target="_blank">이 연결로 작성기 바로 열기</a></p>' +
+      '<details style="margin-top:14px"><summary style="cursor:pointer;color:#555">웹 앱 주소 바꾸기 (지금: ' + esc_(c.url.slice(0, 60)) + '…)</summary>' + urlForm + '</details></div>';
+  }
+  SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(560).setHeight(h), '연결 코드');
+}
+function resetKey() {
+  const ui = SpreadsheetApp.getUi();
+  if (ui.alert('연결 코드를 새로 만들까요?', '지금 연결된 모든 작성기의 연결이 끊어지고, 새 코드로 다시 연결해야 합니다.', ui.ButtonSet.OK_CANCEL) !== ui.Button.OK) return;
+  props_().setProperty('ADMIN_KEY', newKey_());
+  showConnect();
+}
+
+/* ----- 회사 설정 (드라이브 파일 하나, 이미지 포함) ----- */
+function profileFile_() {
+  const id = props_().getProperty('PROFILE_ID');
+  if (id) { try { return DriveApp.getFileById(id); } catch (e) {} }
+  return null;
+}
+function profileGet_(b) {
+  needKey_(b);
+  const f = profileFile_();
+  if (!f) return { ok: true, profile: null, updated: 0 };
+  const p = JSON.parse(f.getBlob().getDataAsString('UTF-8'));
+  return { ok: true, profile: p, updated: Number(p._updated) || 0 };
+}
+function profileSave_(b) {
+  needKey_(b);
+  const p = b.profile || {};
+  p._updated = Date.now(); p._by = String(b.by || '');
+  const s = JSON.stringify(p), f = profileFile_();
+  if (f) f.setContent(s);
+  else props_().setProperty('PROFILE_ID', folder_().createFile('회사설정.json', s, 'application/json').getId());
+  return { ok: true, updated: p._updated };
+}
+function profile_() { try { const f = profileFile_(); return f ? JSON.parse(f.getBlob().getDataAsString('UTF-8')) : {}; } catch (e) { return {}; } }
+
+/* ----- 팀 공유 견적 목록 ----- */
+function listAll_() {
+  const sh = listSheet_(), vals = sh.getDataRange().getValues(), out = [];
+  for (let r = 1; r < vals.length; r++) if (vals[r][0]) out.push({ row: r + 1, v: vals[r] });
+  return { sh, rows: out };
+}
+function rowData_(v) { return v.slice(LCOLS.length).join(''); }
+function list_(b) {
+  needKey_(b);
+  const have = b.have || {}, L = listAll_(), items = [];
+  L.rows.forEach(x => {
+    const v = x.v, id = String(v[0]), up = Number(v[1]) || 0;
+    const e = { id, updated: up, by: v[2], deleted: v[3] === true || v[3] === 'TRUE' };
+    if (!e.deleted && (have[id] || 0) < up) { try { e.data = JSON.parse(rowData_(v)); } catch (err) {} }
+    items.push(e);
+  });
+  return { ok: true, items, time: nowKst_() };
+}
+function save_(b) {
+  needKey_(b);
+  const e = b.entry || {}, id = String(e.id || '');
+  if (!id) throw new Error('견적서 ID가 없습니다.');
+  const data = JSON.stringify(e.data || {}), chunks = [];
+  for (let i = 0; i < data.length; i += CHUNK) chunks.push(data.slice(i, i + CHUNK));
+  const up = Date.now();
+  const row = [id, up, String(b.by || ''), false, e.name || '', e.ceo || '', e.status || '대기', Number(e.total) || 0, e.quoteDate || ''].concat(chunks);
+  const L = listAll_(), hit = L.rows.find(x => String(x.v[0]) === id);
+  const sh = L.sh, need = row.length;
+  if (sh.getMaxColumns() < need) sh.insertColumnsAfter(sh.getMaxColumns(), need - sh.getMaxColumns());
+  if (hit) {
+    const prevLen = hit.v.length;
+    sh.getRange(hit.row, 1, 1, Math.max(need, prevLen)).setValues([row.concat(Array(Math.max(0, prevLen - need)).fill(''))]);
+  } else sh.appendRow(row);
+  return { ok: true, updated: up };
+}
+function remove_(b) {
+  needKey_(b);
+  const L = listAll_(), hit = L.rows.find(x => String(x.v[0]) === String(b.id || ''));
+  if (!hit) return { ok: true };
+  const up = Date.now(), w = hit.v.length;
+  const row = [hit.v[0], up, String(b.by || ''), true].concat(Array(w - 4).fill(''));
+  L.sh.getRange(hit.row, 1, 1, w).setValues([row]);
+  return { ok: true, updated: up };
+}
+
+/* ===== GET: 연결 확인 · 서명 페이지 ===== */
+function doGet(e) {
+  try {
+    const a = (e.parameter.action || '');
+    if (a === 'ping') return json_({ ok: true, time: nowKst_(), app: 'wq1', ver: SERVER_VER });
+    if (a !== 'doc') return json_({ ok: false, error: '잘못된 요청입니다.' });
+    const f = find_(e.parameter.id || '');
+    if (!f) return json_({ ok: false, error: '계약서를 찾을 수 없습니다. 링크를 다시 확인해 주세요.' });
+    const snap = JSON.parse(DriveApp.getFileById(f.v[C.snapshotFileId]).getBlob().getDataAsString('UTF-8'));
+    const s = snap.summary || {}, sc = s.client || {}, sup = s.supplier || {};
+    const st = f.v[C.status];
+    if (st === 'cancelled') return json_({ ok: false, error: '취소되었거나 새 계약서로 대체된 서명 요청입니다. ' + (sup.name || '보낸 곳') + '에 문의해 주세요.' });
+    if (!f.v[C.viewedAt]) set_(f, 'viewedAt', nowKst_());
+    const out = {
+      ok: true, id: f.v[C.id], docNo: f.v[C.docNo], title: f.v[C.title], hash: f.v[C.hash],
+      status: st, requestedAt: f.v[C.requestedAt], viewedAt: f.v[C.viewedAt],
+      client: { name: f.v[C.client], ceo: f.v[C.ceo], phone: f.v[C.phone], email: sc.email || '' },
+      supplier: { name: sup.name || '', ceo: sup.ceo || '', phone: sup.phone || '' },
+      brand: s.brand || {},
+      css: snap.css, html: snap.html, finalSent: !!f.v[C.finalFileId]
+    };
+    if (st === 'signed') {
+      out.signedAt = f.v[C.signedAt];
+      out.signer = { name: f.v[C.signerName], email: f.v[C.signerEmail], phone: f.v[C.signerPhone], ua: f.v[C.userAgent] };
+      out.signature = sigDataUrl_(f);
+    }
+    return json_(out);
+  } catch (err) { return json_({ ok: false, error: String(err.message || err) }); }
+}
+
+/* ===== POST ===== */
+function doPost(e) {
+  let b;
+  try { b = JSON.parse(e.postData.contents); } catch (err) { return json_({ ok: false, error: '요청 형식 오류' }); }
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(25000);
+    switch (b.action) {
+      case 'check':       needKey_(b); return json_({ ok: true, time: nowKst_(), name: ss_().getName(), ver: SERVER_VER });
+      case 'profileGet':  return json_(profileGet_(b));
+      case 'profileSave': return json_(profileSave_(b));
+      case 'list':        return json_(list_(b));
+      case 'save':        return json_(save_(b));
+      case 'remove':      return json_(remove_(b));
+      case 'create':      return json_(create_(b));
+      case 'cancel':      return json_(cancel_(b));
+      case 'status':      return json_(status_(b));
+      case 'sign':        return json_(sign_(b));
+      case 'final':       return json_(final_(b));
+      default:            return json_({ ok: false, error: '잘못된 요청입니다.' });
+    }
+  } catch (err) {
+    return json_({ ok: false, error: String(err.message || err) });
+  } finally { try { lock.releaseLock(); } catch (e2) {} }
+}
+
+/* ----- 이미지(로고 · 명함): 같은 이미지는 한 번만 저장 ----- */
+function saveImage_(dataUrl, kind) {
+  const m = String(dataUrl || '').match(/^data:(image\/(?:png|jpeg));base64,(.+)$/);
+  if (!m) return '';
+  const h = sha256_(m[2]), K = 'IMG_' + kind + '_' + h.slice(0, 16), p = props_();
+  const old = p.getProperty(K);
+  if (old) { try { DriveApp.getFileById(old); return old; } catch (e) {} }
+  const ext = m[1] === 'image/png' ? 'png' : 'jpg';
+  const file = folder_().createFile(Utilities.newBlob(Utilities.base64Decode(m[2]), m[1], kind + '_' + h.slice(0, 8) + '.' + ext));
+  p.setProperty(K, file.getId());
+  return file.getId();
+}
+function blob_(id) { if (!id) return null; try { return DriveApp.getFileById(id).getBlob(); } catch (e) { return null; } }
+
+/* 작성기 → 서명 요청 만들기 (계약서 원본 잠금) */
+function create_(b) {
+  needKey_(b);
+  if (!b.html || !b.css) throw new Error('계약서 내용이 없습니다.');
+  const id = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().slice(0, 8);
+  const d = new Date();
+  const s = b.summary || {}, c = s.client || {};
+  const prefix = String((s.brand && s.brand.prefix) || 'DOC').replace(/[^A-Za-z0-9]/g, '').slice(0, 6) || 'DOC';
+  const docNo = prefix + '-' + Utilities.formatDate(d, TZ, 'yyyyMMdd') + '-' + id.slice(0, 5).toUpperCase();
+  const hash = sha256_(b.css + '\n' + b.html);
+  s.cardFileId = saveImage_(b.card, '명함');
+  s.logoFileId = saveImage_(b.logo, '로고');
+  const file = folder_().createFile(docNo + '_원본.json', JSON.stringify({ css: b.css, html: b.html, summary: s }), 'application/json');
+  const row = COLS.map(() => '');
+  Object.assign(row, {
+    [C.id]: id, [C.docNo]: docNo, [C.title]: s.title || '', [C.client]: c.name || '', [C.ceo]: c.ceo || '', [C.phone]: c.phone || '',
+    [C.status]: 'sent', [C.requestedAt]: nowKst_(d), [C.hash]: hash, [C.snapshotFileId]: file.getId(), [C.summary]: JSON.stringify(s)
+  });
+  sheet_().appendRow(row);
+  return { ok: true, id, docNo, hash, requestedAt: row[C.requestedAt] };
+}
+function cancel_(b) {
+  needKey_(b);
+  const f = find_(b.id); if (!f) return { ok: true };
+  if (f.v[C.status] === 'sent') set_(f, 'status', 'cancelled');
+  return { ok: true, status: f.v[C.status] };
+}
+function status_(b) {
+  needKey_(b);
+  const out = {};
+  (b.ids || []).forEach(id => {
+    const f = find_(id);
+    if (!f) { out[id] = { status: 'missing' }; return; }
+    const r = { status: f.v[C.status], docNo: f.v[C.docNo], requestedAt: f.v[C.requestedAt], viewedAt: f.v[C.viewedAt] };
+    if (r.status === 'signed') {
+      Object.assign(r, {
+        signedAt: f.v[C.signedAt], signer: { name: f.v[C.signerName], email: f.v[C.signerEmail], phone: f.v[C.signerPhone] },
+        signature: sigDataUrl_(f), finalSentAt: f.v[C.finalSentAt],
+        finalUrl: f.v[C.finalFileId] ? DriveApp.getFileById(f.v[C.finalFileId]).getUrl() : ''
+      });
+    }
+    out[id] = r;
+  });
+  return { ok: true, items: out, time: nowKst_() };
+}
+function sigDataUrl_(f) {
+  if (!f.v[C.signatureFileId]) return '';
+  return 'data:image/png;base64,' + Utilities.base64Encode(DriveApp.getFileById(f.v[C.signatureFileId]).getBlob().getBytes());
+}
+
+/* 고객 → 서명 제출 (서버 시각 기록) */
+function sign_(b) {
+  const f = find_(b.id || '');
+  if (!f) throw new Error('계약서를 찾을 수 없습니다.');
+  if (f.v[C.status] === 'signed') throw new Error('이미 서명이 완료된 계약서입니다.');
+  if (f.v[C.status] !== 'sent') throw new Error('서명할 수 없는 상태의 계약서입니다.');
+  if (!b.agree) throw new Error('동의가 필요합니다.');
+  const name = String(b.name || '').trim(), email = String(b.email || '').trim();
+  if (!name) throw new Error('서명자 이름을 입력해 주세요.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('이메일 주소를 확인해 주세요.');
+  const m = String(b.signature || '').match(/^data:image\/png;base64,(.+)$/);
+  if (!m) throw new Error('서명이 없습니다.');
+  const sig = folder_().createFile(Utilities.newBlob(Utilities.base64Decode(m[1]), 'image/png', f.v[C.docNo] + '_의뢰자서명.png'));
+  const at = nowKst_();
+  set_(f, 'signatureFileId', sig.getId());
+  set_(f, 'signerName', name); set_(f, 'signerEmail', email); set_(f, 'signerPhone', String(b.phone || '').trim());
+  set_(f, 'userAgent', String(b.ua || '').slice(0, 300));
+  set_(f, 'signedAt', at);
+  set_(f, 'status', 'signed');
+  return { ok: true, signedAt: at, docNo: f.v[C.docNo], hash: f.v[C.hash], requestedAt: f.v[C.requestedAt], viewedAt: f.v[C.viewedAt] };
+}
+
+/* 서명 페이지 → 최종 PDF 업로드 → 드라이브 저장 + 양측 메일 */
+function final_(b) {
+  const f = find_(b.id || '');
+  if (!f) throw new Error('계약서를 찾을 수 없습니다.');
+  if (f.v[C.status] !== 'signed') throw new Error('서명이 완료되지 않았습니다.');
+  if (f.v[C.finalFileId] && !(b.key && b.key === adminKey_())) return { ok: true, already: true, finalSentAt: f.v[C.finalSentAt] };
+  const bytes = Utilities.base64Decode(String(b.pdf || '').replace(/^data:application\/pdf;[^,]*,/, ''));
+  if (bytes.length < 1000) throw new Error('PDF가 비어 있습니다.');
+  const fname = f.v[C.docNo] + '_' + (f.v[C.client] || '계약서').replace(/[\\/:*?"<>|]/g, '') + '_계약서(서명완료).pdf';
+  const pdf = folder_().createFile(Utilities.newBlob(bytes, 'application/pdf', fname));
+  set_(f, 'finalFileId', pdf.getId());
+  sendFinalMails_(f, pdf.getBlob().setName(fname));
+  set_(f, 'finalSentAt', nowKst_());
+  return { ok: true, finalSentAt: f.v[C.finalSentAt] };
+}
+
+/* ===== 최종본 메일 (작성기 [회사 설정 → 메일 문구]로 바꿀 수 있음) ===== */
+const MAIL_DEFAULT = {
+  subject: '[{상호}] {의뢰인} 계약서 서명 완료 · 최종 계약서 ({문서번호})',
+  client: '{서명자}님, 안녕하세요. {상호}입니다.\n계약서 서명이 정상적으로 완료되어 양측 서명이 모두 들어간 최종 계약서를 보내드립니다.\n궁금하신 점은 언제든 편하게 연락 주세요. 감사합니다.',
+  owner: '{의뢰인} 계약서 서명이 완료되었습니다.\n의뢰자에게 아래와 같은 메일과 동일한 최종 계약서가 발송되었습니다. (의뢰자 메일: {서명자메일})',
+  footer: '문의 · 수정 요청은 아래 연락처로 주세요.',
+  summary: true, record: true, card: true
+};
+function vars_(f, s) {
+  const sup = s.supplier || {};
+  return {
+    '상호': sup.name || '', '수행자': sup.name || '', '대표': sup.ceo || '', '연락처': sup.phone || '',
+    '의뢰인': f.v[C.client] || '', '대표자': f.v[C.ceo] || '', '서명자': f.v[C.signerName] || '', '서명자메일': f.v[C.signerEmail] || '',
+    '문서번호': f.v[C.docNo] || '', '계약명': s.title || f.v[C.title] || '', '총액': won_(s.grandTotal),
+    '서명일시': f.v[C.signedAt] || '', '요청일시': f.v[C.requestedAt] || ''
+  };
+}
+function tpl_(t, v) { return String(t == null ? '' : t).replace(/\{([^{}]+)\}/g, (m, k) => (k in v ? v[k] : m)); }
+function ownerEmail_(s) {
+  const e = String((s.supplier && s.supplier.email) || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) ? e : Session.getEffectiveUser().getEmail();
+}
+
+function sendFinalMails_(f, pdfBlob) {
+  let s = {}; try { s = JSON.parse(f.v[C.summary] || '{}'); } catch (e) {}
+  const M = Object.assign({}, MAIL_DEFAULT, s.mail || {}), v = vars_(f, s);
+  const subject = tpl_(M.subject, v) || ('계약서 서명 완료 (' + f.v[C.docNo] + ')');
+  const inline = {}, logo = blob_(s.logoFileId), card = M.card ? blob_(s.cardFileId) : null;
+  if (logo) inline.wqlogo = logo;
+  if (card) inline.wqcard = card;
+  const common = { attachments: [pdfBlob], name: (s.supplier && s.supplier.name) || '전자계약' };
+  if (Object.keys(inline).length) common.inlineImages = inline;
+  const owner = ownerEmail_(s);
+  MailApp.sendEmail(f.v[C.signerEmail], subject, tpl_(M.client, v), Object.assign({ htmlBody: mailHtml_(f, s, M, v, 'client', !!logo, !!card), replyTo: owner }, common));
+  MailApp.sendEmail(owner, subject, tpl_(M.owner, v), Object.assign({ htmlBody: mailHtml_(f, s, M, v, 'owner', !!logo, !!card) }, common));
+}
+
+function mailHtml_(f, s, M, v, who, hasLogo, hasCard) {
+  const b = s.brand || {}, sup = s.supplier || {};
+  const G = /^#[0-9a-fA-F]{6}$/.test(b.color || '') ? b.color : '#17320B', L = '#D9D9D9', BG = '#EDEDED', T = '#545454';
+  const row = (k, val, strong) => '<tr><td style="padding:8px 12px;background:' + BG + ';border:1px solid ' + L + ';width:34%;font-size:13px;color:#222">' + k +
+    '</td><td style="padding:8px 12px;border:1px solid ' + L + ';font-size:13px;color:#111' + (strong ? ';font-weight:700' : '') + '">' + val + '</td></tr>';
+  const para = t => esc_(t).replace(/\n/g, '<br>');
+  const items = (s.items || []).map(it =>
+    row(esc_(it.name), won_(it.total) + (it.deposit ? '<br><span style="color:' + T + ';font-size:12px">계약금 ' + won_(it.deposit) + ' · 잔금 ' + won_(it.balance) + '</span>' : '') +
+      (it.deliver ? '<br><span style="color:' + T + ';font-size:12px">납품일 ' + esc_(it.deliver) + '</span>' : ''))).join('');
+  const monthly = (s.monthly || []).map(m => row(esc_(m.name), '월 ' + won_(m.price) + ' <span style="color:' + T + ';font-size:12px">(총액과 별도)</span>')).join('');
+  const greet = para(tpl_(who === 'client' ? M.client : M.owner, v));
+
+  const card = hasCard
+    ? '<img src="cid:wqcard" alt="' + esc_(sup.name) + ' 명함" style="max-width:440px;width:100%;border:1px solid ' + L + ';border-radius:10px;display:block">'
+    : '<table cellpadding="0" cellspacing="0" style="width:100%;max-width:440px;border:1px solid ' + L + ';border-radius:10px;border-collapse:separate"><tr>' +
+      (hasLogo ? '<td style="padding:18px 8px 18px 18px;vertical-align:middle;width:92px"><img src="cid:wqlogo" alt="" width="84" style="display:block"></td>' : '') +
+      '<td style="padding:18px 18px 18px 12px;vertical-align:middle;border-left:2px solid ' + G + '">' +
+      '<div style="font-size:16px;font-weight:700;color:#111">' + esc_(sup.ceo) + ' <span style="font-size:12px;font-weight:400;color:' + T + '">대표</span></div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + G + ';margin:2px 0 8px">' + esc_(sup.name) + '</div>' +
+      '<div style="font-size:12px;color:#333;line-height:1.7">' +
+      (sup.phone ? 'T. ' + esc_(sup.phone) + '<br>' : '') + (sup.email ? 'E. ' + esc_(sup.email) + '<br>' : '') +
+      (sup.web ? 'W. ' + esc_(sup.web) + '<br>' : '') + (sup.address ? esc_(sup.address) + '<br>' : '') +
+      '</div>' + (b.slogan ? '<div style="font-size:11px;color:' + T + ';margin-top:6px">' + esc_(b.slogan) + '</div>' : '') +
+      '</td></tr></table>';
+
+  return '<div style="background:#f4f2ee;padding:24px 12px;font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif">' +
+    '<div style="max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid ' + L + '">' +
+    '<div style="padding:22px 26px 14px;border-bottom:2px solid ' + G + '">' +
+    (hasLogo ? '<img src="cid:wqlogo" alt="' + esc_(sup.name) + '" height="44" style="display:block;margin-bottom:8px">' : '<div style="font-weight:700;font-size:18px;color:' + G + '">' + esc_(sup.name) + '</div>') +
+    '<div style="font-size:19px;font-weight:700;color:#111">계약서 서명이 완료되었습니다</div></div>' +
+    '<div style="padding:20px 26px;font-size:14px;line-height:1.7;color:#222">' + greet + '</div>' +
+    (M.summary ? '<div style="padding:0 26px"><div style="font-size:14px;font-weight:700;color:' + G + ';margin:0 0 8px">계약 내용 요약</div>' +
+      '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">' +
+      row('문서번호', esc_(f.v[C.docNo]), true) +
+      row('계약명', esc_(s.title || f.v[C.title])) +
+      row('의뢰자', esc_(f.v[C.client]) + (f.v[C.ceo] ? ' · ' + esc_(f.v[C.ceo]) : '')) +
+      row('수행자', esc_(sup.name) + (sup.ceo ? ' · ' + esc_(sup.ceo) : '')) +
+      items + monthly +
+      row('총액', won_(s.grandTotal) + ' <span style="color:' + T + ';font-size:12px">(' + (s.vatMode === 'include' ? 'VAT 포함' : 'VAT 별도') + ')</span>', true) +
+      (s.account ? row('입금 계좌', esc_(s.account)) : '') +
+      '</table></div>' : '') +
+    (M.record ? '<div style="padding:0 26px"><div style="font-size:14px;font-weight:700;color:' + G + ';margin:20px 0 8px">서명 기록 (서버 기준 시각)</div>' +
+      '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">' +
+      row('서명 요청 일시', esc_(f.v[C.requestedAt])) +
+      row('계약서 열람 일시', esc_(f.v[C.viewedAt] || '-')) +
+      row('<b>계약 체결(서명 완료) 일시</b>', esc_(f.v[C.signedAt]), true) +
+      row('서명자', esc_(f.v[C.signerName]) + (f.v[C.signerPhone] ? ' · ' + esc_(f.v[C.signerPhone]) : '') + '<br><span style="font-size:12px;color:' + T + '">' + esc_(f.v[C.signerEmail]) + '</span>') +
+      row('문서 고유번호<br><span style="font-size:11px;color:' + T + '">SHA-256</span>', '<span style="font-family:Consolas,monospace;font-size:11px;word-break:break-all">' + esc_(f.v[C.hash]) + '</span>') +
+      '</table>' +
+      '<p style="font-size:12px;color:' + T + ';line-height:1.7;margin:12px 0 0">· 첨부된 PDF는 양측 서명이 완료된 최종 계약서이며, <b>동일한 파일</b>이 의뢰자와 ' + esc_(sup.name) + '에 함께 발송되었습니다.<br>' +
+      '· 모든 일시는 서버(Google) 기준 한국 표준시(KST)로 기록되었습니다.<br>' +
+      '· 문서 고유번호는 서명 요청 시점의 계약서 원본으로 계산되며, 내용이 한 글자라도 바뀌면 번호가 달라집니다.</p></div>' : '') +
+    '<div style="padding:24px 26px 26px">' + (M.footer ? '<div style="font-size:12px;color:' + T + ';margin-bottom:8px">' + para(tpl_(M.footer, v)) + '</div>' : '') +
+    (M.card ? card : '') + '</div>' +
+    '</div></div>';
+}
