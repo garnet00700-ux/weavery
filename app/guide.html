@@ -168,6 +168,11 @@ details.stuck>div{padding:0 16px 14px;line-height:1.7}
 .tile .ic{font-size:34px;line-height:1}
 .tile b{font-size:18px}
 .tile span{font-size:15px;color:#555;line-height:1.6}
+.tiles.feat{grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.tiles.feat .tile{padding:16px 18px;gap:4px}
+.tiles.feat .tile .ic{font-size:28px}
+.tiles.feat .tile b{font-size:17px}
+.tiles.feat .tile span{font-size:14px;line-height:1.6}
 .tile.red{border:2.5px solid var(--mark)}
 .tile.red b{color:var(--mark)}
 .tile .no{width:34px;height:34px;border-radius:50%;background:var(--mark);color:#fff;font-weight:800;display:grid;place-items:center;font-size:17px}
@@ -254,12 +259,43 @@ body.all details.stuck{display:block}
     <h1>처음이어도 괜찮아요.<br>한 화면씩 따라 하세요.</h1>
     <p>한 화면에 한 가지 동작만 있습니다.<br>다 했으면 아래 <b>[다음 →]</b>을 누르세요.</p>
     <div class="facts"><span>약 20분</span><span>비용 0원</span><span>PC + 크롬</span><span>구글 계정 1개</span><span>처음 한 번만</span></div>
-    <button class="btn bigbtn go" type="button" data-go="ready">시작하기 →</button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn bigbtn go" type="button" data-go="ready">설치 시작하기 →</button>
+      <button class="btn go" type="button" data-go="features" style="background:transparent;border-color:rgba(255,255,255,.6);font-size:16px;padding:12px 20px">무엇을 할 수 있나요? (주요 기능)</button>
+    </div>
     <div class="sig"><i></i><b>weavery lab</b><em>weaving your brand and the mood of your space</em></div>
   </div>
 </section>
 
-<section class="slide" id="ready" data-chap="시작">
+<section class="slide" id="features" data-chap="주요 기능">
+  <div class="kick">주요 기능 <small>1/2 · 서류 만들기 · 서명</small></div>
+  <h2>서류 작성부터 서명까지 <em>한곳에서</em></h2>
+  <div class="tiles feat">
+    <div class="tile"><div class="ic">📄</div><b>견적서 + 계약서 한 번에</b><span>상품을 고르면 견적서와 계약서가 함께 만들어집니다.<br>합계 · 부가세 · 계약금은 자동 계산됩니다.</span></div>
+    <div class="tile"><div class="ic">💬</div><b>카카오톡으로 서명 받기</b><span>[서명 요청 만들기] → 카카오톡으로 링크를 보냅니다.<br>고객은 휴대폰에서 손가락으로 서명합니다.</span></div>
+    <div class="tile"><div class="ic">✉️</div><b>서명 끝나면 메일 자동 발송</b><span>양측 서명이 들어간 같은 PDF가 고객과 우리 회사 메일로 갑니다.<br>목록 상태도 자동으로 '완료'가 됩니다.</span></div>
+    <div class="tile"><div class="ic">🤝</div><b>근로계약서</b><span>고용노동부 표준 양식 (정규직 · 기간제 · 아르바이트).<br>근로자에게도 카카오톡으로 서명을 받습니다.</span></div>
+    <div class="tile"><div class="ic">🏅</div><b>재직 · 경력 · 퇴직 증명서</b><span>회사 직인이 찍힌 증명서를 바로 발급합니다.<br>PDF는 구글 드라이브에 보관되고, 원하면 메일로도 보냅니다.</span></div>
+    <div class="tile"><div class="ic">🧾</div><b>거래명세서 · 청구서</b><span>견적서 없이 명세서만 만들 수도 있습니다.<br>인수자 서명란도 넣을 수 있습니다.</span></div>
+  </div>
+</section>
+
+<section class="slide" id="features2" data-chap="주요 기능">
+  <div class="kick">주요 기능 <small>2/2 · 저장 · 관리</small></div>
+  <h2>저장 · 찾기 · 팀 공유는 <em>자동으로</em></h2>
+  <div class="tiles feat">
+    <div class="tile"><div class="ic">💾</div><b>자동 저장 · 임시저장</b><span>작성을 시작하면 문서 목록에 자동 저장됩니다.<br>발급 전 증명서는 물어보고 임시저장 (7일 보관),<br>위쪽 배너로 몇 건 남았는지 알려 줍니다.</span></div>
+    <div class="tile"><div class="ic">🗂️</div><b>문서 목록에서 찾기</b><span>날짜 · 서류 종류 · 진행상태(대기 · 완료 · 임시저장)로 골라 봅니다.<br>이름 · 연락처로 검색하고, 복제해서 새 문서로 씁니다.</span></div>
+    <div class="tile"><div class="ic">👥</div><b>팀 공유</b><span>초대 링크 하나로 팀원이 같은 목록을 함께 씁니다.<br>모든 문서는 우리 회사 구글 계정(시트 · 드라이브)에 보관됩니다.</span></div>
+    <div class="tile"><div class="ic">📥</div><b>쓰던 서류 불러오기</b><span>예전 견적서 · 근로계약서(엑셀 · 워드 · PDF)를 읽어 칸을 채웁니다.<br>쓰던 PDF 양식을 그대로 쓸 수도 있습니다.</span></div>
+    <div class="tile"><div class="ic">📍</div><b>주소 검색</b><span>[주소 검색]으로 도로명 주소를 찾고,<br>동 · 호수 같은 상세 주소만 이어서 씁니다.</span></div>
+    <div class="tile"><div class="ic">🎨</div><b>우리 회사 서류처럼</b><span>로고 · 직인 · 대표 사인 · 회사 색을 한 번만 넣으면 모든 서류에 들어갑니다.<br>PDF 저장 · 인쇄 · 앱 설치(자동 업데이트)도 됩니다.</span></div>
+  </div>
+  <div class="note" style="margin-top:16px">비용은 0원입니다.<br>필요한 건 구글 계정 하나뿐이고, 설치는 처음 한 번만 하면 됩니다.</div>
+  <div style="margin-top:16px"><button class="btn bigbtn" type="button" data-go="ready">설치 시작하기 →</button></div>
+</section>
+
+<section class="slide" id="ready" data-chap="설치 준비">
   <div class="kick">시작하기 전에</div>
   <h2>이 네 가지를 준비하세요</h2>
   <div class="tiles">
@@ -270,7 +306,7 @@ body.all details.stuck{display:block}
   </div>
 </section>
 
-<section class="slide" id="rules" data-chap="시작">
+<section class="slide" id="rules" data-chap="설치 준비">
   <div class="kick">꼭 지켜 주세요</div>
   <h2>이 세 가지만 지키면 <em>막히지 않습니다</em></h2>
   <div class="tiles">
@@ -763,7 +799,7 @@ body.all details.stuck{display:block}
       var li=document.createElement("li"), b=document.createElement("button");
       b.type="button"; b.innerHTML='<span class="c"><b>'+(chaps.length+1)+'</b></span><span></span>';
       b.lastChild.textContent=c.replace(/^\d+\.\s*/,"");
-      b.querySelector("b").textContent=(c.match(/^(\d+)\./)||[])[1]||(c==="시작"?"▶":c==="앱 설치"?"앱":"+");
+      b.querySelector("b").textContent=(c.match(/^(\d+)\./)||[])[1]||(c==="시작"?"▶":c==="주요 기능"?"★":c==="설치 준비"?"✓":c==="앱 설치"?"앱":"+");
       b.onclick=function(){ go(i); document.body.classList.remove("toc-open"); };
       li.appendChild(b); toc.appendChild(li); chaps.push({name:c,btn:b,first:i});
     }
