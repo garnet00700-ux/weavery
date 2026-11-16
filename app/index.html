@@ -1124,7 +1124,8 @@ async function pull(){
     const list=loadList(), have={};
     list.forEach(x=>{ if(!dirty.has(x.id)) have[x.id]=x.updated||0; });
     const r=await api({action:"list",have});
-    const map=new Map(list.map(x=>[x.id,x])), seen=new Set();
+    // 서버 응답을 기다리는 동안 자동 저장된 문서가 있을 수 있으므로, 받기 전 목록이 아니라 지금 목록에 합친다
+    const map=new Map(loadList().map(x=>[x.id,x])), seen=new Set();
     for(const it of r.items||[]){
       seen.add(it.id);
       if(dirty.has(it.id)||delQ.has(it.id)) continue;
