@@ -337,6 +337,7 @@ textarea{resize:vertical;line-height:1.5}
 .cert-issue .ci-btn:hover{filter:brightness(1.1)}
 .cert-issue.done .ci-st{color:#2c5a8c}
 .cert-issue.done .ci-btn{background:#eef4fb;color:#2c5a8c;border-color:#b9cde3;cursor:default;filter:none}
+.lst.unissued{color:#9a5b00;border-color:#e8c98f;background:#fff6e5;cursor:default}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -1772,7 +1773,8 @@ const fmtTime=t=>{const d=new Date(t);return `${d.getFullYear()}. ${d.getMonth()
 let listFilter="all", statusFilter="all";
 // 대기 · 완료: 전자서명이 끝나면 자동으로 '완료'. 종이로 서명받은 건 목록에서 눌러 직접 바꿈.
 // 증명서(재직 · 경력 · 퇴직)는 서명을 받는 문서가 아니라 대기 · 완료 없이 '발급'으로만 저장.
-const stOf=x=>entryIsCert(x)?"발급":x.status==="완료"?"완료":"대기";
+// 증명서: [발급하기]를 눌러 저장했으면 '발급', 누르지 않고 저장된 것(✕로 양식 지우며 저장 · 예전 자동 저장)은 '미발급'
+const stOf=x=>entryIsCert(x)?(x.data.issuedAt?"발급":"미발급"):x.status==="완료"?"완료":"대기";
 function entryIsCert(x){ return !!(x&&x.data&&isCert(x.data)); }
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 function dateRange(f){
@@ -1816,7 +1818,8 @@ function renderList(){
         <div class="lsub">${x.id===state.docId?`<span class="tag now">작성 중</span>`:""}${(x.prods||[]).map(n=>`<span class="tag">${esc(n)}</span>`).join("")}${es?(es.status==="signed"?`<span class="tag es ok">서명 완료</span>`:`<span class="tag es">서명 요청됨${es.viewedAt?" · 열람":""}</span>`):""}
           ${dl} ${esc(fmtDate(x.quoteDate))||"-"}${dirty.has(x.id)&&connected()?` · <span class="by">올리는 중</span>`:""}</div>
       </div>
-      ${stOf(x)==="발급"?`<span class="lst issued" title="증명서는 대기 · 완료 없이 저장만 됩니다">발급</span>`
+      ${stOf(x)==="발급"?`<span class="lst issued" title="[발급하기]를 눌러 발급한 증명서입니다">발급</span>`
+        :stOf(x)==="미발급"?`<span class="lst unissued" title="[발급하기]를 누르지 않고 저장된 증명서입니다.\n열어서 맨 아래 [발급하기]를 누르세요">미발급</span>`
         :`<button type="button" class="lst ${stOf(x)==="완료"?"done":"wait"}" data-lact="status" title="${es&&es.status==="signed"?"전자서명이 끝나 자동으로 완료됐습니다":`전자서명이 끝나면 자동으로 완료됩니다.\n종이로 서명받았으면 눌러서 ${stOf(x)==="완료"?"대기":"완료"}로 바꾸세요`}">${stOf(x)}</button>`}
       <div class="lamt"><b>${k!=="quote"?"":x.total?"₩ "+won(x.total):"금액 미입력"}</b>수정 ${fmtTime(x.updated)}${x.by?` · ${esc(x.by)}`:""}</div>
       <div class="lact">
@@ -3215,9 +3218,12 @@ function certCardHtml(p,pi){
 /* --- 증명서 발급: 증명서는 자동 저장하지 않고 [발급하기]를 눌러야 문서 목록에 저장된다 --- */
 function certIssueUI(){
   const box=$("#certIssue"); if(!box) return;
-  const inList=loadList().some(x=>x.id===state.docId), pend=certPending()||!inList;
+  // 목록에 있어도 [발급하기]를 누른 적 없으면(✕로 양식 지우며 저장 등) 아직 발급 전으로 본다
+  const inList=loadList().some(x=>x.id===state.docId)&&!!state.issuedAt, pend=certPending()||!inList;
   const t=state.issuedAt?new Date(state.issuedAt).toLocaleString("ko-KR",{year:"numeric",month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
-  box.querySelector(".ci-st").innerHTML=!inList?"아직 발급 전입니다.<br>[발급하기]를 누르면 문서 목록에 저장됩니다."
+  const savedOnly=!state.issuedAt&&loadList().some(x=>x.id===state.docId);
+  box.querySelector(".ci-st").innerHTML=savedOnly?"<b>미발급</b> · 발급하지 않고 문서 목록에 저장된 증명서입니다.<br>[발급하기]를 눌러 발급하세요."
+    :!inList?"아직 발급 전입니다.<br>[발급하기]를 누르면 문서 목록에 저장됩니다."
     :pend?"발급한 뒤 고친 내용이 있습니다.<br>다시 발급해야 문서 목록에 반영됩니다."
     :`발급 완료${t?` · ${esc(t)}`:""}<br>문서 목록에 저장되어 있습니다.`;
   box.classList.toggle("done",inList&&!pend);
@@ -3806,6 +3812,7 @@ function prodDelete(pi){
     "다음 새 문서부터 목록에 나오지 않습니다."+(connected()?" (팀 전체)":""),
     "이미 만든 문서와 서명 받은 문서는 [문서 목록]에 그대로 남아,","언제든 다시 열고 저장할 수 있습니다."];
   if(keep) msg.push("","지금 작성하던 문서는 [문서 목록]에 저장하고,","새 문서로 넘어갑니다.");
+  if(keep&&p.kind==="cert"&&!state.issuedAt) msg.push("(발급하지 않은 증명서라 목록에 '미발급'으로 표시됩니다)");
   if(!confirm(msg.join("\n"))) return;
   profile.templates=profile.templates.filter(x=>!sameTpl(x,p));
   if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
