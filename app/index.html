@@ -562,7 +562,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <div class="mbox fmbox" role="dialog" aria-label="쓰던 양식 불러오기">
     <div class="mhead"><b>쓰던 양식 불러오기</b><span style="flex:1"></span><button class="btn" id="fmCancel" type="button">닫기</button></div>
     <div class="mbody">
-      <p class="hint" style="margin:0 0 8px">쓰던 양식 파일을 올리면 <b>어떤 서류인지</b>, <b>칸과 내용</b>, <b>서명 · 도장 자리</b>를 찾아 두 가지 방식으로 보여 드립니다. 미리보기를 보고 마음에 드는 쪽을 고르세요.</p>
+      <p class="hint" style="margin:0 0 8px">쓰던 양식 파일을 올리면 <b>어떤 서류인지</b>, <b>칸과 내용</b>, <b>서명 · 도장 자리</b>를 찾아 두 가지 방식으로 보여 드립니다.<br>미리보기를 보고 마음에 드는 쪽을 고르세요.</p>
       <div class="padbtns" style="margin:0 0 8px">
         <button class="btn go" type="button" id="fmFileBtn">양식 파일 올리기</button>
         <input type="file" id="fmFile" accept=".pdf,.hwp,.hwpx,.docx,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg,.webp" hidden>
@@ -572,21 +572,21 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         <div class="fm-guide">
           <b>어느 쪽을 고를까요?</b>
           <ul>
-            <li>원본과 <b>글자 · 모양까지 똑같아야</b> 하면 → <b>B. 원본 모양 그대로</b> (보이는 내용이 하나도 빠지지 않습니다. 앞 8쪽까지)</li>
+            <li>원본과 <b>글자 · 모양까지 똑같아야</b> 하면 → <b>B. 원본 모양 그대로</b> <br>(보이는 내용이 하나도 빠지지 않습니다.<br>앞 8쪽까지 넣습니다.)</li>
             <li>내용을 <b>고쳐 쓰고 금액 계산</b>까지 하려면 → <b>A. 우리 양식에 채우기</b></li>
           </ul>
-          <p>A를 고를 때는 미리보기에서 <b>품목 · 조항 수가 원본과 맞는지</b> 꼭 확인하세요. 조항은 "제1조, 제2조…"처럼 번호가 있어야 나눠 읽고, 번호 없는 특약 문단 · 계좌번호 · 원본 서명란 · 로고는 우리 양식 것으로 바뀝니다.</p>
+          <p>A를 고를 때는 미리보기에서 <b>품목 · 조항 수가 원본과 맞는지</b> 꼭 확인하세요.<br>조항은 "제1조, 제2조…"처럼 번호가 있어야 나눠 읽습니다.<br>번호 없는 특약 문단 · 계좌번호 · 원본 서명란 · 로고는 우리 양식 것으로 바뀝니다.</p>
         </div>
         <section class="fm-opt" id="fmA">
           <div class="fm-oh"><b>A. 우리 양식에 채우기</b><label>서류 종류 <select id="fmKind"></select></label></div>
-          <p class="hint">읽은 내용을 이 작성기의 깔끔한 양식으로 옮깁니다. 칸을 고치기 쉽고 금액 계산 · 전자서명 · 직인이 자동으로 들어갑니다.</p>
+          <p class="hint">읽은 내용을 이 작성기의 깔끔한 양식으로 옮깁니다.<br>칸을 고치기 쉽고 금액 계산 · 전자서명 · 직인이 자동으로 들어갑니다.</p>
           <div class="fm-info" id="fmInfoA"></div>
           <div class="fm-prev" id="fmPrevA"></div>
           <button class="btn go" id="fmOkA" type="button">A 방식으로 넣기</button>
         </section>
         <section class="fm-opt" id="fmB">
           <div class="fm-oh"><b>B. 원본 모양 그대로</b></div>
-          <p class="hint">올린 양식을 그대로 바탕에 깔고, 찾은 빈칸에 내용 · 서명 · 직인만 얹습니다. 칸은 넣은 뒤에 끌어서 옮기거나 더할 수 있습니다.</p>
+          <p class="hint">올린 양식을 그대로 바탕에 깔고, 찾은 빈칸에 내용 · 서명 · 직인만 얹습니다.<br>칸은 넣은 뒤에 끌어서 옮기거나 더할 수 있습니다.</p>
           <div class="fm-info" id="fmInfoB"></div>
           <div class="fm-prev" id="fmPrevB"></div>
           <button class="btn go" id="fmOkB" type="button">B 방식으로 넣기</button>
