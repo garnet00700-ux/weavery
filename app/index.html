@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>견적서 작성기</title>
+<title>계약·서류 작성기</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -340,6 +340,18 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 .page .logo-t{position:absolute;left:9mm;top:16.3mm;transform:translateY(-50%);max-width:40mm;font-size:13pt;font-weight:800;color:var(--green);line-height:1.15;word-break:keep-all}
 .page img.logo{top:16.3mm;transform:translateY(-50%);width:auto;height:auto;max-width:40mm;max-height:11mm;object-fit:contain;object-position:left center}
 .page .wmark{object-fit:contain;max-height:100mm}
+/* 증명서 (재직 · 경력 · 퇴직) */
+.cert-no{text-align:right;font-size:8.5pt;min-height:4mm;margin:2mm 2mm 0}
+.cert-ttl{text-align:center;font-size:21pt;font-weight:800;letter-spacing:2mm;margin:7mm 0 10mm}
+.t.cert td,.t.cert th{padding:2.4mm 2mm;font-size:9.6pt}
+.t.cert th{background:var(--g2);font-weight:700}
+.t.cert td:nth-child(odd):not(.l){background:#fafafa;font-weight:600}
+.t.cert td.l{text-align:left;padding-left:4mm}
+.cert-st{text-align:center;font-size:12pt;font-weight:700;margin:16mm 0 12mm;line-height:1.7}
+.cert-date{text-align:center;font-size:11pt;font-weight:700;margin-bottom:14mm;word-spacing:1mm}
+.cert-co{text-align:center;font-size:13pt;font-weight:800;line-height:2}
+.cert-co .nm{justify-content:center;gap:6mm;padding:0}
+.cert-co .seal img{width:22mm;height:16mm}
 .totals .vin{font-size:.82em;font-weight:500;margin-left:1.5mm}
 </style>
 <style>
@@ -361,7 +373,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 </head>
 <body>
 <div class="topbar">
-  <div class="brand"><span id="topLogoBox"><img id="topLogo" alt=""></span><h1 id="topName">견적서 작성기</h1></div>
+  <div class="brand"><span id="topLogoBox"><img id="topLogo" alt=""></span><h1 id="topName">계약·서류 작성기</h1></div>
   <button class="btn" id="bList" title="지금까지 만든 견적서 목록 — 팀이 함께 봅니다">견적 목록</button>
   <button class="btn" id="bNew" title="의뢰자 정보와 금액을 비우고 새로 작성합니다">새 견적서</button>
   <button class="btn" id="bSettings" title="회사 정보 · 로고 · 사인 · 메일 문구 · 서버 연결">회사 설정</button>
@@ -660,23 +672,28 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
               <option value="lab-fixed">근로계약서 — 기간제</option>
               <option value="lab-part">근로계약서 — 아르바이트 (단시간)</option>
             </optgroup>
+            <optgroup label="증명서 (회사 직인 발급)">
+              <option value="cert-employ">재직증명서</option>
+              <option value="cert-career">경력증명서</option>
+              <option value="cert-retire">퇴직증명서</option>
+            </optgroup>
           </select>
         </label>
         <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
-          근로계약서는 견적서 없이 계약서만 만들어지며, 한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
+          근로계약서 · 증명서는 견적서 없이 그 문서만 만들어지며, 한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
       </div>
     </details>
 
     <details class="card" open>
-      <summary><span data-ll="근로자 정보">의뢰자 정보</span></summary>
+      <summary><span data-ll="근로자 정보" data-lc="직원 정보">의뢰자 정보</span></summary>
       <div class="in">
         <div class="grid2">
           <label class="f"><span data-ll="성명">업체명</span><input data-p="client.name"></label>
           <label class="f" data-only="quote">대표자<input data-p="client.ceo"></label>
           <label class="f">연락처<input data-p="client.phone"></label>
           <label class="f">이메일 <span style="font-weight:400">(최종 계약서 받을 주소)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
-          <label class="f" data-only="labor">주소<input data-p="client.addr"></label>
-          <label class="f"><span data-ll="작성일">견적일</span><input type="date" data-p="quoteDate"></label>
+          <label class="f" data-only="labor cert">주소<input data-p="client.addr"></label>
+          <label class="f"><span data-ll="작성일" data-lc="발급일">견적일</span><input type="date" data-p="quoteDate"></label>
         </div>
         <div class="grid2" id="deliverBox" style="margin-top:10px"></div>
       </div>
@@ -700,8 +717,8 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       </div>
     </details>
 
-    <details class="card" open>
-      <summary>계약일 · <span data-ll="근로자">의뢰자</span> 서명</summary>
+    <details class="card" open data-only="quote labor">
+      <summary>계약일 ·<span data-ll="근로자">의뢰자</span> 서명</summary>
       <div class="in">
         <div class="grid3">
           <label class="f">년<input data-p="date.y"></label>
@@ -1091,6 +1108,7 @@ function termsHtml(pi){
 }
 function prodCardHtml(p,pi){
   if(p.kind==="labor") return laborCardHtml(p,pi);
+  if(p.kind==="cert") return certCardHtml(p,pi);
   const k=`p${p.pid}`;
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
     <summary>${esc(p.name||"(이름 없는 상품)")} — 견적 · 계약</summary>
@@ -1136,7 +1154,7 @@ function prodCardHtml(p,pi){
 }
 function renderProds(){
   $("#prodPick").innerHTML=P().map((p,i)=>`<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}>${esc(p.name||"(이름 없음)")}</label>`).join("");
-  $("#deliverBox").innerHTML=P().map((p,i)=>p.on&&p.kind!=="labor"?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
+  $("#deliverBox").innerHTML=P().map((p,i)=>p.on&&!special(p)?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
   $("#prodCards").innerHTML=P().map(prodCardHtml).join("");
   // 텍스트 칸 값 넣기 (value 속성 대신 직접 넣어야 줄바꿈 등 정확)
   $$("#prodCards [data-p]").forEach(el=>{ if(el.tagName==="SELECT"||el.type==="checkbox") return; const v=getAt(state,el.dataset.p); if(el.value!==String(v??"")) el.value=v??""; });
@@ -1155,8 +1173,8 @@ $("#editor").addEventListener("input",e=>{
   else if(el.hasAttribute("data-num")) v= v==="" ? (el.hasAttribute("data-null")?null:"") : Number(v);
   setAt(state,el.dataset.p,v);
   const on=el.dataset.p.match(/^prods\.(\d+)\.on$/);
-  if(on&&v){ const lab=P()[+on[1]].kind==="labor"; P().forEach((q,i)=>{ if(i!==+on[1]&&(q.kind==="labor"||lab)) q.on=false; }); if(lab) state.client.ceo=state.client.name||""; }
-  if(el.dataset.p==="client.name"&&isLabor()) state.client.ceo=v;
+  if(on&&v) exclusiveOn(+on[1]);
+  if(el.dataset.p==="client.name"&&docKind()!=="quote") state.client.ceo=v;
   const m=el.dataset.p.match(/^(prods\.\d+\.items\.\d+)\.(\w+)$/);
   if(m&&m[2]==="disc"&&!v){ const it=getAt(state,m[1]); it.amount=null; it.note=""; }
   if(m&&/^(cat|desc|qty)$/.test(m[2])){ const h=document.querySelector(`[data-h="${m[1]}"]`); if(h) h.innerHTML=itemHead(getAt(state,m[1])); }
@@ -1239,11 +1257,11 @@ const SAMPLES={
 };
 $("#sampleSel").addEventListener("change",e=>{
   const key=e.target.value; e.target.value=""; if(!key||!SAMPLES[key]) return;
-  if(/^lab-/.test(key)) return addLaborSample(key);
+  if(/^(lab|cert)-/.test(key)) return addLaborSample(key);
   const s=SAMPLES[key]();
   if(P().some(p=>p.name===s.name)&&!confirm(`'${s.name}' 상품이 이미 있습니다. 예시 양식으로 하나 더 추가할까요?`)) return;
   const p=Object.assign(GENERIC_PRODUCT(),s);
-  P().forEach(q=>{ if(q.kind==="labor") q.on=false; });   // 근로계약서와 함께 못 고름
+  P().forEach(q=>{ if(special(q)) q.on=false; });   // 근로계약서 · 증명서와 함께 못 고름
   P().push(p); profile.templates.push(clone(p)); saveProfile();
   openSet.add(`p${p.pid}-tm`);
   renderProds(); esMarkStale(); save(); schedule();
@@ -1956,6 +1974,7 @@ function termBody(text,p){
 }
 function contractBlocks(p){
   if(p.kind==="labor") return laborContractBlocks(p);
+  if(p.kind==="cert") return certBlocks(p);
   const c=state.client,s=profile,out=[];
   const ttl=p.contractTitle||"계약서";
   out.push(`<div class="cttl${ttl.length>18?" sm":""}">${esc(ttl)}</div>`);
@@ -1996,7 +2015,7 @@ function flow(kind,blocks){
 }
 function renderPreview(){
   $("#pages").innerHTML="";
-  onProds().forEach(p=>{ if(p.kind!=="labor") flow("quote",quoteBlocks(p)); flow("contract",contractBlocks(p)); });
+  onProds().forEach(p=>{ if(!special(p)) flow("quote",quoteBlocks(p)); flow("contract",contractBlocks(p)); });
   if(!onProds().length) $("#pages").innerHTML=`<div class="lempty" style="background:#fff;border-radius:10px;padding:40px">왼쪽 [상품 선택]에서 상품을 하나 이상 고르세요.</div>`;
   const pages=$$("#pages .page"); pages.forEach((p,i)=>p.classList.toggle("last",i===pages.length-1));
   updateSums(); applyZoom();
@@ -2025,8 +2044,8 @@ function applyBrand(){
   document.documentElement.style.setProperty("--g1",safeTbl());
   document.documentElement.style.setProperty("--g2",tblLight(safeTbl()));
   $("#topLogoBox").innerHTML=`<span class="logo-t">견적</span>`;   // 상단바는 회사 로고 · 색과 상관없이 늘 같은 모양
-  $("#topName").textContent=`${profile.name?profile.name+" ":""}견적서 작성기`;
-  document.title=`${profile.name?profile.name+" ":""}견적서 작성기`;
+  $("#topName").textContent=`${profile.name?profile.name+" ":""}계약·서류 작성기`;
+  document.title=`${profile.name?profile.name+" ":""}계약·서류 작성기`;
 }
 
 /* ===== 시작 ===== */
@@ -2418,7 +2437,7 @@ function licAsk(msg,entry){
     const w=document.createElement("div"); w.id="licGate";
     w.innerHTML=`<div class="lic-box" role="dialog" aria-modal="true" aria-labelledby="licT">
       ${entry?"":`<button class="lic-x" type="button" aria-label="닫기">×</button>`}
-      <div class="lic-brand"><b>weavery lab</b> 견적서 작성기</div>
+      <div class="lic-brand"><b>weavery lab</b> 계약·서류 작성기</div>
       <h2 id="licT">${entry?"초대받은 분만 쓸 수 있어요":"PDF로 받으려면 초대 코드가 필요해요"}</h2>
       <p>${entry?"weavery lab이 거래처에 드리는 견적서 · 계약서 작성 도구입니다.<br>받으신 <b>초대 코드</b>를 넣어 주세요.":"PDF 다운로드와 인쇄는 weavery lab에서 <b>초대 코드</b>를 받은 분만 쓸 수 있습니다."}<br>이 컴퓨터에서는 처음 한 번만 넣으면 됩니다.</p>
       <form id="licF"><input id="licC" placeholder="WV-XXXX-XXXX" autocomplete="off" spellcheck="false" maxlength="20" aria-label="초대 코드">
@@ -2493,8 +2512,9 @@ setTimeout(serverVerCheck,1500);
 function isLabor(d){ return ((d||state).prods||[]).some(p=>p.on&&p.kind==="labor"); }
 // 한 문서에 견적 상품과 근로계약서가 같이 켜져 있으면 근로계약서를 끔
 function fixMode(d){
-  const on=(d.prods||[]).filter(p=>p.on);
-  if(on.some(p=>p.kind==="labor")&&on.some(p=>p.kind!=="labor")) d.prods.forEach(p=>{ if(p.kind==="labor") p.on=false; });
+  // 근로계약서 · 증명서는 혼자만: 다른 것과 같이 켜져 있으면 근로계약서 · 증명서 쪽을 끔 (견적 상품만 있으면 그대로)
+  const on=(d.prods||[]).filter(p=>p.on), sp=on.filter(special);
+  if(sp.length&&on.length>1){ const keep=on.length>sp.length?null:sp[0]; d.prods.forEach(p=>{ if(special(p)&&p!==keep) p.on=false; }); }
   return d;
 }
 function laborDefaults(type){
@@ -2577,9 +2597,9 @@ function laborCardHtml(p,pi){
 }
 // 의뢰자 ↔ 근로자 화면 문구 · 칸 바꾸기
 function applyMode(){
-  const lab=isLabor();
-  $$("[data-ll]").forEach(e=>{ if(e.dataset.lq==null) e.dataset.lq=e.textContent; e.textContent=lab?e.dataset.ll:e.dataset.lq; });
-  $$("[data-only]").forEach(e=>{ e.style.display=e.dataset.only===(lab?"labor":"quote")?"":"none"; });
+  const mode=docKind();   // quote | labor | cert
+  $$("[data-ll]").forEach(e=>{ if(e.dataset.lq==null) e.dataset.lq=e.textContent; e.textContent=mode==="quote"?e.dataset.lq:mode==="cert"?(e.dataset.lc||e.dataset.ll):e.dataset.ll; });
+  $$("[data-only]").forEach(e=>{ e.style.display=e.dataset.only.split(" ").includes(mode)?"":"none"; });
 }
 
 /* --- 미리보기: 근로계약서 --- */
@@ -2658,7 +2678,7 @@ function addLaborSample(key){
   state.client.ceo=state.client.name||"";
   openSet.add(`p${p.pid}-tm`);
   renderProds(); esMarkStale(); save(); schedule();
-  $("#saved").textContent=`'${p.name}' 예시 양식을 추가했습니다 — 근로 조건을 채우고 항목을 고쳐 쓰세요`;
+  $("#saved").textContent=p.kind==="cert"?`'${p.name}' 양식을 추가했습니다 — 직원 정보와 재직 사항을 채우세요`:`'${p.name}' 예시 양식을 추가했습니다 — 근로 조건을 채우고 항목을 고쳐 쓰세요`;
 }
 
 /* --- 기존 근로계약서 가져오기 ---
@@ -2843,6 +2863,146 @@ async function hwpText(f){
   }
   return out.join("\n");
 }
+
+/* ===== 증명서 (재직 · 경력 · 퇴직) =====
+   상품 종류 kind:"cert" → 견적서 · 계약 조항 없이 증명서 1장. 회사가 발급하는 서류라 직원 서명은 없고 회사 직인(도장)만 찍힙니다.
+   직원 정보는 state.client(성명 · 주소 · 연락처), 재직 사항은 p.cert, 발급일은 작성일(quoteDate).
+   근로계약서 · 견적 상품과 함께 고를 수 없습니다.
+   ※ 이 파일의 함수는 앞 파일에서 먼저 불릴 수 있어 파일 맨 위 const를 쓰지 않습니다. */
+function isCert(d){ return ((d||state).prods||[]).some(p=>p.on&&p.kind==="cert"); }
+function special(p){ return p.kind==="labor"||p.kind==="cert"; }
+function docKind(d){ return isCert(d)?"cert":isLabor(d)?"labor":"quote"; }
+// 상품을 켰을 때: 근로계약서 · 증명서는 혼자, 견적 상품끼리는 여러 개
+function exclusiveOn(i){
+  const sp=special(P()[i]);
+  P().forEach((q,j)=>{ if(j!==i&&(sp||special(q))) q.on=false; });
+  if(sp) state.client.ceo=state.client.name||"";
+}
+function certTypes(){ return {employ:"재직증명서",career:"경력증명서",retire:"퇴직증명서"}; }
+function certStatements(){ return {
+  employ:"위 사람은 현재 당사에 재직하고 있음을 증명합니다.",
+  career:"위 사람은 위와 같이 당사에 근무하였음을 증명합니다.",
+  retire:"위 사람은 위와 같이 당사에 근무하다 퇴직하였음을 증명합니다."}; }
+function certDefaults(type){ return {type:type||"employ", no:"", birth:"", dept:"", pos:"", start:"", end:"", job:"", reason:"", purpose:""}; }
+function certDate(s){ const m=String(s||"").match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); return m?new Date(+m[1],+m[2]-1,+m[3]):null; }
+function certYmd(dt){ return `${dt.getFullYear()}년 ${dt.getMonth()+1}월 ${dt.getDate()}일`; }
+// 재직기간 "2024년 3월 2일 ~ 현재 (2년 8개월)"
+function certPeriod(C,issue){
+  const a=certDate(C.start); if(!a) return C.start?esc(C.start):"";
+  const cur=C.type==="employ", b=cur?issue:certDate(C.end);
+  let s=`${certYmd(a)} ~ ${cur?"현재":b?certYmd(b):esc(C.end||"")}`;
+  if(b&&b>=a){ let mo=(b.getFullYear()-a.getFullYear())*12+b.getMonth()-a.getMonth(); if(b.getDate()<a.getDate()) mo--;
+    const y=Math.floor(mo/12), m=mo%12; s+=` (${y?y+"년 ":""}${m||!y?m+"개월":""}`.replace(/ $/,"")+")"; }
+  return s;
+}
+
+/* --- 편집 화면 --- */
+function certCardHtml(p,pi){
+  const k=`p${p.pid}`, C=p.cert=Object.assign(certDefaults(),p.cert||{}), b=`prods.${pi}.cert`, T=certTypes(), S=certStatements();
+  // 종류를 바꾸면 기본 제목 · 문구도 따라 바뀜 (직접 고친 문구는 그대로)
+  if(!p.contractTitle||Object.values(T).includes(p.contractTitle)) p.contractTitle=T[C.type];
+  if(!p.intro||Object.values(S).includes(p.intro)) p.intro=S[C.type];
+  const f=(key,label,ph,wide)=>`<label class="f"${wide?' style="grid-column:1/-1"':""}>${label}<input data-p="${b}.${key}"${ph?` placeholder="${esc(ph)}"`:""}></label>`;
+  const labs=certCardHtml.docs=certLaborDocs();   // 화면에 보인 목록 그대로 기억 (고르는 사이 자동 저장으로 바뀌지 않게)
+  return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
+    <summary>${esc(p.name||"(이름 없는 증명서)")} — 증명서</summary>
+    <div class="in">
+      <div class="grid2">
+        <label class="f">증명서 종류<select class="f" data-p="${b}.type" data-struct>${
+          Object.entries(T).map(([v,t])=>`<option value="${v}"${C.type===v?" selected":""}>${t}</option>`).join("")}</select></label>
+        ${f("no","발급번호","예: 2026-001")}
+      </div>
+      ${labs.length?`<label class="f" style="margin-top:8px">근로계약서에서 직원 정보 불러오기<select class="f" data-certfrom data-pi="${pi}">
+        <option value="">— 저장된 근로계약서 고르기 (${labs.length}건) —</option>
+        ${labs.map((x,i)=>`<option value="${i}">${esc(x.name)}${x.start?` · 입사 ${esc(x.start)}`:""}${x.job?` · ${esc(x.job)}`:""}</option>`).join("")}</select></label>`:""}
+      <div class="sub" style="margin-top:8px">직원 · 재직 사항</div>
+      <div class="grid2">
+        ${f("birth","생년월일","예: 1990. 5. 12.")}
+        ${f("dept","부서","예: 디자인팀")}
+        ${f("pos","직위","예: 대리")}
+        ${f("start","입사일","예: 2024. 3. 2.")}
+        ${C.type!=="employ"?f("end",C.type==="retire"?"퇴사일":"근무 종료일","예: 2026. 10. 31."):""}
+        ${f("purpose","용도 (제출처)","예: 금융기관 제출")}
+        ${C.type==="retire"?f("reason","퇴직 사유","예: 개인 사정 (비워 두면 표시 안 함)"):""}
+      </div>
+      <label class="f" style="margin-top:8px">담당 업무${C.type==="career"?"":" <span style=\"font-weight:400\">(비워 두면 표시 안 함)</span>"}<textarea rows="${C.type==="career"?3:2}" data-p="${b}.job" placeholder="예: 웹사이트 디자인 및 유지보수">${esc(C.job)}</textarea></label>
+      <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>이름 · 제목 · 증명 문구</summary>
+        <div class="grid2">
+          <label class="f">상품 이름<input data-p="prods.${pi}.name" data-title></label>
+          <label class="f">문서 제목<input data-p="prods.${pi}.contractTitle"></label>
+        </div>
+        <label class="f">증명 문구<textarea rows="2" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
+      </details>
+      <p class="hint">성명 · 주소 · 연락처는 위 <b>직원 정보</b> 칸, 발급일은 <b>발급일</b> 칸에서 넣습니다. 회사 직인은 [회사 설정]의 도장 이미지가 찍힙니다.</p>
+      <div class="pbtns">
+        <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
+        <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
+        <button class="btn" type="button" data-pact="del" data-pi="${pi}">상품 종류 삭제</button>
+      </div>
+    </div>
+  </details>`;
+}
+// 저장된 문서 중 근로계약서 (근로자 이름별 최신 1건)
+function certLaborDocs(){
+  const seen=new Map();
+  const add=d=>{ if(!d||!d.client||!d.client.name) return; const lp=(d.prods||[]).find(p=>p.kind==="labor"&&p.on); if(!lp) return;
+    const L=lp.labor||{}, key=d.client.name.trim();
+    if(!seen.has(key)) seen.set(key,{name:key,phone:d.client.phone||"",email:d.client.email||"",addr:d.client.addr||"",start:L.start||"",end:L.type!=="regular"?L.end||"":"",job:L.job||""}); };
+  loadList().slice().sort((a,b)=>(b.updated||0)-(a.updated||0)).forEach(x=>add(x.data));
+  return [...seen.values()];
+}
+$("#editor").addEventListener("change",e=>{
+  const s=e.target.closest("[data-certfrom]"); if(!s||s.value==="") return;
+  const x=(certCardHtml.docs||[])[+s.value], p=P()[+s.dataset.pi]; if(!x||!p) return;
+  Object.assign(state.client,{name:x.name,ceo:x.name,phone:x.phone,email:x.email,addr:x.addr});
+  p.cert=Object.assign(certDefaults(),p.cert||{}); p.cert.start=x.start||p.cert.start; p.cert.job=x.job||p.cert.job;
+  if(x.end&&p.cert.type!=="employ") p.cert.end=x.end;
+  bindSimple(); renderProds(); esMarkStale(); save(); schedule();
+  $("#saved").textContent=`${x.name} 님 근로계약서에서 성명 · 연락처 · 주소 · 입사일 · 업무를 가져왔습니다`;
+});
+
+/* --- 미리보기 --- */
+function certBlocks(p){
+  const c=state.client, s=profile, C=Object.assign(certDefaults(),p.cert||{}), T=certTypes();
+  const issue=certDate(state.quoteDate)||new Date();
+  const ttl=p.contractTitle||T[C.type];
+  const v=x=>esc(x||"");
+  const row=(a,av,b,bv)=>b?`<tr><td>${a}</td><td>${av}</td><td>${b}</td><td>${bv}</td></tr>`:`<tr><td>${a}</td><td colspan="3" class="l">${av}</td></tr>`;
+  const ss=s.sign?`<img src="${s.sign}" alt="">`:"";
+  const st=String(p.intro||certStatements()[C.type]).replace(/\{성명\}/g,c.name||"").replace(/\{회사명\}/g,s.name||"").replace(/\{용도\}/g,C.purpose||"");
+  return [
+    `<div class="cert-no">${C.no?`발급번호 : ${v(C.no)}`:""}</div>`,
+    `<div class="cert-ttl">${esc(ttl.length<=6?ttl.split("").join(" "):ttl)}</div>`,
+    `<table class="t cert">
+      <colgroup><col style="width:17%"><col style="width:33%"><col style="width:17%"><col style="width:33%"></colgroup>
+      <tr><th colspan="4">인적 사항</th></tr>
+      ${row("성명",v(c.name),"생년월일",v(C.birth))}
+      ${row("주소",v(c.addr))}
+      <tr><th colspan="4">${C.type==="career"?"경력 사항":"재직 사항"}</th></tr>
+      ${row("회사명",v(s.name),"대표자",v(s.ceo))}
+      ${row("사업자등록번호",v(s.bizno),"전화",v(s.phone))}
+      ${row("회사 주소",v(s.address))}
+      ${row("부서",v(C.dept),"직위",v(C.pos))}
+      ${row(C.type==="employ"?"재직 기간":"근무 기간",certPeriod(C,issue))}
+      ${C.job?row("담당 업무",v(C.job).replace(/\n/g,"<br>")):""}
+      ${C.type==="retire"&&C.reason?row("퇴직 사유",v(C.reason)):""}
+      ${row("용도",v(C.purpose))}
+    </table>`,
+    `<div class="cert-st">${v(st).replace(/\n/g,"<br>")}</div>`,
+    `<div class="cert-date">${certYmd(issue)}</div>`,
+    `<div class="cert-co"><div>${v(s.name)}</div><div class="nm"><span>대표 ${v(s.ceo)}</span><span class="seal">${ss}(인)</span></div></div>`
+  ];
+}
+
+/* --- 예시 양식 --- */
+function certSample(type){
+  const T=certTypes();
+  return {kind:"cert", name:T[type], quoteTitle:"", contractTitle:T[type], items:[], notices:[], noticeIntro:"", extra:"", terms:[],
+    intro:certStatements()[type], cert:certDefaults(type)};
+}
+SAMPLES["cert-employ"]=()=>certSample("employ");
+SAMPLES["cert-career"]=()=>certSample("career");
+SAMPLES["cert-retire"]=()=>certSample("retire");
 
 </script>
 </body>
