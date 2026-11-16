@@ -91,15 +91,17 @@ kbd{font-family:var(--f);font-size:.9em;background:#fff;border:1px solid var(--l
 .toc .t{font-size:12px;letter-spacing:.12em;opacity:.7;padding:0 8px}
 .toc .h{font-size:18px;font-weight:800;padding:0 8px;line-height:1.35}
 .toc ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
-.toc button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:center;padding:8px 8px;border-radius:10px;cursor:pointer;font-size:14.5px;line-height:1.35}
+.toc button{all:unset;box-sizing:border-box;width:100%;display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:center;padding:8px 8px;border-radius:10px;cursor:pointer;font-size:14.5px;line-height:1.35}
 .toc button:hover{background:rgba(255,255,255,.08)}
-.toc button .c{width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,.45);display:grid;place-items:center;font-size:12.5px;font-weight:700}
+.toc button .c{width:18px;height:18px;border-radius:50%;border:1px solid rgba(255,255,255,.45);display:grid;place-items:center;font-size:9.5px;font-weight:700;line-height:1}
 .toc button.cur{background:rgba(255,255,255,.14);font-weight:700}
-.toc button.cur .c{background:var(--gold-l);border-color:var(--gold-l);color:var(--green)}
+.toc button.cur .c{background:var(--lime);border-color:var(--lime);color:var(--green)}
 .toc button.done .c{background:rgba(255,255,255,.2);border-color:transparent}
 .toc button.done .c::after{content:"✓"}
 .toc button.done .c b{display:none}
-.toc .grp{font-size:11.5px;opacity:.6;padding:10px 8px 2px;letter-spacing:.06em}
+.toc .grp{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-size:16px;font-weight:800;letter-spacing:-.01em;color:#fff;padding:16px 8px 6px}
+.toc .grp::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(205,242,122,.55),transparent)}
+.toc ol .grp:first-child,.toc .grp:first-child{padding-top:4px}
 .toc .sig{margin-top:auto;padding:14px 8px 0;display:grid;gap:2px}
 .toc .sig i{display:block;width:30px;height:2px;background:#fff;opacity:.8;margin-bottom:8px}
 .toc .sig b{font-size:14px}
