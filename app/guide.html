@@ -151,6 +151,33 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
 .foot{margin-top:40px;color:var(--sub);font-size:12.5px;text-align:center}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 @media print{.btn,.linkbox button{display:none}}
+
+/* ===== 극초보용 추가 ===== */
+.before{margin:22px 0 0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+.before h2{margin:0 0 10px;font-size:19px;color:var(--green)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.checks li{display:flex;gap:10px;align-items:flex-start;line-height:1.55}
+.checks li::before{content:"☐";color:var(--green);font-weight:800;flex:none}
+.gloss{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0 0;padding:0;list-style:none}
+.gloss li{background:var(--tint);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.55}
+.gloss li b{display:block;color:var(--green)}
+@media (max-width:700px){.gloss{grid-template-columns:1fr}}
+.rules{margin:22px 0 0;background:#fff;border:3px solid var(--mark);border-radius:14px;padding:18px 20px}
+.rules h2{margin:0 0 10px;font-size:20px;color:var(--mark)}
+.rules ol{margin:0;padding-left:1.4em;display:grid;gap:10px}
+.rules li{line-height:1.6}
+.rules li b.big{font-size:16px}
+.ok{background:#e9f6ea;border:1px solid #bfe0c2;color:#1e4d24;border-radius:10px;padding:11px 14px;margin:12px 0;font-size:14px}
+.ok::before{content:"✅ 이렇게 되면 성공";display:block;font-weight:800;margin-bottom:2px}
+ol.one{margin:0 0 12px;padding-left:0;list-style:none;counter-reset:one;display:grid;gap:6px}
+ol.one>li{counter-increment:one;display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;align-items:start;line-height:1.6}
+ol.one>li::before{content:counter(one);width:24px;height:24px;border-radius:50%;background:var(--tint);color:var(--green);font-weight:800;font-size:13px;display:grid;place-items:center;margin-top:1px}
+details.stuck{background:var(--warn-bg);border:1px solid #f0d9a8;border-radius:10px;margin:10px 0;padding:0 14px;font-size:14px}
+details.stuck summary{cursor:pointer;padding:10px 0;font-weight:700;color:var(--warn)}
+details.stuck>div{padding:0 0 12px}
+.chk{display:inline-block;width:14px;height:14px;border:2px solid var(--gblue);border-radius:3px;background:var(--gblue);vertical-align:-2px;margin-right:6px;position:relative}
+.chk::after{content:"✓";color:#fff;font-size:11px;position:absolute;top:-3px;left:1px}
+.chk.off{background:#fff}.chk.off::after{content:""}
 </style>
 </head>
 <body>
@@ -158,58 +185,92 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
 
 <header class="cover">
   <div class="eyebrow">계약·서류 작성기 · 설치 안내</div>
-  <h1>앱 설치부터<br>구글 시트 연결까지</h1>
-  <p>견적서 · 계약서 · 근로계약서 · 증명서를 만들고 카카오톡으로 전자서명을 받는 작성기입니다. <b>① 앱으로 설치</b>하고 <b>② 내 구글 시트(서버)를 연결</b>하면 준비가 끝납니다. 구글 시트 연결은 <b>필수</b>입니다 — 이유는 바로 아래에 있습니다.</p>
-  <div class="facts"><span>약 15분</span><span>비용 0원</span><span>구글 계정(지메일) 1개</span><span>PC 크롬 브라우저 권장</span><span>처음 한 번만</span></div>
+  <h1>처음이어도 괜찮아요<br>위에서부터 한 줄씩 따라 하세요</h1>
+  <p>견적서 · 계약서 · 근로계약서 · 증명서를 만들고,<br>카카오톡으로 전자서명을 받는 작성기입니다.<br>
+    이 안내는 <b>컴퓨터를 잘 몰라도</b> 따라 할 수 있게 한 동작씩 적었습니다.<br>
+    단계마다 <b>✅ 이렇게 되면 성공</b>을 확인하고 다음으로 넘어가세요.</p>
+  <div class="facts"><span>약 20분</span><span>비용 0원</span><span>구글 계정(지메일) 1개</span><span>PC + 크롬</span><span>처음 한 번만</span></div>
   <div class="open-app">
-    <div class="t"><b>설치 링크</b>이 버튼으로 작성기를 열고, 위쪽 <b>[⬇ 앱으로 설치]</b>를 누르세요. 업데이트는 자동입니다.</div>
+    <div class="t"><b>작성기 열기</b>이 버튼으로 작성기를 엽니다.<br>설치(1~6단계)는 아래 순서대로 하세요.</div>
     <a class="btn big" href="https://garnet00700-ux.github.io/weavery/app/" target="_blank" rel="noopener">계약·서류 작성기 열기 →</a>
   </div>
   <div class="sig"><i class="bar"></i><b>weavery lab</b><em>weaving your brand and the mood of your space</em></div>
 </header>
 
+<section class="before" aria-labelledby="beforeH">
+  <h2 id="beforeH">시작하기 전에 확인하세요</h2>
+  <ul class="checks">
+    <li><span><b>PC(노트북)</b>로 하세요.<br>휴대폰으로는 설치 단계를 하기 어렵습니다. (다 끝난 뒤에는 휴대폰에서도 씁니다)</span></li>
+    <li><span><b>크롬(Chrome)</b> 브라우저를 쓰세요.<br>카카오톡 · 네이버 앱 안에서 열린 화면은 안 됩니다.</span></li>
+    <li><span>회사 메일로 쓸 <b>구글 계정(지메일)</b>에 크롬에서 로그인해 두세요.<br>이 계정에 우리 회사 문서가 모두 저장됩니다.</span></li>
+    <li><span>시간을 <b>20분</b> 정도 비워 두세요.<br>중간에 멈춰도 이어서 할 수 있습니다.</span></li>
+  </ul>
+  <ul class="gloss" aria-label="낱말 풀이">
+    <li><b>구글 시트</b>구글에서 쓰는 엑셀입니다.<br>우리 회사 '서버'가 이 안에 들어 있습니다.</li>
+    <li><b>서버</b>문서를 보관하고, 서명 메일을 보내 주는 작은 프로그램입니다.<br>우리 구글 계정 안에서만 돌아갑니다.</li>
+    <li><b>배포</b>서버를 인터넷에 '켜 두는' 것입니다.<br>그래야 고객이 서명 페이지를 열 수 있습니다.</li>
+    <li><b>연결 코드</b>작성기와 우리 서버를 잇는 비밀번호입니다.<br>우리 팀에게만 주세요.</li>
+  </ul>
+</section>
+
+<section class="rules" aria-labelledby="rulesH">
+  <h2 id="rulesH">⚠ 이 세 가지만은 꼭 지켜 주세요</h2>
+  <ol>
+    <li><b class="big">권한 허용은 꼭 '크롬 일반 창'에서 하세요.</b><br>
+      구글은 권한 화면을 <b>새 창(팝업)</b>으로 띄웁니다.<br>
+      다른 앱 안의 브라우저에서는 이 창이 안 떠서 '오류 발생'이 나옵니다.<br>
+      주소창 오른쪽에 <b>'팝업 차단됨'</b> 표시가 보이면 눌러서 <b>'항상 허용'</b>을 고르세요.</li>
+    <li><b class="big">권한 화면에서는 [모두 선택]에 체크하세요.</b><br>
+      구글 권한 화면은 항목마다 체크하게 되어 있습니다.<br>
+      하나라도 빠지면 서명 메일이나 문서 저장이 안 됩니다.</li>
+    <li><b class="big">'새 배포'는 처음 한 번만 누르세요.</b><br>
+      그다음부터는 항상 <b>'배포 관리'</b>를 씁니다.<br>
+      '새 배포'를 또 누르면 서버 주소가 바뀌어 작성기 연결이 끊깁니다.</li>
+  </ol>
+</section>
+
 <section class="must" aria-labelledby="whyH">
-  <h2 id="whyH">구글 시트(서버) 연결은 필수입니다 <span class="req">필수</span></h2>
-  <p>작성기는 연결 없이도 열리지만, 연결 전에는 모든 문서가 <b>지금 이 컴퓨터의 브라우저 안에만</b> 저장됩니다. 업무 서류를 다루려면 반드시 연결해 주세요.</p>
+  <h2 id="whyH">왜 구글 시트(서버)를 연결해야 하나요? <span class="req">필수</span></h2>
+  <p>연결하지 않으면 문서가 <b>지금 이 컴퓨터의 브라우저 안에만</b> 저장됩니다.</p>
   <ul class="why">
-    <li><b>① 문서가 사라질 수 있습니다</b>쿠키 · 인터넷 기록 삭제, 브라우저 초기화, 앱 삭제, 컴퓨터 교체 · 고장 때 견적서 · 계약서 · 고객 정보가 모두 지워지고 되살릴 방법이 없습니다. 연결하면 내 구글 시트에 자동 백업됩니다.</li>
-    <li><b>② 전자서명은 서버가 있어야 됩니다</b>카카오톡 서명 요청, 서명 완료 후 최종 계약서 PDF 메일 발송, 서명 기록(누가 · 언제 서명했는지) 보관은 모두 서버가 처리합니다.</li>
-    <li><b>③ 근로계약서는 3년 보관 의무가 있습니다</b>근로기준법 제42조에 따라 근로계약 서류는 3년간 보존해야 합니다. 서명이 끝난 최종 PDF가 내 구글 드라이브 보관함에 자동으로 쌓입니다.</li>
-    <li><b>④ 어느 기기에서나, 팀이 함께</b>PC · 노트북 · 휴대폰 어디서 열어도 같은 문서 목록이 보이고, 팀원도 초대 링크 하나로 같은 목록을 씁니다.</li>
-    <li><b>⑤ 내 구글 계정에만 저장됩니다</b>서버는 내 구글 계정 안에 만들어집니다. 작성기를 만든 곳을 포함해 다른 누구도 우리 회사 문서를 볼 수 없습니다.</li>
-    <li><b>⑥ 비용 0원, 처음 한 번만</b>구글의 무료 기능(시트 · Apps Script · 드라이브)만 씁니다. 대표 계정 한 명이 아래 1~4단계를 한 번만 하면 됩니다.</li>
+    <li><b>① 문서가 사라질 수 있습니다</b>인터넷 기록 삭제, 컴퓨터 교체 · 고장 때 문서가 모두 지워집니다.<br>연결하면 내 구글 시트에 자동 백업됩니다.</li>
+    <li><b>② 전자서명은 서버가 있어야 됩니다</b>카카오톡 서명 요청, 완료 후 계약서 PDF 메일 발송, 서명 기록 보관을 서버가 합니다.</li>
+    <li><b>③ 근로계약서는 3년 보관 의무가 있습니다</b>근로기준법 제42조에 따라 3년간 보관해야 합니다.<br>서명이 끝난 PDF가 내 구글 드라이브에 자동으로 쌓입니다.</li>
+    <li><b>④ 어느 기기에서나, 팀이 함께</b>PC · 휴대폰 어디서 열어도 같은 문서 목록이 보입니다.<br>팀원은 초대 링크 하나로 연결됩니다.</li>
+    <li><b>⑤ 내 구글 계정에만 저장됩니다</b>작성기를 만든 곳을 포함해 다른 누구도 우리 회사 문서를 볼 수 없습니다.</li>
+    <li><b>⑥ 비용 0원, 처음 한 번만</b>구글 무료 기능만 씁니다.<br>대표 계정 한 명이 1~5단계를 한 번만 하면 됩니다.</li>
   </ul>
 </section>
 
 <ol class="flow" aria-label="전체 순서">
   <li><a href="#s0"><b>준비</b>앱으로 설치</a></li>
-  <li><a href="#s1"><b>1<span class="req">필수</span></b>서버 시트 사본 만들기</a></li>
-  <li><a href="#s2"><b>2<span class="req">필수</span></b>처음 설정 · 권한 허용</a></li>
-  <li><a href="#s3"><b>3<span class="req">필수</span></b>웹 앱으로 배포</a></li>
-  <li><a href="#s4"><b>4<span class="req">필수</span></b>주소 저장 · 연결 코드</a></li>
+  <li><a href="#s1"><b>1<span class="req">필수</span></b>서버 시트 복사</a></li>
+  <li><a href="#s2"><b>2<span class="req">필수</span></b>처음 설정 · 권한</a></li>
+  <li><a href="#s3"><b>3<span class="req">필수</span></b>서버 켜기(배포)</a></li>
+  <li><a href="#s4"><b>4<span class="req">필수</span></b>연결 코드 받기</a></li>
   <li><a href="#s5"><b>5<span class="req">필수</span></b>작성기에 연결</a></li>
   <li><a href="#s6"><b>6</b>회사 정보 · 팀 초대</a></li>
 </ol>
-<p class="cap" style="margin-top:4px">설치 후: <a href="#s7">기존 견적서 · 계약서 불러오기</a></p>
-<p class="cap">팀에서 <b>한 사람(대표 계정)</b>만 1~4단계를 하면 됩니다. 팀원은 5단계의 초대 링크만 받으면 바로 연결됩니다.</p>
+<p class="cap" style="margin-top:4px">설치 후: <a href="#s7">기존 견적서 불러오기</a> · <a href="#update">서버 업데이트 하는 법</a> · <a href="#faq">막혔을 때</a></p>
+<p class="cap">팀에서 <b>한 사람(대표 계정)</b>만 1~5단계를 하면 됩니다.<br>팀원은 6단계의 초대 링크만 받으면 바로 연결됩니다.</p>
 
 <!-- 준비: 앱 설치 -->
 <section class="step" id="s0">
   <div class="n app">앱</div>
   <div class="body">
     <h2>작성기를 앱으로 설치하기</h2>
-    <p class="lead">설치하면 바탕화면 · 작업표시줄 · 휴대폰 홈 화면에 아이콘이 생기고, 주소창 없이 프로그램처럼 열립니다. 새 기능이 올라오면 다음에 열 때 <b>자동으로 업데이트</b>됩니다.</p>
-    <div class="open-app" style="margin-top:0">
-      <div class="t"><b>1. 먼저 작성기를 엽니다</b>크롬 또는 엣지에서 여는 것을 권장합니다.</div>
-      <a class="btn big" href="https://garnet00700-ux.github.io/weavery/app/" target="_blank" rel="noopener">계약·서류 작성기 열기 →</a>
-    </div>
-    <div class="sub"><i>2</i>기기별 설치 방법</div>
-    <ul class="do">
-      <li><b>PC (크롬 · 엣지):</b> 작성기 위쪽 <b>[⬇ 앱으로 설치]</b> → <b>[설치]</b>. 버튼이 안 보이면 주소창 오른쪽 설치 아이콘(⊕) 또는 메뉴(⋮) → <b>[앱 설치]</b>.</li>
-      <li><b>안드로이드 (크롬):</b> 메뉴(⋮) → <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b>.</li>
-      <li><b>아이폰 · 아이패드 (사파리):</b> 아래쪽 <b>[공유]</b> 버튼 → <b>[홈 화면에 추가]</b>.</li>
-    </ul>
-    <div class="warn"><b>앱 설치만으로는 문서가 안전하게 보관되지 않습니다.</b> 설치 후 바로 아래 1~6단계로 구글 시트를 연결해 주세요.</div>
+    <p class="lead">바탕화면에 아이콘이 생기고, 프로그램처럼 열립니다.<br>새 기능은 다음에 열 때 <b>자동으로</b> 들어옵니다.</p>
+    <ol class="one">
+      <li><span>위의 노란 <b>[계약·서류 작성기 열기]</b> 버튼을 누릅니다.</span></li>
+      <li><span>작성기 위쪽의 <b>[⬇ 앱으로 설치]</b>를 누릅니다.</span></li>
+      <li><span>작은 창이 뜨면 <b>[설치]</b>를 누릅니다.</span></li>
+    </ol>
+    <div class="ok">작성기가 따로 된 창으로 열리고,<br>바탕화면(또는 작업표시줄)에 작성기 아이콘이 생깁니다.</div>
+    <details class="stuck"><summary>[⬇ 앱으로 설치] 버튼이 안 보여요</summary><div>
+      크롬 주소창 오른쪽 끝의 <b>설치 아이콘(⊕ 모양)</b>을 누르세요.<br>
+      없으면 크롬 오른쪽 위 <b>점 세 개(⋮)</b> → <b>[전송, 저장, 공유]</b> 또는 <b>[앱 설치]</b>를 찾아 누르세요.<br>
+      휴대폰은 다 끝난 뒤에: 안드로이드는 크롬 메뉴(⋮) → [홈 화면에 추가], 아이폰은 사파리 [공유] → [홈 화면에 추가].</div></details>
+    <div class="warn"><b>설치만으로는 문서가 안전하게 보관되지 않습니다.</b><br>바로 아래 1단계부터 이어서 해 주세요.</div>
   </div>
 </section>
 
@@ -217,15 +278,16 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
 <section class="step" id="s1">
   <div class="n">1</div>
   <div class="body">
-    <h2>서버 시트 사본 만들기</h2>
-    <p class="lead">서버가 들어 있는 구글 시트를 내 드라이브로 복사합니다. 서버 프로그램(Apps Script)도 함께 복사됩니다.</p>
-    <ol class="do">
-      <li>회사 메일로 쓸 <b>구글 계정에 로그인</b>한 상태에서 아래 링크를 엽니다.</li>
-      <li><b>[사본 만들기]</b>를 누릅니다.</li>
+    <h2>서버 시트를 내 구글 드라이브로 복사하기</h2>
+    <p class="lead">서버가 들어 있는 구글 시트를 내 것으로 한 부 복사합니다.</p>
+    <ol class="one">
+      <li><span>크롬 오른쪽 위 동그란 프로필 사진을 눌러, <b>회사용 구글 계정</b>이 맞는지 확인합니다.</span></li>
+      <li><span>아래 <b>[사본 만들기 열기]</b> 버튼을 누릅니다.</span></li>
+      <li><span>'문서 복사' 화면에서 파란 <b>[사본 만들기]</b>를 누릅니다.</span></li>
     </ol>
     <div class="linkbox">
       <input id="copyUrl" readonly value="https://docs.google.com/spreadsheets/d/18r9JjPYgOiupHOaArAV4zJXKg9-ewtcxOMnnD3K4ypA/copy" aria-label="서버 시트 사본 만들기 링크">
-      <button class="btn ghost" type="button" data-copy="copyUrl">복사</button>
+      <button class="btn ghost" type="button" data-copy="copyUrl">주소 복사</button>
       <a class="btn" href="https://docs.google.com/spreadsheets/d/18r9JjPYgOiupHOaArAV4zJXKg9-ewtcxOMnnD3K4ypA/copy" target="_blank" rel="noopener">사본 만들기 열기</a>
     </div>
     <div class="shot" role="img" aria-label="문서 복사 화면에서 사본 만들기 버튼을 누릅니다">
@@ -234,11 +296,12 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
         <div style="font-size:22px;color:#202124;margin:4px 0 10px">문서 복사</div>
         <div style="background:#fbe9a7;border-radius:4px;padding:6px 10px;font-size:12px;max-width:380px">⚠ 첨부된 Apps Script 파일 및 기능도 복사됩니다.</div>
         <div style="margin:10px 0 12px">'전자계약 서버 (견적서 작성기)'을(를) 복사하시겠습니까?</div>
-        <span class="gbtn mark">사본 만들기<span class="tag">1</span></span>
+        <span class="gbtn mark">사본 만들기<span class="tag">3</span></span>
         <span class="gbtn o" style="margin-left:6px">Apps Script 파일 보기</span>
       </div>
     </div>
-    <div class="note">노란 경고 문구는 정상입니다. 서버 프로그램이 같이 복사된다는 뜻이에요. 복사된 시트의 이름은 회사 이름으로 바꿔도 됩니다.</div>
+    <div class="ok">새 탭에 <b>'전자계약 서버 (견적서 작성기)의 사본'</b>이라는 시트가 열립니다.<br>이 탭은 닫지 말고 그대로 두세요. 2단계에서 씁니다.</div>
+    <div class="note">노란 경고 문구는 정상입니다.<br>서버 프로그램이 같이 복사된다는 뜻입니다.</div>
   </div>
 </section>
 
@@ -247,28 +310,35 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
   <div class="n">2</div>
   <div class="body">
     <h2>처음 설정하고 권한 허용하기</h2>
-    <p class="lead">서버가 내 시트 · 드라이브에 저장하고 메일을 보낼 수 있도록 허락하는 단계입니다.</p>
+    <p class="lead">서버가 내 시트 · 드라이브에 저장하고, 메일을 보낼 수 있게 허락하는 단계입니다.<br>가장 많이 막히는 단계라 천천히 따라 해 주세요.</p>
 
-    <div class="sub"><i>2-1</i>시트 위 메뉴에서 [전자계약 → ① 처음 설정]</div>
+    <div class="sub"><i>2-1</i>시트 메뉴에서 [전자계약 → ① 처음 설정]</div>
+    <ol class="one">
+      <li><span>복사한 시트에서 맨 위 메뉴줄을 봅니다. (파일 · 수정 · 보기 …)</span></li>
+      <li><span>메뉴줄 맨 끝, '도움말' 오른쪽의 <b>[전자계약]</b>을 누릅니다.</span></li>
+      <li><span><b>[① 처음 설정 (권한 허용)]</b>을 누릅니다.</span></li>
+    </ol>
     <div class="shot" role="img" aria-label="시트 메뉴 전자계약을 열고 처음 설정을 누릅니다">
       <div class="tb"><i></i><i></i><i></i><span>전자계약 서버 (견적서 작성기)의 사본</span></div>
       <div class="cv" style="min-height:210px">
-        <div class="menubar"><span>파일</span><span>수정</span><span>보기</span><span>삽입</span><span>서식</span><span>데이터</span><span>도구</span><span>확장 프로그램</span><span>도움말</span><span class="mark">전자계약<span class="tag">1</span></span></div>
+        <div class="menubar"><span>파일</span><span>수정</span><span>보기</span><span>삽입</span><span>서식</span><span>데이터</span><span>도구</span><span>확장 프로그램</span><span>도움말</span><span class="mark">전자계약<span class="tag">2</span></span></div>
         <div class="grid-s"><div class="h"></div><div class="h">A</div><div class="h">B</div><div class="h">C</div><div class="h">D</div><div class="h">E</div>
           <div class="h">1</div><div></div><div></div><div></div><div></div><div></div>
           <div class="h">2</div><div></div><div></div><div></div><div></div><div></div>
-          <div class="h">3</div><div></div><div></div><div></div><div></div><div></div>
-          <div class="h">4</div><div></div><div></div><div></div><div></div><div></div></div>
+          <div class="h">3</div><div></div><div></div><div></div><div></div><div></div></div>
         <div class="drop" style="top:40px;right:14px">
-          <div class="mark" style="margin:0 6px">① 처음 설정 (권한 허용)<span class="tag">2</span></div>
+          <div class="mark" style="margin:0 6px">① 처음 설정 (권한 허용)<span class="tag">3</span></div>
           <div>② 연결 코드 보기</div><hr>
           <div>연결 코드 새로 만들기 (기존 팀원 연결 끊김)</div>
         </div>
       </div>
     </div>
-    <div class="note"><b>[전자계약] 메뉴가 안 보이면</b> 시트를 새로고침(<kbd>F5</kbd>)하고 5~10초 기다려 주세요. 메뉴가 메뉴줄 끝에 생깁니다.</div>
+    <details class="stuck"><summary>[전자계약] 메뉴가 안 보여요</summary><div>
+      키보드 <kbd>F5</kbd>를 눌러 시트를 새로고침하고, <b>10초</b> 기다리세요.<br>
+      메뉴는 조금 늦게 생깁니다.<br>
+      그래도 없으면 1단계의 [사본 만들기 열기]로 다시 복사해 주세요. (원본을 연 것일 수 있습니다)</div></details>
 
-    <div class="sub"><i>2-2</i>'승인 필요' 창에서 [확인] → 내 계정 선택</div>
+    <div class="sub"><i>2-2</i>'승인 필요' 창 → [확인] → 내 계정 고르기</div>
     <div class="shot" role="img" aria-label="승인 필요 창에서 확인을 누릅니다">
       <div class="tb"><i></i><i></i><i></i><span>승인 필요</span></div>
       <div class="cv" style="background:#e8eaed">
@@ -276,45 +346,62 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
           <div class="acts"><span>취소</span><span class="mark" style="padding:0 6px">확인<span class="tag">1</span></span></div></div>
       </div>
     </div>
+    <p style="margin:6px 0">[확인]을 누르면 <b>새 창</b>이 뜨고, 구글 계정을 고르라고 합니다.<br><b>1단계에서 확인한 회사용 계정</b>을 누르세요.</p>
+    <details class="stuck"><summary>새 창이 안 뜨거나 '오류 발생'이 나와요</summary><div>
+      팝업(새 창)이 막힌 것입니다.<br>
+      ① 크롬 주소창 오른쪽 끝에 <b>창에 빨간 ✕가 있는 아이콘</b>이 보이면 누르고, <b>'항상 허용'</b> → [완료].<br>
+      ② 카카오톡 · 네이버 앱 · 다른 프로그램 안에서 연 화면이라면, <b>크롬을 직접 열고</b> 시트를 다시 여세요.<br>
+      ③ 시트를 새로고침(<kbd>F5</kbd>)하고 2-1부터 다시 합니다.</div></details>
 
-    <div class="sub"><i>2-3</i>'확인하지 않은 앱' 경고 → [고급] → [(안전하지 않음)으로 이동] → [허용]</div>
-    <div class="twocol">
-      <div class="shot" role="img" aria-label="경고 화면에서 고급을 누르고 이동을 누릅니다">
-        <div class="tb"><i></i><i></i><i></i><span>accounts.google.com</span></div>
-        <div class="cv">
-          <div class="consent">
-            <div style="font-size:17px;color:#202124;margin-bottom:6px">Google에서 확인하지 않은 앱</div>
-            앱에서 내 Google 계정에 대한 액세스를 요청합니다. 개발자를 알고 신뢰하는 경우에만 계속하세요.
-            <div style="margin:12px 0 4px"><span class="lnk mark" style="padding:0 4px">고급<span class="tag">1</span></span></div>
-            <div style="margin-top:12px"><span class="lnk mark" style="padding:0 4px">전자계약 서버(으)로 이동(안전하지 않음)<span class="tag">2</span></span></div>
-          </div>
-        </div>
-      </div>
-      <div class="shot" role="img" aria-label="권한 목록 맨 아래 허용을 누릅니다">
-        <div class="tb"><i></i><i></i><i></i><span>accounts.google.com</span></div>
-        <div class="cv">
-          <div class="consent">
-            <div style="font-size:16px;color:#202124">전자계약 서버에서 내 Google 계정에 액세스하려고 합니다</div>
-            <div class="who"><span class="av"></span>내계정@gmail.com</div>
-            <ul style="margin:6px 0;padding-left:18px;font-size:12.5px">
-              <li>내 Google Drive 파일 보기, 수정, 생성, 삭제</li>
-              <li>내 스프레드시트 보기, 수정, 생성, 삭제</li>
-              <li>내 이름으로 이메일 보내기</li>
-              <li>Google 애플리케이션 내에서 대화상자 표시</li>
-            </ul>
-            <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px"><span class="gbtn o">취소</span><span class="gbtn mark">허용<span class="tag">3</span></span></div>
-          </div>
+    <div class="sub"><i>2-3</i>'확인하지 않은 앱' 경고 → [고급] → [이동]</div>
+    <div class="shot" role="img" aria-label="경고 화면에서 고급을 누르고 이동을 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>accounts.google.com</span></div>
+      <div class="cv">
+        <div class="consent">
+          <div style="font-size:17px;color:#202124;margin-bottom:6px">Google에서 확인하지 않은 앱</div>
+          앱에서 내 Google 계정에 대한 액세스를 요청합니다. 개발자를 알고 신뢰하는 경우에만 계속하세요.
+          <div style="margin:12px 0 4px"><span class="lnk mark" style="padding:0 4px">고급<span class="tag">1</span></span> <span style="color:#5f6368;font-size:12px">← 왼쪽 아래 작은 글씨</span></div>
+          <div style="margin-top:12px"><span class="lnk mark" style="padding:0 4px">전자계약 서버(으)로 이동(안전하지 않음)<span class="tag">2</span></span> <span style="color:#5f6368;font-size:12px">← 맨 아래</span></div>
         </div>
       </div>
     </div>
-    <div class="warn"><b>왜 '안전하지 않음'이라고 나오나요?</b> 구글 심사를 받지 않은 스크립트에는 모두 이 경고가 나옵니다. 이 서버는 <b>내 계정 안에서, 내 시트와 드라이브에만</b> 동작하고 다른 곳으로 데이터를 보내지 않습니다. 화면의 '개발자'에 내 이메일이 보이면 내가 복사한 서버가 맞습니다.</div>
+    <div class="note"><b>'안전하지 않음'이라고 나와도 괜찮습니다.</b><br>
+      구글 심사를 받지 않은 프로그램에는 모두 이 경고가 나옵니다.<br>
+      이 서버는 <b>내 계정 안에서, 내 시트와 드라이브에만</b> 동작합니다.<br>
+      화면의 '개발자'에 내 이메일이 보이면 내가 복사한 서버가 맞습니다.</div>
 
-    <div class="sub"><i>2-4</i>'설정이 끝났습니다' 확인</div>
-    <p style="margin:0 0 6px">허용이 끝나면 시트 아래에 <b>전자계약 · 견적목록</b> 탭이 생기고, 내 드라이브에 <b>'… 보관함'</b> 폴더가 만들어집니다.</p>
+    <div class="sub"><i>2-4</i>권한 목록 → <span style="color:var(--mark)">[모두 선택] 체크</span> → [계속]</div>
+    <div class="shot" role="img" aria-label="권한 목록에서 모두 선택에 체크하고 계속을 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>accounts.google.com</span></div>
+      <div class="cv">
+        <div class="consent">
+          <div style="font-size:16px;color:#202124">전자계약 서버에서 내 Google 계정에 대한 추가 액세스를 요청합니다</div>
+          <div class="who"><span class="av"></span>내계정@gmail.com</div>
+          <div class="mark" style="padding:4px 6px;margin:8px 0;font-weight:700"><span class="chk"></span>모두 선택<span class="tag">1</span></div>
+          <div style="font-size:12.5px;display:grid;gap:5px;padding-left:6px">
+            <div><span class="chk"></span>Google Drive 파일 보기, 수정, 생성, 삭제</div>
+            <div><span class="chk"></span>스프레드시트 보기, 수정, 생성, 삭제</div>
+            <div><span class="chk"></span>나 대신 이메일 보내기</div>
+            <div><span class="chk"></span>Google 애플리케이션 내에서 대화상자 표시</div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px"><span class="gbtn o">취소</span><span class="gbtn mark">계속<span class="tag">2</span></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="warn"><b>체크가 하나라도 빠지면 안 됩니다.</b><br>
+      맨 위 <b>[모두 선택]</b>을 누르면 아래 항목이 한꺼번에 체크됩니다.<br>
+      화면에 따라 체크 칸 없이 <b>[허용]</b> 버튼만 있으면, 그냥 [허용]을 누르세요.</div>
+
+    <div class="sub"><i>2-5</i>'설정이 끝났습니다' 확인</div>
+    <div class="ok">시트에 <b>'설정이 끝났습니다'</b> 창이 뜹니다. → [확인]<br>
+      시트 아래쪽에 <b>전자계약 · 견적목록</b> 탭이 새로 생깁니다.</div>
     <div class="shot" role="img" aria-label="시트 아래에 전자계약, 견적목록 탭이 새로 생깁니다">
       <div class="cv" style="min-height:0;padding:10px 14px"><div class="sheettabs" style="margin:0"><span>시트1</span><span class="new">견적목록</span><span class="new">전자계약</span></div></div>
     </div>
-    <div class="note">허용한 뒤에 아무 일도 없어 보이면 <b>[전자계약 → ① 처음 설정]을 한 번 더</b> 눌러 주세요. 탭이 생기면 성공입니다.</div>
+    <details class="stuck"><summary>허용했는데 아무 일도 없어요 / 권한을 일부만 체크했어요</summary><div>
+      <b>[전자계약 → ① 처음 설정]을 한 번 더</b> 누르세요.<br>
+      빠진 권한이 있으면 '승인 필요' 창이 다시 뜹니다.<br>
+      이번에는 <b>[모두 선택]</b>에 꼭 체크해 주세요.</div></details>
   </div>
 </section>
 
@@ -322,25 +409,36 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
 <section class="step" id="s3">
   <div class="n">3</div>
   <div class="body">
-    <h2>서버를 웹 앱으로 배포하기</h2>
-    <p class="lead">작성기와 고객의 서명 페이지가 서버에 접속할 수 있도록 인터넷 주소를 하나 만듭니다.</p>
+    <h2>서버를 인터넷에 켜 두기 (배포)</h2>
+    <p class="lead">작성기와 고객의 서명 페이지가 서버에 들어올 수 있게 '인터넷 주소'를 하나 만듭니다.<br>처음 한 번만 하는 단계입니다.</p>
 
-    <div class="sub"><i>3-1</i>[확장 프로그램 → Apps Script]를 열고, 오른쪽 위 [배포 → 새 배포]</div>
+    <div class="sub"><i>3-1</i>Apps Script 화면 열기 → [배포 → 새 배포]</div>
+    <ol class="one">
+      <li><span>시트 위쪽 메뉴 <b>[확장 프로그램]</b> → <b>[Apps Script]</b>를 누릅니다.<br>새 탭에 코드가 적힌 화면이 열립니다. <b>코드는 건드리지 않습니다.</b></span></li>
+      <li><span>오른쪽 위 파란 <b>[배포 ▾]</b> 버튼을 누릅니다.</span></li>
+      <li><span><b>[새 배포]</b>를 누릅니다. (이 버튼은 처음 한 번만!)</span></li>
+    </ol>
     <div class="shot" role="img" aria-label="Apps Script 편집기에서 배포, 새 배포를 누릅니다">
       <div class="tb"><i></i><i></i><i></i><span>script.google.com · 전자계약 서버</span></div>
       <div class="idebar"><span class="t">전자계약 서버</span><span class="sp"></span>
-        <span style="position:relative"><span class="gbtn mark">배포 ▾<span class="tag">1</span></span>
+        <span style="position:relative"><span class="gbtn mark">배포 ▾<span class="tag">2</span></span>
           <span class="drop" style="right:0;top:34px;min-width:150px">
-            <span style="display:block" class="mark"><span style="display:block;padding:6px 14px">새 배포</span><span class="tag">2</span></span>
+            <span style="display:block" class="mark"><span style="display:block;padding:6px 14px">새 배포</span><span class="tag">3</span></span>
             <span style="display:block;padding:6px 14px">배포 관리</span>
             <span style="display:block;padding:6px 14px">배포 테스트</span>
           </span></span></div>
       <div class="ide"><div class="side"><div class="on">Code.gs</div><div>라이브러리</div><div>서비스</div></div>
         <div class="main">/**<br> * 견적서 · 전자계약 서버<br> * …<br> */<br>const TZ = 'Asia/Seoul';</div></div>
     </div>
-    <div class="note">코드는 <b>고칠 필요가 없습니다.</b> 편집기 화면은 그대로 두고 배포 버튼만 쓰면 됩니다.</div>
 
-    <div class="sub"><i>3-2</i>유형 선택(톱니바퀴) → [웹 앱] → 실행 '나', 액세스 '모든 사용자' → [배포]</div>
+    <div class="sub"><i>3-2</i>[웹 앱] 고르기 → 액세스 '모든 사용자' → [배포]</div>
+    <ol class="one">
+      <li><span>왼쪽 '유형 선택' 옆 <b>톱니바퀴(⚙)</b>를 누릅니다.</span></li>
+      <li><span>목록에서 <b>[웹 앱]</b>을 누릅니다.</span></li>
+      <li><span>'다음 사용자 인증 정보로 실행'은 <b>'나(내 이메일)'</b> 그대로 둡니다.</span></li>
+      <li><span>'액세스 권한이 있는 사용자'를 눌러 <b>'모든 사용자'</b>를 고릅니다.</span></li>
+      <li><span>오른쪽 아래 파란 <b>[배포]</b>를 누릅니다.</span></li>
+    </ol>
     <div class="shot" role="img" aria-label="새 배포 창에서 웹 앱을 고르고 액세스를 모든 사용자로 바꾼 뒤 배포를 누릅니다">
       <div class="tb"><i></i><i></i><i></i><span>새 배포</span></div>
       <div class="cv" style="display:grid;grid-template-columns:minmax(0,140px) minmax(0,1fr);gap:14px">
@@ -353,32 +451,37 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
           <div class="field" style="margin-top:4px;color:#9aa0a6">새 설명</div>
           <div class="lbl">웹 앱</div>
           <div class="field"><small>다음 사용자 인증 정보로 실행</small>나(내계정@gmail.com) <span>▾</span></div>
-          <div class="field mark"><small>액세스 권한이 있는 사용자</small><b>모든 사용자</b> <span>▾</span><span class="tag">3</span></div>
-          <div style="text-align:right;margin-top:14px"><span class="gbtn mark">배포<span class="tag">4</span></span></div>
+          <div class="field mark"><small>액세스 권한이 있는 사용자</small><b>모든 사용자</b> <span>▾</span><span class="tag">4</span></div>
+          <div style="text-align:right;margin-top:14px"><span class="gbtn mark">배포<span class="tag">5</span></span></div>
         </div>
       </div>
     </div>
-    <div class="warn"><b>액세스는 꼭 '모든 사용자'</b>로 골라 주세요. 'Google 계정이 있는 모든 사용자'나 '나만'으로 두면 고객이 서명 페이지를 열 수 없습니다. 데이터는 연결 코드(비밀번호) 없이는 볼 수 없으니 안전합니다.</div>
+    <div class="warn"><b>액세스는 꼭 '모든 사용자'로 고르세요.</b><br>
+      'Google 계정이 있는 모든 사용자'나 '나만'으로 두면 고객이 서명 페이지를 열 수 없습니다.<br>
+      문서는 연결 코드(비밀번호) 없이는 볼 수 없으니 안전합니다.</div>
+    <details class="stuck"><summary>[액세스 승인] 창이 또 나와요</summary><div>
+      처음 배포할 때 한 번 더 묻는 경우가 있습니다.<br>
+      2-2 ~ 2-4와 똑같이 하세요. (계정 고르기 → 고급 → 이동 → <b>모두 선택</b> → 계속)</div></details>
 
-    <div class="sub"><i>3-3</i>[액세스 승인]이 나오면 2-3과 같이 → [허용]</div>
-    <p style="margin:0 0 6px">처음 배포할 때 한 번 더 권한을 묻습니다. 계정 선택 → 고급 → 이동 → 허용 순서로 똑같이 진행하세요.</p>
-
-    <div class="sub"><i>3-4</i>완료 화면의 <b>웹 앱 URL</b> [복사]</div>
+    <div class="sub"><i>3-3</i>'웹 앱 URL' 아래 [복사] → [완료]</div>
     <div class="shot" role="img" aria-label="배포 완료 화면에서 웹 앱 URL 아래 복사를 누릅니다">
       <div class="tb"><i></i><i></i><i></i><span>새 배포</span></div>
       <div class="cv">
         <div>배포가 업데이트되었습니다.</div>
-        <div class="lbl">버전 1 (날짜 · 시각)</div>
-        <div style="font-size:12px;color:#5f6368;margin-top:6px">배포 ID</div>
+        <div style="font-size:12px;color:#5f6368;margin-top:10px">배포 ID <span style="color:#b00">← 이것 아님</span></div>
         <div class="mono" style="color:#5f6368">AKfycb…(긴 문자)</div>
         <div class="lbl" style="margin-top:12px">웹 앱</div>
-        <div style="font-size:12px;color:#5f6368">URL</div>
+        <div style="font-size:12px;color:#5f6368">URL <span style="color:#1e6b2a;font-weight:700">← 이것!</span></div>
         <div class="mono" style="color:var(--gblue)">https://script.google.com/macros/s/AKfycb…/exec</div>
         <div style="margin-top:6px"><span class="mark" style="color:var(--gblue);padding:0 6px">⧉ 복사<span class="tag">1</span></span></div>
         <div style="text-align:right"><span class="gbtn">완료</span></div>
       </div>
     </div>
-    <div class="note">주소는 <b>https://script.google.com/macros/s/</b>로 시작해서 <b>/exec</b>로 끝납니다. '배포 ID'가 아니라 그 아래 <b>'웹 앱 URL'</b>을 복사하세요. 놓쳤다면 [배포 → 배포 관리]에서 다시 볼 수 있습니다.</div>
+    <div class="ok">'배포가 업데이트되었습니다'가 보이고, <b>웹 앱 URL</b>을 복사했습니다.<br>
+      주소는 <b>https://script.google.com/macros/s/</b>로 시작하고 <b>/exec</b>로 끝납니다.</div>
+    <details class="stuck"><summary>복사하기 전에 창을 닫아 버렸어요</summary><div>
+      [배포 ▾] → <b>[배포 관리]</b>를 누르면 웹 앱 URL을 다시 볼 수 있습니다.<br>
+      <b>'새 배포'를 또 누르지 마세요.</b></div></details>
   </div>
 </section>
 
@@ -386,33 +489,39 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
 <section class="step" id="s4">
   <div class="n">4</div>
   <div class="body">
-    <h2>웹 앱 주소 저장하고 연결 코드 받기</h2>
-    <p class="lead">시트로 돌아가 방금 복사한 주소를 한 번 저장하면, 작성기에 넣을 연결 코드가 나옵니다.</p>
-    <ol class="do">
-      <li>시트 탭으로 돌아가 <b>[전자계약 → ② 연결 코드 보기]</b></li>
-      <li>칸에 웹 앱 URL을 붙여넣고(<kbd>Ctrl</kbd>+<kbd>V</kbd>) <b>[저장]</b></li>
-      <li>잠시 뒤 <b>연결 코드</b>가 나옵니다.</li>
+    <h2>주소 저장하고 연결 코드 받기</h2>
+    <p class="lead">방금 복사한 주소를 시트에 한 번 저장하면, 작성기에 넣을 연결 코드가 나옵니다.</p>
+    <ol class="one">
+      <li><span>Apps Script 탭은 닫고, <b>시트 탭</b>으로 돌아갑니다.</span></li>
+      <li><span>메뉴 <b>[전자계약]</b> → <b>[② 연결 코드 보기]</b>를 누릅니다.</span></li>
+      <li><span>빈칸을 클릭하고 <kbd>Ctrl</kbd>+<kbd>V</kbd>로 주소를 붙여넣은 뒤 <b>[저장]</b>을 누릅니다.</span></li>
     </ol>
     <div class="twocol">
       <div class="shot" role="img" aria-label="연결 코드 창에 웹 앱 주소를 붙여넣고 저장을 누릅니다">
         <div class="tb"><i></i><i></i><i></i><span>연결 코드</span></div>
         <div class="cv">
           <div style="font-size:12.5px"><b>웹 앱 주소</b>를 붙여넣어 주세요. (배포 완료 화면의 웹 앱 URL)</div>
-          <div class="field mark" style="margin-top:10px"><span class="mono">https://script.google.com/macros/s/…/exec</span><span class="tag">1</span></div>
-          <div style="margin-top:10px"><span class="gbtn o mark" style="color:#202124">저장<span class="tag">2</span></span></div>
+          <div class="field mark" style="margin-top:10px"><span class="mono">https://script.google.com/macros/s/…/exec</span><span class="tag">3</span></div>
+          <div style="margin-top:10px"><span class="gbtn o mark" style="color:#202124">저장<span class="tag">3</span></span></div>
         </div>
       </div>
-      <div class="shot" role="img" aria-label="연결 코드가 나오면 이 연결로 작성기 바로 열기를 누릅니다">
+      <div class="shot" role="img" aria-label="연결 코드가 나옵니다">
         <div class="tb"><i></i><i></i><i></i><span>연결 코드</span></div>
         <div class="cv">
           <div style="font-size:12.5px">아래 <b>연결 코드</b>를 작성기 [회사 설정 → 서버 연결]에 붙여넣으세요. <span style="color:#b00">이 코드는 비밀번호와 같습니다.</span></div>
           <div class="mono" style="border:1px solid var(--gline);border-radius:5px;padding:8px;margin:8px 0;color:#5f6368">WQ1.eyJ1IjoiaHR0cHM6Ly9zY3Jp…</div>
           <span class="gbtn o" style="color:#202124">복사</span>
-          <span class="mark" style="color:var(--gblue);text-decoration:underline;margin-left:8px;padding:0 4px">이 연결로 작성기 바로 열기<span class="tag">3</span></span>
+          <span style="color:var(--gblue);text-decoration:underline;margin-left:8px">이 연결로 작성기 바로 열기</span>
         </div>
       </div>
     </div>
-    <div class="warn"><b>연결 코드는 비밀번호와 같습니다.</b> 코드를 가진 사람은 우리 문서 목록을 보고 고칠 수 있으니, 우리 팀에게만 주세요. 유출됐다면 <b>[전자계약 → 연결 코드 새로 만들기]</b>로 바로 바꿀 수 있습니다.</div>
+    <div class="ok">'연결 코드'라는 긴 글자(WQ1.으로 시작)가 나옵니다.<br>이 창은 열어 둔 채로 5단계로 갑니다.</div>
+    <details class="stuck"><summary>'웹 앱 주소가 아닙니다'라고 나와요</summary><div>
+      '배포 ID'를 복사했을 가능성이 큽니다.<br>
+      Apps Script 탭에서 [배포 ▾] → [배포 관리] → <b>'웹 앱' 아래 URL</b>의 [복사]를 누르고 다시 붙여넣으세요.</div></details>
+    <div class="warn"><b>연결 코드는 비밀번호와 같습니다.</b><br>
+      코드를 가진 사람은 우리 문서 목록을 보고 고칠 수 있으니 우리 팀에게만 주세요.<br>
+      유출됐다면 <b>[전자계약 → 연결 코드 새로 만들기]</b>로 바로 바꿀 수 있습니다.</div>
   </div>
 </section>
 
@@ -421,27 +530,20 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
   <div class="n">5</div>
   <div class="body">
     <h2>작성기에 연결하기</h2>
-    <p class="lead">둘 중 편한 방법으로 연결하세요.</p>
-    <ul class="do">
-      <li><b>바로 열기:</b> 4단계 창의 <b>[이 연결로 작성기 바로 열기]</b>를 누르고, 이름을 물으면 내 이름을 입력합니다.</li>
-      <li><b>붙여넣기:</b> 작성기 <b>[회사 설정 → 서버 연결 · 팀]</b>에서 연결 코드를 붙여넣고, 내 이름을 쓴 뒤 <b>[연결하기]</b>.</li>
-    </ul>
-    <div class="open-app">
-      <div class="t"><b>작성기를 아직 안 열었다면</b>이 버튼으로 열고 [회사 설정]에 연결 코드를 붙여넣으세요.</div>
-      <a class="btn big" href="https://garnet00700-ux.github.io/weavery/app/" target="_blank" rel="noopener">계약·서류 작성기 열기 →</a>
+    <p class="lead">가장 쉬운 방법은 '바로 열기'입니다.</p>
+    <ol class="one">
+      <li><span>4단계 창의 <b>[이 연결로 작성기 바로 열기]</b>를 누릅니다.</span></li>
+      <li><span>작성기가 열리고 이름을 물으면 <b>내 이름</b>을 쓰고 [확인]을 누릅니다.</span></li>
+    </ol>
+    <details class="stuck"><summary>바로 열기가 안 되면: 직접 붙여넣기</summary><div>
+      ① 4단계 창에서 <b>[복사]</b>를 누릅니다.<br>
+      ② 작성기 위쪽 <b>[회사 설정]</b> → <b>[서버 연결 · 팀]</b>을 엽니다.<br>
+      ③ 칸에 붙여넣고(<kbd>Ctrl</kbd>+<kbd>V</kbd>) 내 이름을 쓴 뒤 <b>[연결하기]</b>를 누릅니다.</div></details>
+    <div class="shot" role="img" aria-label="작성기 오른쪽 위에 연결됨이 표시됩니다">
+      <div class="app-top"><b style="font-size:14px">계약·서류 작성기</b><span>문서 목록</span><span>새 문서</span><span>회사 설정</span><span style="margin-left:auto;border-radius:999px;background:rgba(255,255,255,.15)">✓ 팀 공유 중</span></div>
+      <div class="app-card"><div class="okline">✓ 서버 연결됨 · 내 이름 홍길동</div></div>
     </div>
-    <div class="shot" role="img" aria-label="작성기 회사 설정에서 연결 코드를 붙여넣고 연결하기를 누르면 서버 연결됨이 표시됩니다">
-      <div class="app-top"><b style="font-size:14px">계약·서류 작성기</b><span>문서 목록</span><span>새 문서</span><span>회사 설정</span><span class="ok">✓ 연결됨</span></div>
-      <div class="app-card">
-        <div style="font-weight:700;color:var(--green);margin-bottom:6px">회사 설정 · 서버 연결 · 팀</div>
-        <div class="ta mark">WQ1.eyJ1IjoiaHR0cHM6Ly9zY3Jp…<span class="tag">1</span></div>
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-          <div style="flex:1;min-width:140px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;color:#888" class="mark">내 이름: 홍길동<span class="tag">2</span></div>
-          <div class="mark" style="flex:1;min-width:140px;background:var(--green);color:#fff;border-radius:6px;padding:6px 8px;text-align:center;font-weight:700">연결하기<span class="tag">3</span></div>
-        </div>
-        <div class="okline" style="margin-top:10px">✓ 서버 연결됨 · 내 이름 홍길동</div>
-      </div>
-    </div>
+    <div class="ok">작성기 위쪽에 <b>'팀 공유 중'</b>이 보입니다.<br>이제 문서가 내 구글 시트에 자동 저장됩니다. 설치 끝!</div>
     <div class="linkbox">
       <input id="appUrl" readonly value="https://garnet00700-ux.github.io/weavery/app/" aria-label="작성기 주소">
       <button class="btn ghost" type="button" data-copy="appUrl">작성기 주소 복사</button>
@@ -454,23 +556,19 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
   <div class="n">6</div>
   <div class="body">
     <h2>회사 정보 넣고 팀원 초대하기</h2>
-    <p class="lead">연결 후 한 번 넣으면 팀 전체에 똑같이 적용됩니다.</p>
+    <p class="lead">작성기 위쪽 <b>[회사 설정]</b>에서 한 번 넣으면 팀 전체에 똑같이 적용됩니다.</p>
     <ul class="do">
-      <li><b>회사 정보:</b> 상호 · 대표자 · <b>이메일</b>은 꼭 넣어 주세요. 서명이 끝나면 이 이메일로 계약서 PDF가 옵니다. 홈페이지 등 나머지는 비워도 됩니다.</li>
-      <li><b>회사 로고:</b> [회사 설정] → [회사 정보] 탭의 <b>회사 로고</b>에서 올립니다. 견적서 맨 위 가로선 왼쪽에 맞춰 들어가고, 바로 아래 <b>미리보기</b>로 어떻게 들어가는지 볼 수 있습니다.</li>
-      <li><b>색:</b> <b>대표 색</b>(제목 · 강조)과 <b>표 머리 색</b>을 고를 수 있습니다. 위쪽 메뉴줄 색은 바뀌지 않습니다.</li>
-      <li><b>사인 · 명함:</b> 대표 사인(직접 그리기 가능)과 완료 메일에 넣을 명함 이미지.</li>
-      <li><b>메일 · 카카오 문구:</b> 고객에게 가는 메일 제목과 인사말을 우리 회사 말투로 바꿀 수 있습니다.</li>
-      <li><b>팀원 초대:</b> [서버 연결 · 팀]의 <b>팀원 초대 링크</b>를 복사해 팀원에게 보내면, 팀원은 링크만 열면 바로 연결됩니다.</li>
+      <li><b>회사 정보:</b> 상호 · 대표자 · <b>이메일</b>은 꼭 넣어 주세요.<br>서명이 끝나면 이 이메일로 계약서 PDF가 옵니다.</li>
+      <li><b>회사 로고 · 직인(도장) · 대표 사인:</b> 이미지를 올리면 견적서 · 계약서 · 증명서에 들어갑니다.</li>
+      <li><b>색:</b> 대표 색(제목 · 강조)과 표 머리 색을 고를 수 있습니다.</li>
+      <li><b>메일 · 카카오 문구:</b> 고객에게 가는 인사말을 우리 회사 말투로 바꿀 수 있습니다.</li>
+      <li><b>팀원 초대:</b> [서버 연결 · 팀]의 <b>팀원 초대 링크</b>를 복사해 보내세요.<br>팀원은 링크만 열면 바로 연결됩니다.</li>
     </ul>
-    <div class="sub"><i>✓</i>견적서 내보내기</div>
-    <ul class="do">
-      <li><b>[PDF 다운로드]</b>(맨 위 메뉴줄): 옆에서 고른 범위(전체 · 견적서 · 계약서)를 PDF 파일로 바로 받습니다. <b>[인쇄]</b>는 프린터로 뽑을 때 씁니다.</li>
-      <li><b>전자서명용 PDF 다운로드</b>([계약일 · 의뢰자 서명] 칸): 의뢰자 사인 칸을 비운 PDF입니다. 다른 전자서명 서비스에 올릴 때 씁니다.</li>
-      <li><b>부가세 표시:</b> 편집 화면 <b>[대금 조건] → 부가세</b>에서 고릅니다. <b>VAT 별도</b>(총액 아래 "계산서 발행시 VAT 10% 발생됩니다."), <b>VAT 포함</b>(총액 숫자 옆에 "(VAT 포함)"), <b>VAT 10% 더해서 총액</b>, <b>문구 없음</b>.</li>
-      <li>상품 이름을 <b>거래명세서</b>처럼 문서 이름으로 지으면 제목에 "견적서"가 붙지 않고 그 이름만 나옵니다.</li>
-    </ul>
-    <div class="note">이제 견적서를 만들고 <b>[전자서명 요청]</b>을 누르면 카카오톡으로 서명 링크를 보낼 수 있습니다. 고객이 서명하면 고객과 우리 회사 메일로 같은 계약서 PDF가 가고, 문서 목록의 상태가 <b>완료</b>로 바뀝니다.</div>
+    <div class="note">이제 견적서를 만들고 <b>[전자서명 요청]</b>을 누르면 카카오톡으로 서명 링크를 보낼 수 있습니다.<br>
+      고객이 서명하면 고객과 우리 회사 메일로 같은 계약서 PDF가 가고,<br>문서 목록의 상태가 <b>완료</b>로 바뀝니다.</div>
+    <div class="note"><b>보안 팁:</b> 회사 구글 계정에 <b>2단계 인증</b>을 켜 두세요.<br>
+      비밀번호가 새도 휴대폰 확인 없이는 아무도 들어올 수 없습니다.<br>
+      (구글 계정 → 보안 → 2단계 인증)</div>
   </div>
 </section>
 
@@ -478,23 +576,17 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
   <div class="n">+</div>
   <div class="body">
     <h2>기존 견적서 · 계약서 불러오기</h2>
-    <p class="lead">예전에 쓰던 양식이 있으면 처음부터 다시 칠 필요 없이 파일을 올려 가져올 수 있습니다. 서버 연결과 상관없이 언제든 쓸 수 있습니다.</p>
-
-    <div class="sub"><i>1</i>품목 · 금액 · 의뢰자 정보 — [견적 품목] 아래 [기존 견적서 불러오기]</div>
-    <ol class="do">
-      <li>견적서 편집 화면의 상품 칸에서 <b>[+ 품목 추가]</b> 옆 <b>[기존 견적서 불러오기]</b>를 누릅니다.</li>
-      <li><b>[견적서 파일 올리기]</b>로 예전 견적서를 고릅니다.</li>
-      <li>찾아온 <b>의뢰자 정보</b>와 <b>품목표</b>를 확인합니다. 칸을 눌러 바로 고칠 수 있고, 체크를 끄면 그 줄은 빠집니다.</li>
-      <li><b>PDF</b>로 올렸다면 맨 위 <b>디자인</b> 칸에 원본의 <b>로고 · 도장 · 대표 색 · 표 머리 색</b>이 나옵니다. 쓰고 싶은 것만 체크해 두면 우리 견적서·계약서 디자인이 그대로 바뀝니다. 색은 네모를 눌러 고를 수도 있고, 나중에 [회사 설정]에서 다시 바꿀 수 있습니다. (회사 설정이 바뀌므로 팀 전체에 적용됩니다)</li>
-      <li><b>[불러오기]</b>를 누르면 견적서에 들어가고 오른쪽 미리보기에 바로 보입니다.</li>
+    <p class="lead">예전에 쓰던 견적서 파일을 올리면 품목 · 금액 · 의뢰자 정보를 가져옵니다.<br>서버 연결과 상관없이 언제든 쓸 수 있습니다.</p>
+    <ol class="one">
+      <li><span>견적서 편집 화면의 품목 칸에서 <b>[기존 견적서 불러오기]</b>를 누릅니다.</span></li>
+      <li><span><b>[견적서 파일 올리기]</b>로 예전 견적서(엑셀 · 워드 · PDF)를 고릅니다.</span></li>
+      <li><span>찾아온 의뢰자 정보와 품목표를 확인합니다.<br>칸을 눌러 바로 고칠 수 있고, 체크를 끄면 그 줄은 빠집니다.</span></li>
+      <li><span><b>[불러오기]</b>를 누르면 견적서에 들어갑니다.</span></li>
     </ol>
     <div class="shot" role="img" aria-label="기존 견적서 불러오기 창: 의뢰자 정보와 품목표를 확인하고 불러오기를 누릅니다">
       <div class="app-top"><b style="font-size:14px">기존 견적서 불러오기</b><span style="margin-left:auto">닫기</span></div>
       <div class="app-card" style="border:0;margin:0">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mark" style="background:var(--green);color:#fff;border-radius:6px;padding:5px 12px;font-weight:700">견적서 파일 올리기<span class="tag">1</span></span><span style="color:#888;font-size:12px">예전견적서_바다커피.xlsx</span></div>
-        <div style="font-weight:700;color:var(--green);margin:12px 0 6px;font-size:12.5px">의뢰자 정보</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;font-size:12px">
-          <div>☑ 업체명 <b>(주)바다커피</b></div><div>☑ 대표자 <b>이바다</b></div><div>☑ 연락처 <b>02-345-6789</b></div><div>☑ 견적일 <b>2026-10-03</b></div></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="mark" style="background:var(--green);color:#fff;border-radius:6px;padding:5px 12px;font-weight:700">견적서 파일 올리기<span class="tag">2</span></span><span style="color:#888;font-size:12px">예전견적서_바다커피.xlsx</span></div>
         <div class="mark" style="margin-top:12px;padding:2px">
           <div style="font-weight:700;color:var(--green);font-size:12.5px;padding:4px 6px">품목 3줄 <span style="color:#1e6b2a;font-weight:500">✓ 원본 합계 1,900,000원과 같습니다</span></div>
           <div class="scroll"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:420px">
@@ -502,48 +594,89 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
             <tr><td>☑</td><td>디자인</td><td>로고 디자인</td><td>1식</td><td style="text-align:right">500,000</td></tr>
             <tr><td>☑</td><td>디자인</td><td>명함 디자인</td><td>2</td><td style="text-align:right">200,000</td></tr>
             <tr><td>☑</td><td>시공</td><td>간판 제작</td><td>1식</td><td style="text-align:right">1,200,000</td></tr></table></div>
-          <span class="tag">2</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;font-size:12px;flex-wrap:wrap;gap:8px"><span>☑ 기존 품목을 지우고 바꾸기</span><span class="mark" style="background:var(--green);color:#fff;border-radius:6px;padding:5px 14px;font-weight:700">불러오기<span class="tag">3</span></span></div>
+          <span class="tag">3</span></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px"><span class="mark" style="background:var(--green);color:#fff;border-radius:6px;padding:5px 14px;font-weight:700;font-size:12px">불러오기<span class="tag">4</span></span></div>
       </div>
     </div>
-    <div class="note"><b>합계 확인:</b> 원본에 합계 · 공급가액이 적혀 있으면 불러온 품목의 합과 비교해서 <b>✓ 같습니다</b> 또는 <b>차이</b>를 알려 줍니다. 차이가 나면 빠진 줄이나 잘못 읽힌 금액이 있는지 표에서 확인하세요.</div>
-    <div class="scroll"><table style="width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 4px;min-width:460px">
-      <tr style="text-align:left;border-bottom:1px solid var(--line)"><th style="padding:6px 8px">파일</th><th style="padding:6px 8px">정확도</th></tr>
-      <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px">엑셀 (.xlsx · .csv)</td><td style="padding:6px 8px"><b>가장 정확</b> — 표 머리줄(품명 · 수량 · 단가 · 금액)을 보고 칸 그대로 읽습니다</td></tr>
-      <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px">워드 (.docx)</td><td style="padding:6px 8px">표로 만든 견적서는 잘 읽습니다</td></tr>
-      <tr style="border-bottom:1px solid var(--line)"><td style="padding:6px 8px">PDF</td><td style="padding:6px 8px">대부분 됩니다. 칸이 붙어 읽히면 표에서 고쳐 주세요</td></tr>
-      <tr><td style="padding:6px 8px">스캔 · 사진 PDF</td><td style="padding:6px 8px">글자가 아니라 그림이라 읽을 수 없습니다</td></tr></table></div>
-    <p class="cap">엑셀에서 표를 복사(<kbd>Ctrl</kbd>+<kbd>C</kbd>)해서 [읽은 글자 보기 · 직접 붙여넣기] 칸에 붙여넣어도 됩니다. 우리 회사 정보(상호 · 대표 · 연락처)는 의뢰자로 잘못 들어가지 않게 자동으로 뺍니다.</p>
-
-    <div class="sub"><i>2</i>계약 조항 · 안내사항 — 각 칸의 [기존 계약서에서 가져오기]</div>
-    <ul class="do">
-      <li><b>계약 조항:</b> 상품 칸의 [계약서 조항] → <b>[기존 계약서에서 가져오기]</b> → 계약서 파일(한글 · PDF · 워드)을 올리거나 붙여넣기. "제1조 (목적)"처럼 조 번호를 기준으로 나눠 넣습니다.</li>
-      <li><b>안내사항:</b> [견적서 안내사항] → <b>[기존 양식에서 가져오기]</b>. 줄마다 한 항목으로 넣습니다.</li>
-    </ul>
-    <div class="note">한 번 맞춰 둔 품목 · 조항은 상품 칸의 <b>[이 상품을 기본값으로 저장]</b>을 누르면 다음 견적서부터 자동으로 들어갑니다. 서버에 연결돼 있으면 팀원도 같은 기본값을 씁니다.</div>
+    <div class="note"><b>엑셀 파일이 가장 정확합니다.</b><br>
+      워드는 표로 만든 견적서면 잘 읽고, PDF도 대부분 됩니다.<br>
+      스캔 · 사진 PDF는 글자가 아니라 그림이라 읽을 수 없습니다.</div>
+    <div class="note">계약 조항은 상품 칸의 [계약서 조항] → <b>[기존 계약서에서 가져오기]</b>로 넣을 수 있습니다.<br>
+      한 번 맞춰 둔 내용은 <b>[이 상품을 기본값으로 저장]</b>을 누르면 다음 견적서부터 자동으로 들어갑니다.</div>
   </div>
 </section>
 
-<h3 class="sec">문제가 생겼을 때</h3>
-<details class="faq"><summary>시트에 [전자계약] 메뉴가 안 보여요</summary><div>시트를 새로고침하고 5~10초 기다리세요. 그래도 없으면 사본이 아니라 원본 링크를 연 것일 수 있습니다. 1단계의 <b>사본 만들기</b> 링크로 다시 복사해 주세요.</div></details>
-<details class="faq"><summary>작성기에서 "연결하지 못했습니다: Failed to fetch"가 나와요</summary><div>
-  웹 앱 주소가 틀렸거나 배포가 안 된 경우입니다.
-  <ol class="do"><li>Apps Script에서 <b>[배포 → 배포 관리]</b>를 열어 <b>웹 앱 URL</b>을 복사합니다.</li>
-  <li>시트 <b>[전자계약 → ② 연결 코드 보기]</b> → 아래 <b>'웹 앱 주소 바꾸기'</b>를 열어 붙여넣고 저장합니다.</li>
-  <li>새로 나온 연결 코드로 다시 연결합니다.</li></ol>
-  배포할 때 액세스가 <b>'모든 사용자'</b>였는지도 확인해 주세요.</div></details>
-<details class="faq"><summary>"연결 코드(키)가 맞지 않습니다"가 나와요</summary><div>누군가 연결 코드를 새로 만들어서 예전 코드가 무효가 된 것입니다. 시트의 <b>[② 연결 코드 보기]</b>에서 최신 코드를 받아 다시 연결하세요.</div></details>
-<details class="faq"><summary>팀원이 퇴사했어요</summary><div>퇴사한 사람이 우리 회사 서버(문서 목록 · 회사 설정)에 더 이상 들어오지 못하게 하는 방법입니다. 시트 <b>[전자계약 → 연결 코드 새로 만들기]</b>를 누르면 기존 연결이 모두 끊깁니다. 새 초대 링크를 남은 팀원에게 다시 보내 주세요. 문서 목록과 회사 설정은 그대로 남습니다.</div></details>
-<details class="faq"><summary>작성기 위에 "서버 업데이트가 있어요"가 떠요 (코드 교체)</summary><div>
-  작성기 화면(디자인 · 기능)은 자동으로 최신이 되지만, 서버 코드는 각자 구글 계정에 있어서 서버를 만든 분이 한 번 바꿔 줘야 합니다. 서버 코드가 바뀌면 작성기 위쪽에 알림이 뜹니다. 팀원은 할 일이 없고, 서버를 만든 분만 하면 됩니다.
-  <ol class="do"><li>알림의 <b>[새 서버 코드 복사]</b>를 누릅니다.</li>
-  <li>서버 시트 <b>[확장 프로그램 → Apps Script]</b>에서 Code.gs 내용을 모두 지우고(<kbd>Ctrl</kbd>+<kbd>A</kbd>) 붙여넣은 뒤 저장(<kbd>Ctrl</kbd>+<kbd>S</kbd>)합니다.</li>
-  <li><b>[배포 → 배포 관리]</b> → 연필(수정) → 버전 <b>'새 버전'</b> → <b>[배포]</b>.</li></ol>
-  이렇게 하면 주소가 바뀌지 않아 연결 코드를 다시 줄 필요가 없습니다. '새 배포'로 하면 주소가 바뀌니 주의하세요.</div></details>
-<details class="faq"><summary>메일은 하루에 몇 통까지 보낼 수 있나요?</summary><div>일반 지메일 계정은 구글 기준 <b>하루 약 100통</b>입니다. 서명 1건에 고객 · 우리 회사 2통이 가므로 하루 약 50건까지 처리할 수 있습니다. 구글 워크스페이스(회사 도메인) 계정은 한도가 더 큽니다.</div></details>
-<details class="faq"><summary>데이터는 어디에 저장되나요?</summary><div>모두 서버를 만든 사람의 구글 계정에 저장됩니다. 견적 목록은 이 시트의 <b>견적목록</b> 탭, 서명 기록은 <b>전자계약</b> 탭, 계약서 원본 · 서명 이미지 · 최종 PDF는 드라이브의 <b>'… 보관함'</b> 폴더에 있습니다. 시트나 폴더를 지우면 복구할 수 없으니 지우지 마세요.</div></details>
+<!-- 서버 업데이트 -->
+<section class="step" id="update">
+  <div class="n">↻</div>
+  <div class="body">
+    <h2>서버 업데이트 하는 법 (가끔 한 번, 5분)</h2>
+    <p class="lead">작성기 화면은 자동으로 최신이 되지만, 서버는 각자 구글 계정에 있어서 직접 바꿔 줘야 합니다.<br>
+      작성기 위쪽에 <b>'서버 업데이트가 있어요'</b> 알림이 뜨면, <b>서버를 만든 분(대표 계정)</b>만 아래대로 하면 됩니다.<br>팀원은 할 일이 없습니다.</p>
+    <ol class="one">
+      <li><span>작성기 알림의 <b>[방법 보기]</b> → <b>[새 서버 코드 복사]</b>를 누릅니다.</span></li>
+      <li><span><b>크롬</b>에서 서버 시트를 열고, 메뉴 <b>[확장 프로그램 → Apps Script]</b>를 누릅니다.</span></li>
+      <li><span>왼쪽 <b>Code.gs</b>를 누르고, 코드 아무 곳이나 한 번 클릭합니다.</span></li>
+      <li><span><kbd>Ctrl</kbd>+<kbd>A</kbd> (전부 선택) → <kbd>Ctrl</kbd>+<kbd>V</kbd> (붙여넣기) → <kbd>Ctrl</kbd>+<kbd>S</kbd> (저장)</span></li>
+      <li><span>오른쪽 위 <b>[배포 ▾]</b> → <b>[배포 관리]</b>를 누릅니다. <b style="color:var(--mark)">('새 배포' 아님!)</b></span></li>
+      <li><span>오른쪽 위 <b>연필 모양(수정)</b>을 누릅니다.</span></li>
+      <li><span><b>버전</b> 칸을 눌러 <b>'새 버전'</b>을 고릅니다.</span></li>
+      <li><span>아래 <b>[배포]</b> → <b>[완료]</b>를 누릅니다.</span></li>
+      <li><span>작성기를 새로고침(<kbd>F5</kbd>)합니다.</span></li>
+    </ol>
+    <div class="shot" role="img" aria-label="배포 관리 창에서 연필을 누르고 버전을 새 버전으로 바꾼 뒤 배포를 누릅니다">
+      <div class="tb"><i></i><i></i><i></i><span>배포 관리</span></div>
+      <div class="cv">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">구성</b><span class="mark" style="padding:0 6px">✎<span class="tag">6</span></span></div>
+        <div class="field mark" style="margin-top:14px"><small>버전</small><b>새 버전</b> <span>▾</span><span class="tag">7</span></div>
+        <div style="font-size:12px;color:#5f6368;margin-top:10px">웹 앱 URL: https://script.google.com/macros/s/…/exec <span style="color:#1e6b2a">(그대로 유지)</span></div>
+        <div style="text-align:right;margin-top:12px"><span class="gbtn o" style="margin-right:6px">취소</span><span class="gbtn mark">배포<span class="tag">8</span></span></div>
+      </div>
+    </div>
+    <div class="ok">작성기를 새로고침하면 '서버 업데이트' 알림이 사라집니다.<br>주소가 그대로라 연결 코드를 다시 줄 필요가 없습니다.</div>
+    <details class="stuck"><summary>배포할 때 '액세스 승인'이 나와요</summary><div>
+      새 기능에 권한이 더 필요할 때 나옵니다.<br>
+      2-2 ~ 2-4와 똑같이 하세요. (계정 → 고급 → 이동 → <b>모두 선택</b> → 계속)</div></details>
+    <details class="stuck"><summary>실수로 '새 배포'를 눌렀어요</summary><div>
+      서버 주소가 새로 생겨서, 작성기는 여전히 예전 주소를 씁니다.<br>
+      가장 쉬운 해결: 시트 <b>[전자계약 → ② 연결 코드 보기]</b> → '웹 앱 주소 바꾸기'에 <b>새 주소</b>를 넣고 저장 →<br>
+      새로 나온 연결 코드로 작성기를 다시 연결합니다. (팀원에게도 새 초대 링크를 보내 주세요)</div></details>
+  </div>
+</section>
 
-<p class="foot">계약·서류 작성기 · 전자계약 서버 설치 안내</p>
+<h3 class="sec" id="faq">막혔을 때</h3>
+<details class="faq"><summary>권한 창이 안 뜨고 '오류 발생 — 먼저 새로고침해 보세요'가 나와요</summary><div>
+  권한 창(팝업)이 막힌 것입니다.<br>
+  ① <b>크롬을 직접 열어서</b> 시트를 여세요. (카카오톡 · 다른 앱 안의 화면 X)<br>
+  ② 주소창 오른쪽 '팝업 차단됨' 아이콘 → <b>'항상 허용'</b>.<br>
+  ③ 시트를 새로고침(<kbd>F5</kbd>)하고 메뉴를 다시 누르세요.</div></details>
+<details class="faq"><summary>시트에 [전자계약] 메뉴가 안 보여요</summary><div>
+  <kbd>F5</kbd>로 새로고침하고 10초 기다리세요.<br>
+  그래도 없으면 원본을 연 것일 수 있습니다.<br>1단계의 <b>[사본 만들기 열기]</b>로 다시 복사해 주세요.</div></details>
+<details class="faq"><summary>작성기에서 "연결하지 못했습니다: Failed to fetch"가 나와요</summary><div>
+  서버 주소가 틀렸거나, 배포가 안 됐거나, 액세스가 '모든 사용자'가 아닌 경우입니다.
+  <ol class="do"><li>Apps Script에서 <b>[배포 ▾ → 배포 관리]</b>를 열어 <b>웹 앱 URL</b>을 복사합니다.<br>(액세스가 '모든 사용자'인지도 확인합니다)</li>
+  <li>시트 <b>[전자계약 → ② 연결 코드 보기]</b> → <b>'웹 앱 주소 바꾸기'</b>에 붙여넣고 저장합니다.</li>
+  <li>새로 나온 연결 코드로 다시 연결합니다.</li></ol></div></details>
+<details class="faq"><summary>서명 메일이 안 가요 / 문서가 저장이 안 돼요</summary><div>
+  권한을 일부만 허용했을 수 있습니다.<br>
+  시트 <b>[전자계약 → ① 처음 설정]</b>을 다시 누르고, 권한 창이 뜨면 <b>[모두 선택]</b> → [계속].</div></details>
+<details class="faq"><summary>"연결 코드(키)가 맞지 않습니다"가 나와요</summary><div>
+  누군가 연결 코드를 새로 만들어서 예전 코드가 무효가 된 것입니다.<br>
+  시트 <b>[② 연결 코드 보기]</b>에서 최신 코드를 받아 다시 연결하세요.</div></details>
+<details class="faq"><summary>팀원이 퇴사했어요</summary><div>
+  시트 <b>[전자계약 → 연결 코드 새로 만들기]</b>를 누르면 기존 연결이 모두 끊깁니다.<br>
+  남은 팀원에게 새 초대 링크를 보내 주세요.<br>문서 목록과 회사 설정은 그대로 남습니다.</div></details>
+<details class="faq"><summary>메일은 하루에 몇 통까지 보낼 수 있나요?</summary><div>
+  일반 지메일 계정은 구글 기준 <b>하루 약 100통</b>입니다.<br>
+  서명 1건에 고객 · 우리 회사 2통이 가므로 하루 약 50건까지 처리할 수 있습니다.<br>
+  구글 워크스페이스(회사 도메인) 계정은 한도가 더 큽니다.</div></details>
+<details class="faq"><summary>데이터는 어디에 저장되나요?</summary><div>
+  모두 서버를 만든 사람의 구글 계정에 저장됩니다.<br>
+  견적 목록은 시트의 <b>견적목록</b> 탭, 서명 기록은 <b>전자계약</b> 탭, PDF · 서명 이미지는 드라이브의 <b>'… 보관함'</b> 폴더에 있습니다.<br>
+  시트나 폴더를 지우면 복구할 수 없으니 지우지 마세요.</div></details>
+
+<p class="foot">계약·서류 작성기 · 전자계약 서버 설치 안내 · weavery lab</p>
 </div>
 
 <script>
