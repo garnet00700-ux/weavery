@@ -1838,7 +1838,8 @@ $("#lBody").addEventListener("click",e=>{
     const signed=x.data&&x.data.esign&&x.data.esign.status==="signed";
     if(!confirm(`'${x.name||"(이름 미입력)"}' 문서를 목록에서 삭제할까요?${connected()?"\n팀원 목록에서도 함께 사라집니다.":""}${signed?"\n\n서명 완료된 문서입니다.\n양측 서명이 들어간 최종 PDF는 구글 드라이브에 그대로 남습니다.":""}\n\n삭제하면 되돌릴 수 없습니다.`)) return;
     storeList(list.filter(v=>v.id!==x.id)); dirty.delete(x.id); delQ.add(x.id); storeQ(); pushSoon();
-    if(x.id===state.docId){ state.docId=newId(); lsSet(K.doc,state); }
+    // 지금 열린 문서를 지우면 빈 새 문서로 (내용이 남아 있으면 다음 자동 저장 때 목록에 다시 올라감)
+    if(x.id===state.docId){ state=newDocFrom(profile); lastSaved=JSON.stringify(state); lsSet(K.doc,state); renderEditor(); renderPreview(); }
     renderList(); return;
   }
   if(act==="dup"){
