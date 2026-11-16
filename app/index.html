@@ -338,6 +338,12 @@ textarea{resize:vertical;line-height:1.5}
 .cert-issue.done .ci-st{color:#2c5a8c}
 .cert-issue.done .ci-btn{background:#eef4fb;color:#2c5a8c;border-color:#b9cde3;cursor:default;filter:none}
 .lst.unissued{color:#9a5b00;border-color:#e8c98f;background:#fff6e5;cursor:default;text-align:center;line-height:1.25}
+/* 증명서 종류 고르기 */
+.cert-type{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;padding:10px 12px;border:1px solid #c9d6c4;border-radius:10px;background:#f4f8f2}
+.cert-type .ct-l{font-size:13px;font-weight:700;color:#333;margin-right:4px}
+.cert-type .ct-b{border:1px solid var(--ui-border,#ccc);background:#fff;border-radius:999px;padding:6px 14px;font:inherit;font-size:13.5px;cursor:pointer;color:#333}
+.cert-type .ct-b:hover{border-color:var(--green)}
+.cert-type .ct-b.on{background:var(--green);border-color:var(--green);color:#fff;font-weight:700}
 /* 임시저장 알림 배너: 제목과 내용 사이 여백 */
 #draftBar #dbText{margin-left:14px}
 /* 주소 검색 */
@@ -857,9 +863,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
               <option value="lab-part">근로계약서 — 아르바이트 (단시간)</option>
             </optgroup>
             <optgroup label="증명서 (회사 직인 발급)">
-              <option value="cert-employ">재직증명서</option>
-              <option value="cert-career">경력증명서</option>
-              <option value="cert-retire">퇴직증명서</option>
+              <option value="cert">재직 · 경력 · 퇴직 증명서 (종류는 다음에 고름)</option>
             </optgroup>
           </select>
         </label>
@@ -1017,6 +1021,13 @@ function normProfile(p){
   if(!Array.isArray(o.templates)||!o.templates.length) o.templates=[GENERIC_PRODUCT()];
   o.templates=o.templates.map(normProduct);
   o.templates.forEach(t=>{ if((t.name||"").trim()==="기본 상품") t.name="기본 양식"; });   // 예전 이름 정리 (상품 목록만, 저장된 문서는 그대로)
+  // 예전 증명서 3개(재직 · 경력 · 퇴직)는 상품 목록에서 하나로 합침. 손대지 않은 기본 양식만 정리하고, 고친 양식 · 저장된 문서는 그대로
+  const T=certTypes(), S=certStatements(), tv=Object.values(T), sv=Object.values(S);
+  const plain=t=>t.kind==="cert"&&tv.includes((t.name||"").trim())&&(!t.contractTitle||tv.includes(t.contractTitle))&&(!t.intro||sv.includes(t.intro));
+  if(o.templates.some(plain)){
+    let first=true;
+    o.templates=o.templates.filter(t=>{ if(!plain(t)) return true; if(first){ first=false; t.name=CERT_ALL(); return true; } return false; });
+  }
   return o;
 }
 function normProduct(x){
@@ -1132,7 +1143,7 @@ const delQ=new Set(lsGet(K.del,[]));
 const storeQ=()=>{ lsSet(K.dirty,[...dirty]); lsSet(K.del,[...delQ]); };
 function entryOf(d){
   return {id:d.docId,name:d.client.name,ceo:d.client.ceo,phone:d.client.phone,
-    prods:d.prods.filter(p=>p.on).map(p=>p.name),status:d.status,total:d.prods.filter(p=>p.on).reduce((s,p)=>s+totalsFor(d,p).total,0),
+    prods:d.prods.filter(p=>p.on).map(p=>p.kind==="cert"&&p.cert?certTypes()[p.cert.type]||p.name:p.name),status:d.status,total:d.prods.filter(p=>p.on).reduce((s,p)=>s+totalsFor(d,p).total,0),
     quoteDate:d.quoteDate,updated:Date.now(),by:cfg.user||"",data:d};
 }
 function totalsFor(d,p){ const keep=state; state=d; try{ return totals(p); } finally{ state=keep; } }
@@ -1486,7 +1497,7 @@ const SAMPLES={
 };
 $("#sampleSel").addEventListener("change",e=>{
   const key=e.target.value; e.target.value=""; if(!key||!SAMPLES[key]) return;
-  if(/^(lab|cert)-/.test(key)) return addLaborSample(key);
+  if(/^(lab-|cert)/.test(key)) return addLaborSample(key);
   const s=SAMPLES[key]();
   if(P().some(p=>p.name===s.name)&&!confirm(`'${s.name}' 상품이 이미 있습니다. 예시 양식으로 하나 더 추가할까요?`)) return;
   const p=Object.assign(GENERIC_PRODUCT(),s);
@@ -3108,6 +3119,14 @@ SAMPLES["lab-part"]=()=>laborSample("part");
 // 근로계약서 예시 줄도 같은 버튼 처리 (app1.js의 #sampleRow 처리를 그대로 씀)
 function addLaborSample(key){
   const s=SAMPLES[key]();
+  // 증명서가 이미 상품 목록에 있으면 새로 만들지 않고 그걸 켬 (종류는 카드 맨 위에서 고름)
+  const had=key==="cert"&&P().find(p=>p.kind==="cert");
+  if(had){
+    P().forEach(q=>{ q.on=false; }); had.on=true; state._t=1; state.client.ceo=state.client.name||"";
+    renderProds(); esMarkStale(); save(); schedule();
+    $("#saved").textContent="증명서를 골랐습니다 — 카드 맨 위에서 재직 · 경력 · 퇴직 중 종류를 고르세요";
+    return;
+  }
   if(P().some(p=>p.name===s.name)&&!confirm(`'${s.name}'이(가) 이미 있습니다. 하나 더 추가할까요?`)) return;
   const p=Object.assign(GENERIC_PRODUCT(),s);
   P().forEach(q=>{ q.on=false; });                       // 근로계약서는 따로
@@ -3115,7 +3134,7 @@ function addLaborSample(key){
   state.client.ceo=state.client.name||"";
   openSet.add(`p${p.pid}-tm`);
   renderProds(); esMarkStale(); save(); schedule();
-  $("#saved").textContent=p.kind==="cert"?`'${p.name}' 양식을 추가했습니다 — 직원 정보와 재직 사항을 채우세요`:`'${p.name}' 예시 양식을 추가했습니다 — 근로 조건을 채우고 항목을 고쳐 쓰세요`;
+  $("#saved").textContent=p.kind==="cert"?`증명서 양식을 추가했습니다 — 카드 맨 위에서 재직 · 경력 · 퇴직 중 종류를 고르세요`:`'${p.name}' 예시 양식을 추가했습니다 — 근로 조건을 채우고 항목을 고쳐 쓰세요`;
 }
 
 /* --- 기존 근로계약서 가져오기 ---
@@ -3342,11 +3361,13 @@ function certCardHtml(p,pi){
   const f=(key,label,ph,wide)=>`<label class="f"${wide?' style="grid-column:1/-1"':""}>${label}<input data-p="${b}.${key}"${ph?` placeholder="${esc(ph)}"`:""}></label>`;
   const labs=certCardHtml.docs=certLaborDocs();   // 화면에 보인 목록 그대로 기억 (고르는 사이 자동 저장으로 바뀌지 않게)
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
-    <summary>${esc(p.name||"(이름 없는 증명서)")} — 증명서</summary>
+    <summary>${esc(p.name&&!Object.values(T).includes(p.name)&&p.name!==CERT_ALL()?p.name+" — ":"")}증명서 — ${esc(T[C.type]||"")}</summary>
     <div class="in">
+      <div class="cert-type" role="group" aria-label="증명서 종류">
+        <span class="ct-l">증명서 종류</span>
+        ${Object.entries(T).map(([v,t])=>`<button type="button" class="ct-b${C.type===v?" on":""}" data-certtype="${v}" data-pi="${pi}" aria-pressed="${C.type===v}">${t}</button>`).join("")}
+      </div>
       <div class="grid2">
-        <label class="f">증명서 종류<select class="f" data-p="${b}.type" data-struct>${
-          Object.entries(T).map(([v,t])=>`<option value="${v}"${C.type===v?" selected":""}>${t}</option>`).join("")}</select></label>
         ${f("no","발급번호","예: 2026-001")}
       </div>
       ${labs.length?`<label class="f" style="margin-top:8px">근로계약서에서 직원 정보 불러오기<select class="f" data-certfrom data-pi="${pi}">
@@ -3408,6 +3429,13 @@ function certIssueUI(){
   b.disabled=inList&&!pend;
 }
 $("#editor").addEventListener("change",e=>{ if(e.target.matches("[data-cimail]")) certMailWant=e.target.checked; });
+// 증명서 종류 고르기 (재직 · 경력 · 퇴직)
+$("#editor").addEventListener("click",e=>{
+  const b=e.target.closest("[data-certtype]"); if(!b) return;
+  const p=P()[+b.dataset.pi]; if(!p||!p.cert||p.cert.type===b.dataset.certtype) return;
+  p.cert.type=b.dataset.certtype; state._t=1;
+  renderProds(); updateSums(); esMarkStale(); save(); schedule();
+});
 $("#editor").addEventListener("click",async e=>{
   const btn=e.target.closest("[data-certissue]"); if(!btn||certBusy) return;
   if(!state.client.name.trim()){ alert("직원 성명을 먼저 입력해 주세요.\n(위 직원 정보 칸)"); return; }
@@ -3513,6 +3541,9 @@ function certSample(type){
   return {kind:"cert", name:T[type], quoteTitle:"", contractTitle:T[type], items:[], notices:[], noticeIntro:"", extra:"", terms:[],
     intro:certStatements()[type], cert:certDefaults(type)};
 }
+// 상품 선택에는 증명서 하나만 ('재직 · 경력 · 퇴직 증명서') → 종류는 카드 맨 위에서 고름
+function CERT_ALL(){ return "재직 · 경력 · 퇴직 증명서"; }
+SAMPLES["cert"]=()=>Object.assign(certSample("employ"),{name:CERT_ALL()});
 SAMPLES["cert-employ"]=()=>certSample("employ");
 SAMPLES["cert-career"]=()=>certSample("career");
 SAMPLES["cert-retire"]=()=>certSample("retire");
