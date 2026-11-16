@@ -1008,6 +1008,8 @@ function normDoc(d){
   o.prods=d.prods.map(normProduct);
   if(o.status!=="완료") o.status="대기";
   if(!o.esign||typeof o.esign!=="object"||!o.esign.id) o.esign=null;
+  // 예전 이름 '기본 상품' → '기본 양식' (편집 화면 이름일 뿐 인쇄엔 안 나옴 · 서명 요청한 문서는 그대로)
+  if(!o.esign) o.prods.forEach(p=>{ if((p.name||"").trim()==="기본 상품") p.name="기본 양식"; });
   if(!o.docId) o.docId=newId();
   return fixMode(o);
 }
