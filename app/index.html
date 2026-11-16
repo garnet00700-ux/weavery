@@ -338,6 +338,20 @@ textarea{resize:vertical;line-height:1.5}
 .cert-issue.done .ci-st{color:#2c5a8c}
 .cert-issue.done .ci-btn{background:#eef4fb;color:#2c5a8c;border-color:#b9cde3;cursor:default;filter:none}
 .lst.unissued{color:#9a5b00;border-color:#e8c98f;background:#fff6e5;cursor:default;text-align:center;line-height:1.25}
+/* 주소 검색 */
+.addr-row{display:flex;gap:6px;align-items:stretch}
+.addr-row input{flex:1;min-width:0}
+.addr-row .addr-b{flex:none;white-space:nowrap;font-size:13px;padding:0 12px;background:var(--green);color:#fff;border-color:var(--green)}
+.addr-detail{display:grid;gap:4px;margin-top:6px;padding:8px 10px;border:1px dashed #c9d6c4;border-radius:8px;background:#f4f8f2}
+.addr-detail .ab{font-size:12px;color:#556;font-weight:400}
+.addr-detail .ab::before{content:"선택한 주소 · "}
+.addr-detail input{width:100%}
+.addr-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:10000;display:grid;place-items:center;padding:16px}
+.addr-modal[hidden]{display:none}
+.addr-box{background:#fff;border-radius:14px;width:min(520px,100%);height:min(620px,100%);display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.addr-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #e5e2dc}
+.addr-head span{font-size:12px;color:#888;flex:1}
+.addr-embed{position:relative;min-height:0}
 .lst.unissued small{display:block;font-size:10.5px;font-weight:400;white-space:nowrap}
 .cert-issue .ci-mail{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:#333;flex-wrap:wrap}
 .cert-issue .ci-mail[hidden]{display:none}
@@ -680,7 +694,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <label class="f">대표 메일 <span style="font-weight:400">(서명 완료 메일 받는 곳)</span><input type="email" data-c="email" placeholder="비우면 서버 구글 계정 메일"></label>
           <label class="f">홈페이지<input data-c="web" placeholder="https://"></label>
         </div>
-        <label class="f" style="margin-top:10px">주소<input data-c="address"></label>
+        <label class="f" style="margin-top:10px">주소<input data-c="address" data-addr></label>
         <label class="f" style="margin-top:10px">입금 계좌 <span style="font-weight:400">(견적서 VAT 문구 아래에 표시)</span><input data-c="account" placeholder="예: 은행 000-0000-0000 (예금주 : 홍길동)"></label>
         <label class="f" style="margin-top:10px">상단 슬로건 <span style="font-weight:400">(견적서·계약서 오른쪽 위)</span><input data-c="slogan"></label>
         <div class="sub" style="margin-top:14px">회사 로고 <span style="font-weight:400;color:var(--ui-sub)">(견적서·계약서 왼쪽 위, 메일 머리)</span></div>
@@ -853,7 +867,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <label class="f" data-only="quote">대표자<input data-p="client.ceo"></label>
           <label class="f">연락처<input data-p="client.phone"></label>
           <label class="f">이메일 <span style="font-weight:400" data-only="quote labor">(최종 계약서 받을 주소)</span><span style="font-weight:400" data-only="cert">(증명서 PDF 받을 주소 · 원할 때만 발송)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
-          <label class="f" data-only="labor cert">주소<input data-p="client.addr"></label>
+          <label class="f" data-only="labor cert" style="grid-column:1/-1">주소<input data-p="client.addr" data-addr></label>
           <label class="f"><span data-ll="작성일" data-lc="발급일">견적일</span><input type="date" data-p="quoteDate"></label>
         </div>
         <div class="grid2" id="deliverBox" style="margin-top:10px"></div>
@@ -2827,6 +2841,68 @@ $("#suCopy").onclick=async()=>{
   setTimeout(()=>{ b.textContent=t; },2500);
 };
 setTimeout(serverVerCheck,1500);
+
+/* ===== 주소 검색 (카카오 우편번호 서비스 · 무료 · 키 필요 없음) =====
+   data-addr 칸 옆에 [주소 검색] 버튼. 주소를 고르면 칸에 들어가고, 아래 '상세 주소' 칸에 동 · 호수를 이어서 씀.
+   저장은 지금처럼 한 칸(전체 주소)으로. */
+let postLoad=null;
+function loadPost(){
+  return postLoad||(postLoad=new Promise((ok,no)=>{
+    if(window.daum&&daum.Postcode) return ok();
+    const s=document.createElement("script");
+    s.src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    s.onload=()=>ok();
+    s.onerror=()=>{ postLoad=null; s.parentNode&&s.parentNode.removeChild(s); no(new Error("주소 검색을 불러오지 못했습니다.\n인터넷 연결을 확인해 주세요.")); };
+    document.head.appendChild(s);
+  }));
+}
+const addrModal=document.createElement("div");
+addrModal.className="addr-modal"; addrModal.hidden=true;
+addrModal.innerHTML=`<div class="addr-box" role="dialog" aria-label="주소 검색"><div class="addr-head"><b>주소 검색</b><span>도로명 · 건물명 · 지번으로 찾으세요</span><button class="btn" type="button">닫기</button></div><div class="addr-embed"></div></div>`;
+document.body.appendChild(addrModal);
+const addrClose=()=>{ addrModal.hidden=true; addrModal.querySelector(".addr-embed").innerHTML=""; };
+addrModal.querySelector(".addr-head button").onclick=addrClose;
+addrModal.addEventListener("click",e=>{ if(e.target===addrModal) addrClose(); });
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&!addrModal.hidden) addrClose(); });
+function addrSet(inp,v){ inp.value=v; inp.dispatchEvent(new Event("input",{bubbles:true})); inp.dispatchEvent(new Event("change",{bubbles:true})); }
+function addrDetail(inp,base){
+  const lab=inp.closest("label")||inp.parentNode.parentNode;
+  let row=lab.querySelector(".addr-detail");
+  if(!row){ row=document.createElement("div"); row.className="addr-detail"; row.innerHTML=`<span class="ab"></span><input type="text" placeholder="상세 주소 (동 · 호수 · 층) — 없으면 비워 두세요" aria-label="상세 주소">`; lab.appendChild(row); }
+  row.querySelector(".ab").textContent=base;
+  const d=row.querySelector("input"); d.value="";
+  d.oninput=()=>addrSet(inp,base+(d.value.trim()?" "+d.value.trim():""));
+  d.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); d.blur(); } };
+  addrSet(inp,base);
+  setTimeout(()=>d.focus(),50);
+}
+async function addrSearch(inp){
+  try{ await loadPost(); }catch(e){ alert(e.message); return; }
+  const box=addrModal.querySelector(".addr-embed"); box.innerHTML=""; addrModal.hidden=false;
+  new daum.Postcode({
+    width:"100%", height:"100%",
+    oncomplete(d){
+      let a=d.userSelectedType==="J"?(d.jibunAddress||d.autoJibunAddress):(d.roadAddress||d.autoRoadAddress);
+      a=a||d.address;
+      if(d.userSelectedType!=="J"){
+        const ex=[]; if(d.bname&&/[동로가]$/.test(d.bname)) ex.push(d.bname);
+        if(d.buildingName&&d.apartment==="Y") ex.push(d.buildingName);
+        if(ex.length) a+=` (${ex.join(", ")})`;
+      }
+      addrClose(); addrDetail(inp,a);
+    }
+  }).embed(box,{autoClose:false});
+}
+$$("input[data-addr]").forEach(inp=>{
+  const row=document.createElement("div"); row.className="addr-row";
+  inp.parentNode.insertBefore(row,inp); row.appendChild(inp);
+  inp.placeholder=inp.placeholder||"[주소 검색]을 누르거나 직접 입력";
+  const b=document.createElement("button"); b.type="button"; b.className="btn addr-b"; b.textContent="주소 검색";
+  b.onclick=e=>{ e.preventDefault(); addrSearch(inp); };
+  row.appendChild(b);
+  // 직접 고쳐 쓰면 상세 주소 칸은 닫음
+  inp.addEventListener("input",e=>{ if(e.isTrusted){ const r=(inp.closest("label")||document).querySelector(".addr-detail"); if(r) r.parentNode.removeChild(r); } });
+});
 
 /* ===== 근로계약서 =====
    상품 종류 kind:"labor" → 견적서 없이 계약서만, 당사자는 사업주(회사) / 근로자(state.client).
