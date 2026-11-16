@@ -419,11 +419,11 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 <div class="modal" id="impModal" hidden>
   <div class="mbox padbox" role="dialog" aria-label="기존 양식에서 가져오기">
     <div class="mhead"><b id="impTitle">기존 계약서에서 조항 가져오기</b></div>
-    <p class="hint" id="impHint" style="margin:0 0 8px">기존 계약서·견적서 파일(PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br>
+    <p class="hint" id="impHint" style="margin:0 0 8px">기존 계약서·견적서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br>
       <b>조항</b>은 "제1조 (목적)"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.</p>
     <div class="padbtns" style="margin:0 0 8px">
       <button class="btn" type="button" id="impFileBtn">파일 올리기</button>
-      <input type="file" id="impFile" accept=".pdf,.docx,.txt,application/pdf" hidden>
+      <input type="file" id="impFile" accept=".hwp,.hwpx,.pdf,.docx,.txt,application/pdf" hidden>
       <span class="hint" id="impFileR" style="margin:0;align-self:center"></span>
     </div>
     <textarea id="impText" rows="9" placeholder="여기에 붙여넣기"></textarea>
@@ -443,11 +443,11 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
     <div class="mhead"><b>기존 견적서 불러오기</b><span class="mcount" id="qiTo"></span><span style="flex:1"></span><button class="btn" id="qiCancel" type="button">닫기</button></div>
     <div class="mbody">
       <p class="hint" style="margin:0 0 8px">예전에 쓰던 견적서 파일을 올리면 <b>품목 · 수량 · 금액</b>과 <b>의뢰자 정보</b>를 찾아 옵니다.
-        엑셀(.xlsx · .csv)이 가장 정확하고, PDF · 워드(.docx)도 됩니다. 스캔한 사진 PDF는 읽을 수 없습니다.<br>PDF로 올리면 <b>로고 · 도장 · 대표 색 · 표 머리 색</b>도 찾아서 우리 견적서 디자인에 넣을 수 있습니다.<br>
+        엑셀(.xlsx · .csv)이 가장 정확하고, 한글(.hwp · .hwpx) · PDF · 워드(.docx)도 됩니다. 스캔한 사진 PDF는 읽을 수 없습니다.<br>PDF로 올리면 <b>로고 · 도장 · 대표 색 · 표 머리 색</b>도 찾아서 우리 견적서 디자인에 넣을 수 있습니다.<br>
         넣기 전에 아래 표에서 확인하고 고칠 수 있습니다. 체크를 끄면 그 줄은 빠집니다.</p>
       <div class="padbtns" style="margin:0 0 8px">
         <button class="btn go" type="button" id="qiFileBtn">견적서 파일 올리기</button>
-        <input type="file" id="qiFile" accept=".xlsx,.xls,.csv,.pdf,.docx,.txt" hidden>
+        <input type="file" id="qiFile" accept=".xlsx,.xls,.csv,.hwp,.hwpx,.pdf,.docx,.txt" hidden>
         <span class="hint" id="qiFileR" style="margin:0;align-self:center"></span>
       </div>
       <details class="es-set" id="qiRawBox"><summary>읽은 글자 보기 · 직접 붙여넣기</summary>
@@ -1105,7 +1105,7 @@ function prodCardHtml(p,pi){
       <div class="sub" style="margin-top:4px">견적 품목</div>
       <div>${itemsHtml(pi)}</div>
       <div class="pbtns"><button class="btn" type="button" data-add="prods.${pi}.items">+ 품목 추가</button>
-        <button class="btn" type="button" data-imp="quote" data-pi="${pi}" title="기존 견적서(엑셀 · PDF · 워드)에서 품목 · 금액 · 의뢰자 정보를 불러옵니다">기존 견적서 불러오기</button></div>
+        <button class="btn" type="button" data-imp="quote" data-pi="${pi}" title="기존 견적서(엑셀 · 한글 · PDF · 워드)에서 품목 · 금액 · 의뢰자 정보를 불러옵니다">기존 견적서 불러오기</button></div>
       <p class="hint">할인 후 금액을 넣으면 <b>금액 칸은 정가 취소선</b>, <b>비고 칸은 할인 내용 + 할인가</b>로 표시됩니다. 같은 구성명이 이어지면 한 칸으로 묶입니다.</p>
       <label class="f" style="margin-top:10px">기타 안내 (VAT 문구 아래 한 줄)<input data-p="prods.${pi}.extra"></label>
       <div class="sum-box"><span>${esc(p.name)} 총액</span><span data-sum="${pi}"></span></div>
@@ -1442,8 +1442,8 @@ function openImport(kind,pi){
   impKind=kind; impPi=pi;
   $("#impTitle").textContent={terms:"기존 계약서에서 조항 가져오기",labor:"기존 근로계약서 가져오기"}[kind]||"기존 견적서에서 안내사항 가져오기";
   $("#impHint").innerHTML=kind==="labor"
-    ?"쓰시던 근로계약서 파일(PDF · 워드 .docx · .txt)을 올리거나 내용을 붙여넣으세요.<br><b>\"1. 근로개시일 : …\"</b>처럼 번호 붙은 항목을 나누고, 날짜 · 근무시간 · 임금 · 근로자 이름 같은 값은 <b>근로 조건 칸으로 옮겨</b> 칸에서 고치면 계약서에 바로 반영되게 합니다. 넣기 전에 아래에서 확인할 수 있습니다."
-    :"기존 계약서·견적서 파일(PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br><b>조항</b>은 \"제1조 (목적)\"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.";
+    ?"쓰시던 근로계약서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나 내용을 붙여넣으세요.<br><b>\"1. 근로개시일 : …\"</b>처럼 번호 붙은 항목을 나누고, 날짜 · 근무시간 · 임금 · 근로자 이름 같은 값은 <b>근로 조건 칸으로 옮겨</b> 칸에서 고치면 계약서에 바로 반영되게 합니다. 넣기 전에 아래에서 확인할 수 있습니다."
+    :"기존 계약서·견적서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br><b>조항</b>은 \"제1조 (목적)\"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.";
   $("#impText").value=""; $("#impPrev").innerHTML=""; $("#impFileR").textContent="";
   $("#impModal").hidden=false; $("#impText").focus();
 }
@@ -1492,7 +1492,8 @@ async function fileText(f){
     }
     return out.join("\n");
   }
-  throw new Error("엑셀(.xlsx · .csv) · PDF · 워드(.docx) · 텍스트(.txt) 파일만 읽을 수 있습니다.");
+  if(/\.hwpx?$/.test(n)) return await hwpText(f);
+  throw new Error("엑셀(.xlsx · .csv) · PDF · 워드(.docx) · 한글(.hwp · .hwpx) · 텍스트(.txt) 파일만 읽을 수 있습니다.");
 }
 function parseTerms(text){
   const t=String(text).replace(/\r/g,"").replace(/[ \t]+\n/g,"\n");
@@ -2564,7 +2565,7 @@ function laborCardHtml(p,pi){
         <div class="sub">항목</div>
         <div>${termsHtml(pi)}</div>
         <button class="btn" type="button" data-add="prods.${pi}.terms">+ 항목 추가</button>
-        <button class="btn" type="button" data-imp="labor" data-pi="${pi}" title="기존 근로계약서(PDF · 워드 · 글)를 읽어 항목과 근로 조건 · 근로자 정보를 채웁니다">기존 근로계약서 가져오기</button>
+        <button class="btn" type="button" data-imp="labor" data-pi="${pi}" title="기존 근로계약서(한글 · PDF · 워드 · 글)를 읽어 항목과 근로 조건 · 근로자 정보를 채웁니다">기존 근로계약서 가져오기</button>
       </details>
       <div class="pbtns">
         <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 근로계약서 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
@@ -2668,12 +2669,14 @@ function parseLabor(raw){
   const t=String(raw).replace(/\r/g,"").replace(/\t+/g," ").replace(/[  ]+\n/g,"\n");
   const fields={}, client={};
   const one=s=>String(s||"").replace(/\s+/g," ").trim();
-  const sp=s=>/^([가-힣]\s)+[가-힣]$/.test(s)?s.replace(/\s/g,""):s;          // "근 무 장 소" → "근무장소"
+  const sp=s=>/^([가-힣]\s+)+[가-힣]$/.test(s)?s.replace(/\s/g,""):s;          // "근 무 장 소" → "근무장소"
   const ymd=s=>{ const m=String(s).match(/(\d{4})\s*[년.\-/]\s*(\d{1,2})\s*[월.\-/]\s*(\d{1,2})\s*일?/); return m?{raw:m[0],v:`${m[1]}. ${+m[2]}. ${+m[3]}.`}:null; };
   const hm=s=>{ const m=String(s).match(/(\d{1,2})\s*(?:시|:)\s*(\d{1,2})?\s*분?/); return m?{raw:m[0],v:`${String(m[1]).padStart(2,"0")}:${String(m[2]||"0").padStart(2,"0")}`}:null; };
   // 번호 항목 찾기: 줄 맨 앞 "1." "2)" … 차례대로인 것만
-  const re=/(?:^|\n)[ \t]*(\d{1,2})\s*[.)]\s*([^\n]*)/g, marks=[]; let m, want=1;
-  while((m=re.exec(t))){ if(+m[1]!==want) continue; marks.push({i:m.index+(m[0].startsWith("\n")?1:0),head:m[2],end:re.lastIndex}); want++; }
+  const re=/(?:^|\n)[ \t]*(\d{1,2})\s*[.)]\s*([^\n]*)/g, marks=[]; let m, want=1, stop=t.length;
+  while((m=re.exec(t))){
+    if(+m[1]===1&&want>3){ stop=m.index; break; }          // 파일에 계약서가 여러 장이면 첫 장만
+    if(+m[1]!==want) continue; marks.push({i:m.index+(m[0].startsWith("\n")?1:0),head:m[2],end:re.lastIndex}); want++; }
   const res={title:"",intro:"",terms:[],fields,client,type:""};
   if(marks.length<3) return res;
   // 머리: 제목 줄 + 머리말
@@ -2684,10 +2687,10 @@ function parseLabor(raw){
   if(im&&im[1]){ if(im[2]&&!/^_+$/.test(im[2])) client.name=im[2].trim(); intro=intro.replace(im[1],"{사업주}").replace(im[2]?im[2]:"\u0000","{근로자}"); }
   res.intro=intro;
   // 꼬리(날짜 · 서명 칸) 자르기
-  const tailRe=/\n\s*(?:\d{4}\s*년\s*\d{0,2}\s*월?|\(\s*사업주\s*\)|사업주\s*사업체명|\(\s*근로자\s*\))/;
+  const tailRe=/\n\s*(?:\d{4}\s*년\s*\d{0,2}\s*월?|년\s*\d{0,2}\s*월\s*\d{0,2}\s*일\s*(?:\n|$)|\(\s*사업주\s*\)|사업주\s*사업체명|\(\s*근로자\s*\))/;
   let tail="";
   marks.forEach((k,j)=>{
-    let seg=t.slice(k.end,j+1<marks.length?marks[j+1].i:t.length);
+    let seg=t.slice(k.end,j+1<marks.length?marks[j+1].i:stop);
     if(j===marks.length-1){ const x=seg.search(tailRe); if(x>=0){ tail=seg.slice(x); seg=seg.slice(0,x); } }
     let head=k.head.trim(), title, body;
     const c=head.match(/^([^:：]{1,30}?)\s*[:：]\s*(.*)$/);
@@ -2698,7 +2701,8 @@ function parseLabor(raw){
   // 근로자 칸 (주소 · 연락처 · 성명)
   const w=tail.slice(Math.max(0,tail.search(/근\s*로\s*자/)));
   const g=(re)=>{ const x=w.match(re); return x?one(x[1]):""; };
-  const nm=g(/성\s*명\s*[:：]\s*([^\n(]+)/), ph=g(/연\s*락\s*처\s*[:：]\s*([0-9\-\s]{9,})/), ad=g(/주\s*소\s*[:：]\s*([^\n]+)/);
+  const nx="(?=\\s*(?:연\\s*락\\s*처|성\\s*명|주\\s*소|\\(?\\s*서명|\\(?\\s*인\\s*\\)|\\n|$))";   // 한 줄에 칸이 여럿 있어도 다음 칸 이름 앞에서 끊음
+  const nm=g(new RegExp("성\\s*명\\s*[:：]\\s*([^\\n(]*?)"+nx)), ph=g(/연\s*락\s*처\s*[:：]\s*([0-9\-\s]{9,})/), ad=g(new RegExp("주\\s*소\\s*[:：]\\s*([^\\n]*?)"+nx));
   if(nm&&!/^_+$/.test(nm)) client.name=nm.replace(/\s*\(?\s*서명\s*\)?\s*$/,"");
   if(ph) client.phone=ph; if(ad&&!/^_+$/.test(ad)) client.addr=ad;
   res.type=/단시간/.test(t.slice(0,200))?"part":fields.end?"fixed":"regular";
@@ -2714,7 +2718,7 @@ function parseLabor(raw){
     else if(/근무\s*장소/.test(title)){ const v=one(body.split("\n")[0]); if(v&&!/^_+$/.test(v)) put("place","{근무장소}",body.split("\n")[0].trim(),v); }
     else if(/업무/.test(title)){ const v=one(body.split("\n")[0]); if(v&&!/^_+$/.test(v)) put("job","{업무내용}",body.split("\n")[0].trim(),v); }
     else if(/근로시간|근무시간/.test(title)){
-      const r=line(/휴게\s*시간?\s*[:：]?\s*([^)\n]+)/); if(r) put("rest","{휴게시간}",r.raw,r.v,r.at);
+      const r=line(/휴게\s*시간?\s*[:：]?\s*([^)\n]+)/); if(r&&/\d/.test(r.raw)) put("rest","{휴게시간}",r.raw,r.v,r.at);
       const a=hm(body); if(a){ put("from","{시업시각}",a.raw,a.v); const b=hm(body); if(b) put("to","{종업시각}",b.raw,b.v); }
       const d=line(/근로일\s*[:：]\s*([^\n]+)/); if(d) put("days","{근무일}",d.raw,d.v,d.at);
     }
@@ -2752,6 +2756,92 @@ function laborImpApply(p,r,rep){
   ["name","phone","addr"].forEach(k=>{ if(r.client[k]&&(rep||!state.client[k])) state.client[k]=r.client[k]; });
   state.client.ceo=state.client.name||"";
   bindSimple(); openSet.add(`p${p.pid}-tm`);
+}
+
+/* --- 한글 파일 읽기 (.hwp · .hwpx) ---
+   .hwpx: 압축(zip) 안의 Contents/section*.xml 글자를 읽음
+   .hwp : 한글 5.0 문서 — BodyText/Section* 기록에서 문단 글자(PARA_TEXT)를 꺼냄
+   표는 줄마다 칸을 탭으로 나눠서 돌려줍니다 (견적서 품목 불러오기가 칸을 알아보게).
+   파일 열기는 엑셀 읽기에 쓰는 SheetJS 안의 CFB를 같이 씁니다. */
+async function hwpText(f){
+  if(!window.XLSX) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");
+  const buf=new Uint8Array(await f.arrayBuffer());
+  let doc;
+  try{ doc=XLSX.CFB.read(buf,{type:"array"}); }
+  catch(e){ throw new Error("한글 파일을 열 수 없습니다. 한글에서 다른 이름으로 저장(.hwpx 또는 PDF)한 뒤 올려 주세요."); }
+  const files=doc.FullPaths.map((p,i)=>({p,e:doc.FileIndex[i]})).filter(x=>x.e&&x.e.content&&x.e.content.length);
+  const num=p=>+((p.match(/(\d+)(?:\.xml)?$/i)||[0,0])[1]);
+  const u8=c=>c instanceof Uint8Array?c:new Uint8Array(c);
+  const out=[];
+
+  // .hwpx
+  const secs=files.filter(x=>/Contents\/section\d+\.xml$/i.test(x.p)).sort((a,b)=>num(a.p)-num(b.p));
+  if(secs.length){
+    const ln=el=>el.localName;
+    const cellText=tc=>[...tc.getElementsByTagNameNS("*","t")].map(t=>t.textContent).join(" ").replace(/\s+/g," ").trim();
+    const para=p=>{
+      let txt=""; const tbls=[];
+      const walk=n=>{ for(const c of n.children){
+        if(ln(c)==="tbl") tbls.push(c);
+        else if(ln(c)==="t"){ for(const k of c.childNodes){ if(k.nodeType===3) txt+=k.textContent; else if(ln(k)==="tab") txt+="\t"; else if(ln(k)==="lineBreak") txt+=" "; } }
+        else walk(c);
+      } };
+      walk(p);
+      if(txt.trim()) out.push(txt.trim());
+      tbls.forEach(tb=>[...tb.children].filter(r=>ln(r)==="tr").forEach(tr=>{
+        const cells=[...tr.children].filter(c=>ln(c)==="tc").map(cellText);
+        if(cells.some(Boolean)) out.push(cells.join("\t"));
+      }));
+    };
+    secs.forEach(s=>{
+      const xml=new DOMParser().parseFromString(new TextDecoder("utf-8").decode(u8(s.e.content)),"application/xml");
+      [...xml.documentElement.children].filter(c=>ln(c)==="p").forEach(para);
+    });
+    return out.join("\n");
+  }
+
+  // .hwp (한글 5.0)
+  const head=files.find(x=>/FileHeader$/.test(x.p));
+  if(!head) throw new Error("한글 문서 형식을 알아볼 수 없습니다. 한글에서 PDF로 저장해 올려 주세요.");
+  const hb=u8(head.e.content), prop=hb[36]|(hb[37]<<8)|(hb[38]<<16)|(hb[39]<<24);
+  if(prop&2) throw new Error("암호가 걸린 한글 문서는 읽을 수 없습니다. 암호를 풀어 저장한 뒤 올려 주세요.");
+  if(prop&4) throw new Error("배포용(읽기 전용) 한글 문서는 읽을 수 없습니다. 한글에서 PDF로 저장해 올려 주세요.");
+  const zipped=!!(prop&1);
+  const inflate=async d=>{
+    try{ const r=XLSX.CFB.utils._inflateRaw(d); if(r&&r.length) return u8(r); }catch(e){}
+    try{ return new Uint8Array(await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer()); }
+    catch(e){ throw new Error("한글 문서 내용을 풀지 못했습니다. 한글에서 PDF나 .hwpx로 저장해 올려 주세요."); }
+  };
+  const bodies=files.filter(x=>/BodyText\/Section\d+$/.test(x.p)).sort((a,b)=>num(a.p)-num(b.p));
+  const one=new Set([0,10,13,24,25,26,27,28,29,30,31]);
+  const decode=d=>{ let s="";
+    for(let i=0;i+1<d.length;i+=2){ const c=d[i]|(d[i+1]<<8);
+      if(c<32){ if(c===9) s+="\t"; else if(c===10) s+=" "; if(!one.has(c)) i+=14; continue; }
+      s+=String.fromCharCode(c); }
+    return s; };
+  for(const b of bodies){
+    const d=zipped?await inflate(u8(b.e.content)):u8(b.e.content);
+    let pos=0, tbl=null;
+    const flush=()=>{ if(!tbl) return;
+      const cells=tbl.cells.map(c=>c.join(" ").replace(/\s+/g," ").trim());
+      let k=0;
+      (tbl.rows.length?tbl.rows:[cells.length]).forEach(n=>{ const row=cells.slice(k,k+n); k+=n; if(row.some(Boolean)) out.push(row.join("\t")); });
+      if(k<cells.length){ const rest=cells.slice(k); if(rest.some(Boolean)) out.push(rest.join("\t")); }
+      tbl=null; };
+    while(pos+4<=d.length){
+      const h=(d[pos]|(d[pos+1]<<8)|(d[pos+2]<<16)|(d[pos+3]<<24))>>>0; pos+=4;
+      const tag=h&0x3ff, lv=(h>>>10)&0x3ff; let size=(h>>>20)&0xfff;
+      if(size===0xfff){ size=(d[pos]|(d[pos+1]<<8)|(d[pos+2]<<16)|(d[pos+3]<<24))>>>0; pos+=4; }
+      const r=d.subarray(pos,pos+size); pos+=size;
+      if(tbl&&lv<=tbl.lv) flush();
+      if(tag===71&&!tbl&&r.length>=4&&((r[0]|(r[1]<<8)|(r[2]<<16)|(r[3]<<24))>>>0)===0x74626c20) tbl={lv,rows:[],cells:[],cur:null};
+      else if(tag===77&&tbl&&!tbl.rows.length&&r.length>=8){ const n=r[4]|(r[5]<<8); for(let i=0;i<n&&19+i*2<r.length;i++) tbl.rows.push(r[18+i*2]|(r[19+i*2]<<8)); }
+      else if(tag===72&&tbl&&lv===tbl.lv+1){ tbl.cur=[]; tbl.cells.push(tbl.cur); }
+      else if(tag===67){ const t=decode(r).trim(); if(!t) continue; if(tbl&&tbl.cur) tbl.cur.push(t); else out.push(t); }
+    }
+    flush();
+  }
+  return out.join("\n");
 }
 
 </script>
