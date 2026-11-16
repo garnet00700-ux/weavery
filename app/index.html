@@ -794,9 +794,10 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         <label class="sample-row" id="sampleRow">예시 양식으로 추가
           <select id="sampleSel">
             <option value="">— 골라 주세요 —</option>
-            <optgroup label="견적서 · 계약서">
+            <optgroup label="견적서 · 거래명세서 · 계약서">
               <option value="home">홈페이지 제작</option>
               <option value="blog">홈페이지형 블로그 제작</option>
+              <option value="stmt">거래명세서 (인수자 서명란 포함)</option>
             </optgroup>
             <optgroup label="근로계약서 (고용노동부 표준 양식)">
               <option value="lab-regular">근로계약서 — 정규직</option>
@@ -3715,6 +3716,16 @@ $("#fmOkB").onclick=()=>{
   fmSel=null; fmAddT=null;
   fmAddProduct(p,{});
   $("#saved").textContent=`'${p.name}' 원본 양식을 넣었습니다 — 칸 위치 · 내용을 확인하세요`;
+};
+
+/* --- 예시 양식: 거래명세서 (계약서 없이 명세서 1장 + 하단 인수자 서명란) --- */
+SAMPLES.stmt=()=>{
+  const p=GENERIC_PRODUCT();
+  Object.assign(p,{name:"거래명세서", quoteTitle:"거래명세서", contractTitle:"", docs:"quote", recvSign:true, terms:[], intro:"",
+    items:[ITEM("물품","품목명 (규격)","","1개","","normal"), ITEM("물품","품목명 (규격)","","1개","","normal"), ITEM("배송","배송비","","1식","","normal")]});
+  delete p.pid; delete p.on;
+  statementNotices(Object.assign(p,{on:true}));
+  return p;
 };
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
