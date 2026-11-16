@@ -269,7 +269,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <button class="btn" id="bOpen" title="파일로 저장해 둔 견적서(.json) 열기">파일 열기</button>
   <button class="btn" id="bSave">파일로 저장</button>
   <input type="file" id="fOpen" accept=".json,application/json" hidden>
-  <span class="saved" id="saved"></span>
+  <span class="saved" id="saved"></span><span class="saved" id="bkSt" style="margin-left:8px"></span>
   <span class="sp"></span>
   <select id="zoom" title="미리보기 배율">
     <option value="fit">화면 맞춤</option><option value="0.6">60%</option><option value="0.75">75%</option><option value="1">100%</option>
@@ -321,7 +321,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
     </div>
     <div class="mbody" id="lBody"></div>
     <div class="mfoot">
-      <span class="hint" style="margin:0;flex:1">견적서는 입력하는 대로 이 목록에 자동 저장됩니다 (업체명이나 대표자를 입력한 견적서부터). 이 컴퓨터·이 브라우저에만 저장되니 가끔 백업해 두세요.</span>
+      <span class="hint" style="margin:0;flex:1">견적서는 입력하는 대로 이 목록에 자동 저장되고, 전자서명 서버(구글 시트 '견적목록' 탭)에도 자동 백업됩니다. 브라우저 기록을 지워도 전자서명 설정에 관리자 키만 다시 넣으면 목록이 돌아옵니다.</span>
       <button class="btn" id="lBackup" type="button">목록 백업 파일 받기</button>
       <button class="btn" id="lRestore" type="button">백업 파일 불러오기</button>
       <input type="file" id="fRestore" accept=".json,application/json" hidden>
@@ -703,7 +703,11 @@ function saveNow(){
 const LIST_KEY="weavery-quote-list";
 function newId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function loadList(){ try{ const l=JSON.parse(localStorage.getItem(LIST_KEY)); return Array.isArray(l)?l:[]; }catch(e){ return []; } }
-function storeList(l){ localStorage.setItem(LIST_KEY,JSON.stringify(l)); }
+function storeList(l){
+  const old=bkQuiet?null:loadList();
+  localStorage.setItem(LIST_KEY,JSON.stringify(l));
+  if(old) bkMark(old,l);
+}
 function docTotal(){ return (state.products.home?totals("home").total:0)+(state.products.blog?totals("blog").total:0); }
 function saveToList(){
   const list=loadList(), i=list.findIndex(x=>x.id===state.docId);
@@ -1488,6 +1492,72 @@ addEventListener("resize",applyZoom);
 $("#topLogo").src=LOGO;
 esLoadCfg();
 renderEditor();
+
+/* ===== 견적 목록 서버 백업 =====
+   목록이 바뀔 때마다 바뀐 견적서만 전자서명 서버(기록 시트의 '견적목록' 탭)에 올립니다.
+   열 때 · 목록 창을 열 때 서버에서 받아와 더 최신인 것을 합칩니다 → 브라우저 기록을 지워도 복원.
+   서버 주소 · 관리자 키는 전자서명 설정 그대로 씁니다. */
+var bkQuiet=false, bkBusy=false, bkTimer=0;
+function bkDirty(){ try{ return JSON.parse(localStorage.getItem("weavery-backup-dirty"))||{}; }catch(e){ return {}; } }
+function bkSetDirty(d){ try{ localStorage.setItem("weavery-backup-dirty",JSON.stringify(d)); }catch(e){} }
+function bkMark(old,nw){
+  try{
+    const d=bkDirty(), om=new Map(old.map(x=>[x.id,JSON.stringify(x)])), ids=new Set(nw.map(x=>x.id)), t=Date.now();
+    nw.forEach(x=>{ if(om.get(x.id)!==JSON.stringify(x)) d[x.id]="c"+t; });
+    old.forEach(x=>{ if(!ids.has(x.id)) d[x.id]="d"+t; });
+    bkSetDirty(d);
+  }catch(e){}
+  clearTimeout(bkTimer); bkTimer=setTimeout(bkPush,3000);
+}
+function bkState(k,msg){
+  const el=document.getElementById("bkSt"); if(!el) return;
+  const tm=()=>new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+  el.textContent={ok:"· 서버 백업됨 "+tm(),busy:"· 서버 백업 중…",off:"· 서버 백업 꺼짐 (전자서명 설정에 관리자 키 필요)",
+    old:"· 서버 코드 업데이트 필요 (견적 목록 백업)",err:"· 서버 백업 실패 — 잠시 뒤 다시 시도"}[k]||"";
+  el.title=msg||"";
+}
+async function bkPush(){
+  const c=esCfg(); if(!c.apiUrl||!c.adminKey) return bkState("off");
+  if(bkBusy){ clearTimeout(bkTimer); bkTimer=setTimeout(bkPush,3000); return; }
+  const d=bkDirty(), ids=Object.keys(d); if(!ids.length) return;
+  const m=new Map(loadList().map(x=>[x.id,x]));
+  const items=ids.map(id=>m.has(id)?m.get(id):{id,deleted:true,updated:Number(String(d[id]).slice(1))||Date.now()});
+  bkBusy=true; bkState("busy");
+  try{
+    await esApi({action:"listSave",items});
+    const now=bkDirty(); ids.forEach(id=>{ if(now[id]===d[id]) delete now[id]; }); bkSetDirty(now);
+    bkState("ok");
+  }catch(e){ bkState(/잘못된 요청/.test(e.message)?"old":"err",e.message); }
+  finally{ bkBusy=false; }
+}
+async function bkPull(){
+  const c=esCfg(); if(!c.apiUrl||!c.adminKey) return bkState("off");
+  let r; try{ r=await esApi({action:"listGet"}); }
+  catch(e){ return bkState(/잘못된 요청/.test(e.message)?"old":"err",e.message); }
+  const dirty=bkDirty(), list=loadList(), m=new Map(list.map(x=>[x.id,x])), onSrv=new Map();
+  let got=0;
+  (r.items||[]).forEach(sv=>{
+    onSrv.set(sv.id,sv.updated||0);
+    if(dirty[sv.id]) return;                                   // 아직 안 올린 이 컴퓨터의 변경이 우선
+    const l=m.get(sv.id);
+    if(sv.deleted){ if(l&&(l.updated||0)<=(sv.updated||0)){ m.delete(sv.id); got++; } return; }
+    if(!l||(sv.updated||0)>(l.updated||0)){ delete sv.deleted; m.set(sv.id,sv); got++; }
+  });
+  const t=Date.now();
+  m.forEach((x,id)=>{ if(!onSrv.has(id)||(x.updated||0)>onSrv.get(id)) if(!dirty[id]) dirty[id]="c"+t; });   // 서버에 없거나 더 최신 → 올리기
+  bkSetDirty(dirty);
+  if(got){
+    bkQuiet=true; storeList([...m.values()].sort((a,b)=>(b.updated||0)-(a.updated||0))); bkQuiet=false;
+    if(!$("#listModal").hidden) renderList();
+  }
+  if(Object.keys(dirty).length) await bkPush(); else bkState("ok");
+  return got;
+}
+setTimeout(bkPull,1200);
+setInterval(()=>{ if(!document.hidden) bkPush(); },60000);
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) bkPush(); });
+["#esApi","#esKey"].forEach(q=>$(q).addEventListener("change",()=>bkPull()));
+new MutationObserver(()=>{ if(!$("#listModal").hidden) bkPull(); }).observe($("#listModal"),{attributes:true,attributeFilter:["hidden"]});
 renderPreview();
 esRefresh(false);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(renderPreview);
