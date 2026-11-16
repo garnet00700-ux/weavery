@@ -1896,6 +1896,7 @@ $("#lBody").addEventListener("click",e=>{
     if(!certLeaveOk()) return;
     const d=clone(x.data); d.docId=newId(); d.client.name=(d.client.name||"")+" (복사)";
     d.quoteDate=todayISO(); d.date={y:String(new Date().getFullYear()),m:"",d:""}; d.clientSign=""; d.status="대기"; d.esign=null;
+    delete d.issuedAt; delete d.issueInfo;     // 복제한 증명서는 아직 발급 전 (임시저장)
     openDoc(d); saveNow(); closeList(); return;
   }
   if(x.id!==state.docId){ if(!certLeaveOk()) return; openDoc(x.data); }
