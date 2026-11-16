@@ -1161,7 +1161,10 @@ async function pullProfile(){
   try{
     const r=await api({action:"profileGet"});
     if(!r.profile){ await pushProfile(); return; }
-    if((r.updated||0)>(profile._updated||0)){ profile=normProfile(r.profile); lsSet(K.prof,profile); applyBrand(); renderSettings(); renderEditor(); renderPreview(); }
+    if((r.updated||0)>(profile._updated||0)){ profile=normProfile(r.profile); lsSet(K.prof,profile);
+      // 아직 아무것도 안 쓴 새 문서면 팀 양식으로 다시 만듦 (서버 양식을 받기 전에 만들어진 빈 문서)
+      if(docUntouched()){ const id=state.docId; state=newDocFrom(profile); state.docId=id; lsSet(K.doc,state); }
+      applyBrand(); renderSettings(); renderEditor(); renderPreview(); }
     else if((profile._updated||0)>(r.updated||0)) await pushProfile();
   }catch(err){ setSync("err",err.message); }
 }
@@ -3733,8 +3736,7 @@ SAMPLES.stmt=()=>{
    이미 만든 문서 · 서명 받은 문서는 [문서 목록]에서 언제든 다시 열고 저장할 수 있습니다.
    원본 모양 양식의 그림(profile.forms)도 예전 문서가 쓸 수 있게 지우지 않습니다. */
 function prodPickHtml(){
-  const T=new Set(profile.templates.map(x=>x.pid));
-  return P().map((p,i)=>{ const gone=!T.has(p.pid);
+  return P().map((p,i)=>{ const gone=!inTemplates(p);
     return `<label class="${gone?"gone":""}"><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}><span class="pp-n">${esc(p.name||"(이름 없음)")}${gone?`<small>목록에서 지움</small>`:""}</span>`+
       `<button type="button" class="pp-x" data-${gone?"prest":"pdel"}="${i}" title="${gone?"상품 목록에 다시 넣기":"상품 목록에서 지우기"}" aria-label="${esc(p.name)} ${gone?"다시 넣기":"지우기"}">${gone?"↺":"✕"}</button></label>`; }).join("");
 }
@@ -3746,7 +3748,7 @@ function prodDelete(pi){
     "이미 만든 문서와 서명 받은 문서는 [문서 목록]에 그대로 남아,","언제든 다시 열고 저장할 수 있습니다."];
   if(keep) msg.push("","지금 문서는 서명 요청한 문서라,","이 문서 안에서는 양식을 그대로 둡니다.");
   if(!confirm(msg.join("\n"))) return;
-  profile.templates=profile.templates.filter(x=>x.pid!==p.pid);
+  profile.templates=profile.templates.filter(x=>!sameTpl(x,p));
   if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
   saveProfile();
   if(!keep) P().splice(pi,1);
@@ -3765,6 +3767,13 @@ $("#prodPick").addEventListener("click",e=>{
   e.preventDefault(); e.stopPropagation();
   if(b.dataset.pdel!==undefined) prodDelete(+b.dataset.pdel); else prodRestore(+b.dataset.prest);
 });
+// 아무것도 안 쓴 새 문서인지 (의뢰자 · 서명 요청 없음, 문서 목록에 아직 없음)
+function docUntouched(){
+  const c=state.client||{};
+  return !c.name&&!c.ceo&&!c.phone&&!c.email&&!state.esign&&!state.clientSign&&!loadList().some(x=>x.id===state.docId);
+}
+function sameTpl(t,p){ return t.pid===p.pid||((t.name||"").trim()&&(t.name||"").trim()===(p.name||"").trim()&&(t.kind||"")===(p.kind||"")); }
+function inTemplates(p){ return profile.templates.some(t=>sameTpl(t,p)); }
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다. */
