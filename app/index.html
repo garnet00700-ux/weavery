@@ -359,8 +359,14 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 .cert-st{text-align:center;font-size:12pt;font-weight:700;margin:16mm 0 12mm;line-height:1.7}
 .cert-date{text-align:center;font-size:11pt;font-weight:700;margin-bottom:14mm;word-spacing:1mm}
 .cert-co{text-align:center;font-size:13pt;font-weight:800;line-height:2}
-.cert-co .nm{justify-content:center;gap:6mm;padding:0}
-.cert-co .seal img{width:22mm;height:16mm}
+.cert-co .nm{display:flex;justify-content:center;align-items:center;gap:6mm;padding:0}
+.cert-co .seal{position:relative;display:inline-block}
+.cert-co .seal img{position:absolute;left:50%;top:50%;width:22mm;height:16mm;object-fit:contain;transform:translate(-50%,-55%)}
+.cert-co .seal img.stamp{width:24mm;height:24mm;opacity:.92;transform:translate(-50%,-50%)}
+/* 거래명세서 인수자 서명 자리도 같은 방식 */
+.recv .nm{display:flex;justify-content:flex-end;align-items:center;gap:5mm;padding-right:2mm}
+.recv .seal{position:relative;display:inline-block}
+.recv .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;object-fit:contain;transform:translate(-50%,-55%)}
 .totals .vin{font-size:.82em;font-weight:500;margin-left:1.5mm}
 </style>
 <style>
@@ -587,6 +593,16 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <input type="file" id="fSign" accept="image/*" hidden>
         </div>
         <p class="hint">흰 배경에 쓴 사인 사진을 올리면 배경을 자동으로 투명하게 바꿉니다.</p>
+        <div class="sub">회사 직인 <span style="font-weight:400;color:var(--ui-sub)">(재직 · 경력 · 퇴직증명서의 회사명 옆에 찍힘)</span></div>
+        <div class="signbox">
+          <div class="signprev" id="sealPrev"></div>
+          <div class="btncol">
+            <button class="btn" id="bSealUp" type="button">직인 이미지 올리기</button>
+            <button class="btn" id="bSealDel" type="button">직인 없이</button>
+          </div>
+          <input type="file" id="fSeal" accept="image/*" hidden>
+        </div>
+        <p class="hint">흰 종이에 찍은 직인을 사진 찍거나 스캔해서 올리면 배경은 투명하게, 인주 색(빨강)은 그대로 둡니다. 직인이 없으면 대표 사인이 대신 들어갑니다.</p>
         <div class="sub">완료 메일 명함</div>
         <div class="signbox">
           <div class="signprev cardprev" id="cardPrev"></div>
@@ -830,7 +846,7 @@ const KAKAO_MSG={text:"[{상호}] {대표자} 님, 계약서 서명 요청드립
 const PROFILE_DEFAULT={
   name:"",ceo:"",bizno:"",phone:"",email:"",bizType:"",bizItem:"",address:"",web:"",account:"",slogan:"",
   color:"#17320B",tbl:"#D9D9D9",prefix:"DOC",depositRate:30,
-  logo:"",sign:"",card:"",
+  logo:"",sign:"",card:"",seal:"",
   mail:MAIL_DEFAULT, kakao:KAKAO_MSG,
   templates:null, _updated:0
 };
@@ -1311,6 +1327,7 @@ function renderSettings(){
   $$("#setModal [data-c]").forEach(el=>{ const v=getAt(profile,el.dataset.c); if(el.type==="checkbox") el.checked=!!v; else el.value=v??""; });
   $("#logoPrev").innerHTML=$("#logoPrev2").innerHTML=profile.logo?`<img src="${profile.logo}" alt="로고">`:"로고 없음 (상호 글자)";
   $("#signPrev").innerHTML=profile.sign?`<img src="${profile.sign}" alt="사인">`:"사인 없음";
+  $("#sealPrev").innerHTML=profile.seal?`<img src="${profile.seal}" alt="직인">`:"직인 없음 (대표 사인 사용)";
   $("#cardPrev").innerHTML=profile.card?`<img src="${profile.card}" alt="명함">`:"기본 명함 사용";
   $("#cUser").value=cfg.user||""; $("#cUrl").value=cfg.url||""; $("#cKey").value=cfg.key||"";
   renderConn();
@@ -1443,6 +1460,26 @@ imgInput("#bCardUp","#fCard",img=>{ profile.card=scaled(img,900,"image/jpeg",.88
 imgInput("#bCSignUp","#fCSign",img=>{ state.clientSign=toTransparentSign(img); renderImages(); save(); schedule(); });
 $("#bLogoDel").onclick=()=>{ profile.logo=""; saveProfile(); renderSettings(); esMarkStale(); schedule(); };
 $("#bSignDel").onclick=()=>{ profile.sign=""; saveProfile(); renderSettings(); esMarkStale(); schedule(); };
+// 회사 직인: 흰 배경만 투명하게, 인주 색은 그대로 (사인처럼 검게 바꾸지 않음)
+function toTransparentSeal(img){
+  const sc=Math.min(1,500/Math.max(img.width,img.height)), w=Math.round(img.width*sc), h=Math.round(img.height*sc);
+  const c=document.createElement("canvas"); c.width=w; c.height=h;
+  const x=c.getContext("2d"); x.drawImage(img,0,0,w,h);
+  const d=x.getImageData(0,0,w,h), p=d.data; let x0=w,y0=h,x1=-1,y1=-1;
+  for(let i=0;i<p.length;i+=4){
+    const mn=Math.min(p[i],p[i+1],p[i+2]);           // 흰색일수록 가장 어두운 채널도 밝음
+    let a=mn>=225?0:mn<=120?255:(225-mn)*255/105; a=Math.min(a,p[i+3]); p[i+3]=a;
+    if(a>30){ const k=i/4,px=k%w,py=(k/w)|0; if(px<x0)x0=px; if(px>x1)x1=px; if(py<y0)y0=py; if(py>y1)y1=py; }
+  }
+  if(x1<0) throw new Error("empty");
+  x.putImageData(d,0,0);
+  const pad=4; x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(w-1,x1+pad); y1=Math.min(h-1,y1+pad);
+  const o=document.createElement("canvas"); o.width=x1-x0+1; o.height=y1-y0+1;
+  o.getContext("2d").drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return o.toDataURL("image/png");
+}
+imgInput("#bSealUp","#fSeal",img=>{ profile.seal=toTransparentSeal(img); saveProfile(); renderSettings(); esMarkStale(); schedule(); });
+$("#bSealDel").onclick=()=>{ profile.seal=""; saveProfile(); renderSettings(); esMarkStale(); schedule(); };
 $("#bCardDel").onclick=()=>{ if(profile.card&&!confirm("올린 명함을 지우고 기본 명함을 쓸까요?")) return; profile.card=""; saveProfile(); renderSettings(); };
 $("#bCSignDel").onclick=()=>{ if(state.clientSign&&!confirm("고객 사인을 지울까요?"))return; state.clientSign="";renderImages();save();schedule();};
 /* 대표 사인 직접 그리기 */
@@ -3019,7 +3056,7 @@ function certCardHtml(p,pi){
         </div>
         <label class="f">증명 문구<textarea rows="2" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
       </details>
-      <p class="hint">성명 · 주소 · 연락처는 위 <b>직원 정보</b> 칸, 발급일은 <b>발급일</b> 칸에서 넣습니다. 회사 직인은 [회사 설정]의 도장 이미지가 찍힙니다.</p>
+      <p class="hint">성명 · 주소 · 연락처는 위 <b>직원 정보</b> 칸, 발급일은 <b>발급일</b> 칸에서 넣습니다. 회사 직인은 <b>[회사 설정 → 로고 · 사인 → 회사 직인]</b>에 올린 이미지가 찍힙니다${profile.seal?"":` <b style="color:#b3261e">(아직 직인이 없어 대표 사인이 들어갑니다)</b>`}.</p>
       <div class="pbtns">
         <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
         <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
@@ -3054,7 +3091,8 @@ function certBlocks(p){
   const ttl=p.contractTitle||T[C.type];
   const v=x=>esc(x||"");
   const row=(a,av,b,bv)=>b?`<tr><td>${a}</td><td>${av}</td><td>${b}</td><td>${bv}</td></tr>`:`<tr><td>${a}</td><td colspan="3" class="l">${av}</td></tr>`;
-  const ss=s.sign?`<img src="${s.sign}" alt="">`:"";
+  // 회사 직인이 있으면 직인, 없으면 대표 사인
+  const ss=s.seal?`<img class="stamp" src="${s.seal}" alt="">`:s.sign?`<img src="${s.sign}" alt="">`:"";
   const st=String(p.intro||certStatements()[C.type]).replace(/\{성명\}/g,c.name||"").replace(/\{회사명\}/g,s.name||"").replace(/\{용도\}/g,C.purpose||"");
   return [
     `<div class="cert-no">${C.no?`발급번호 : ${v(C.no)}`:""}</div>`,
