@@ -475,7 +475,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 
 <!-- 첫 화면 안내 -->
 <div class="welcome" id="welcome" hidden>
-  <b>처음 오셨나요?</b> <span>[회사 설정]에서 회사 정보와 <b>구글 시트(서버) 연결</b>을 먼저 해 주세요 — 연결 전에는 이 브라우저에만 저장돼 쿠키를 지우면 문서가 사라집니다. 연결 코드가 있으면 바로 붙여넣으면 됩니다.</span>
+  <b>처음 오셨나요?</b> <span>[회사 설정]에서 회사 정보와 <b>구글 시트(서버) 연결</b>을 먼저 해 주세요 — 연결 전에는 이 브라우저에만 저장돼 쿠키를 지우면 문서가 사라집니다.<br>연결 코드가 있으면 바로 붙여넣으면 됩니다.</span>
   <button class="btn" type="button" data-guide>설치 안내서</button>
   <button class="btn go" type="button" id="wGo">회사 설정 열기</button>
   <button class="ib" type="button" id="wClose" title="닫기">✕</button>
@@ -483,7 +483,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 <!-- 서버 업데이트 알림 (연결된 서버 코드가 예전 버전일 때) -->
 <div class="welcome" id="srvUpd" hidden>
   <b>서버 업데이트가 있어요</b>
-  <span>연결된 서버(구글 시트의 Apps Script) 코드가 예전 버전입니다. 서버를 만든 분이 한 번만 바꿔 주면 팀 전체에 적용됩니다. (약 5분)</span>
+  <span>연결된 서버(구글 시트의 Apps Script) 코드가 예전 버전입니다.<br>서버를 만든 분이 한 번만 바꿔 주면 팀 전체에 적용됩니다. (약 5분)</span>
   <button class="btn" type="button" id="suHow">방법 보기</button>
   <button class="btn go" type="button" id="suCopy">새 서버 코드 복사</button>
   <button class="ib" type="button" id="suClose" title="이번 업데이트 알림 닫기">✕</button>
@@ -515,7 +515,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <div class="mbox padbox" role="dialog" aria-label="기존 양식에서 가져오기">
     <div class="mhead"><b id="impTitle">기존 계약서에서 조항 가져오기</b></div>
     <p class="hint" id="impHint" style="margin:0 0 8px">기존 계약서·견적서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br>
-      <b>조항</b>은 "제1조 (목적)"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.</p>
+      <b>조항</b>은 "제1조 (목적)"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다.<br>넣기 전에 아래에서 확인할 수 있습니다.</p>
     <div class="padbtns" style="margin:0 0 8px">
       <button class="btn" type="button" id="impFileBtn">파일 올리기</button>
       <input type="file" id="impFile" accept=".hwp,.hwpx,.pdf,.docx,.txt,application/pdf" hidden>
@@ -537,9 +537,9 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <div class="mbox qibox" role="dialog" aria-label="기존 견적서 불러오기">
     <div class="mhead"><b>기존 견적서 불러오기</b><span class="mcount" id="qiTo"></span><span style="flex:1"></span><button class="btn" id="qiCancel" type="button">닫기</button></div>
     <div class="mbody">
-      <p class="hint" style="margin:0 0 8px">예전에 쓰던 견적서 파일을 올리면 <b>품목 · 수량 · 금액</b>과 <b>의뢰자 정보</b>를 찾아 옵니다.
-        엑셀(.xlsx · .csv)이 가장 정확하고, 한글(.hwp · .hwpx) · PDF · 워드(.docx)도 됩니다. 스캔한 사진 PDF는 읽을 수 없습니다.<br>PDF로 올리면 <b>로고 · 도장 · 대표 색 · 표 머리 색</b>도 찾아서 우리 견적서 디자인에 넣을 수 있습니다.<br>
-        넣기 전에 아래 표에서 확인하고 고칠 수 있습니다. 체크를 끄면 그 줄은 빠집니다.</p>
+      <p class="hint" style="margin:0 0 8px">예전에 쓰던 견적서 파일을 올리면 <b>품목 · 수량 · 금액</b>과 <b>의뢰자 정보</b>를 찾아 옵니다.<br>
+        엑셀(.xlsx · .csv)이 가장 정확하고, 한글(.hwp · .hwpx) · PDF · 워드(.docx)도 됩니다.<br>스캔한 사진 PDF는 읽을 수 없습니다.<br>PDF로 올리면 <b>로고 · 도장 · 대표 색 · 표 머리 색</b>도 찾아서 우리 견적서 디자인에 넣을 수 있습니다.<br>
+        넣기 전에 아래 표에서 확인하고 고칠 수 있습니다.<br>체크를 끄면 그 줄은 빠집니다.</p>
       <div class="padbtns" style="margin:0 0 8px">
         <button class="btn go" type="button" id="qiFileBtn">견적서 파일 올리기</button>
         <input type="file" id="qiFile" accept=".xlsx,.xls,.csv,.hwp,.hwpx,.pdf,.docx,.txt" hidden>
@@ -707,7 +707,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           </div>
           <input type="file" id="fSeal" accept="image/*" hidden>
         </div>
-        <p class="hint">흰 종이에 찍은 직인을 사진 찍거나 스캔해서 올리면 배경은 투명하게, 인주 색(빨강)은 그대로 둡니다. 직인이 없으면 대표 사인이 대신 들어갑니다.</p>
+        <p class="hint">흰 종이에 찍은 직인을 사진 찍거나 스캔해서 올리면 배경은 투명하게, 인주 색(빨강)은 그대로 둡니다.<br>직인이 없으면 대표 사인이 대신 들어갑니다.</p>
         <div class="sub">완료 메일 명함</div>
         <div class="signbox">
           <div class="signprev cardprev" id="cardPrev"></div>
@@ -811,7 +811,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           </select>
         </label>
         <button class="btn fm-entry" type="button" id="bFormImp" title="쓰던 양식 파일(PDF · 한글 · 워드 · 엑셀 · 사진)을 올리면 서류 종류 · 칸 · 서명 자리를 찾아 줍니다">📄 쓰던 양식 불러오기 <span>자동 인식</span></button>
-        <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
+        <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다.<br>품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
           근로계약서 · 증명서는 견적서 없이 그 문서만 만들어지며, 한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
       </div>
     </details>
@@ -1265,7 +1265,7 @@ function prodCardHtml(p,pi){
       <div>${itemsHtml(pi)}</div>
       <div class="pbtns"><button class="btn" type="button" data-add="prods.${pi}.items">+ 품목 추가</button>
         <button class="btn" type="button" data-imp="quote" data-pi="${pi}" title="기존 견적서(엑셀 · 한글 · PDF · 워드)에서 품목 · 금액 · 의뢰자 정보를 불러옵니다">기존 견적서 불러오기</button></div>
-      <p class="hint">할인 후 금액을 넣으면 <b>금액 칸은 정가 취소선</b>, <b>비고 칸은 할인 내용 + 할인가</b>로 표시됩니다. 같은 구성명이 이어지면 한 칸으로 묶입니다.</p>
+      <p class="hint">할인 후 금액을 넣으면 <b>금액 칸은 정가 취소선</b>, <b>비고 칸은 할인 내용 + 할인가</b>로 표시됩니다.<br>같은 구성명이 이어지면 한 칸으로 묶입니다.</p>
       <label class="f" style="margin-top:10px">기타 안내 (VAT 문구 아래 한 줄)<input data-p="prods.${pi}.extra"></label>
       <div class="sum-box"><span>${esc(p.name)} 총액</span><span data-sum="${pi}"></span></div>
       ${d!=="contract"?`<details class="prodcfg" data-k="${k}-nt" ${isOpen(k+"-nt")} style="margin-top:12px"><summary>${d==="both"?"견적서":esc(qn)} 안내사항 (${p.notices.length}개)</summary>
@@ -1278,7 +1278,7 @@ function prodCardHtml(p,pi){
         ${d==="quote"&&/명세(서|표)$/.test(qn)?`<button class="btn" type="button" data-pact="stmt" data-pi="${pi}">거래명세서 기본 문구로</button>`:""}
       </details>`:""}
       ${d!=="quote"?`<details class="prodcfg" data-k="${k}-tm" ${isOpen(k+"-tm")}><summary>계약서 조항 (${p.terms.length}개)</summary>
-        <p class="hint" style="margin:0 0 8px">조 번호는 자동입니다. 줄이 <code>- </code>로 시작하면 들여쓰기, 빈 줄은 간격이 됩니다.<br>
+        <p class="hint" style="margin:0 0 8px">조 번호는 자동입니다.<br>줄이 <code>- </code>로 시작하면 들여쓰기, 빈 줄은 간격이 됩니다.<br>
           자동으로 채워지는 칸: <code>{대표자}</code> <code>{의뢰인}</code> <code>{수행자}</code> <code>{금액}</code> <code>{총액}</code> <code>{계약금비율}</code> <code>{잔금비율}</code> <code>{납품일}</code></p>
         <label class="f">머리말<textarea rows="3" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
         <div class="sub">조항</div>
@@ -1492,7 +1492,7 @@ const inviteLink=()=>APP_URL+"#connect="+encodeURIComponent(makeCode());
 let connName="";
 function renderConn(){
   const v=$("#connView");
-  if(!connected()){ v.innerHTML=`<div class="conn-no">서버에 연결되지 않았습니다. 지금은 이 컴퓨터 · 이 브라우저에만 저장됩니다.<br>연결하면 문서 목록과 회사 설정을 팀이 함께 쓰고, 카카오톡 전자서명을 보낼 수 있습니다.</div>`; return; }
+  if(!connected()){ v.innerHTML=`<div class="conn-no">서버에 연결되지 않았습니다.<br>지금은 이 컴퓨터 · 이 브라우저에만 저장됩니다.<br>연결하면 문서 목록과 회사 설정을 팀이 함께 쓰고, 카카오톡 전자서명을 보낼 수 있습니다.</div>`; return; }
   v.innerHTML=`<div class="conn-ok"><b>✓ 서버 연결됨</b>${connName?` · ${esc(connName)}`:""}${cfg.user?` · 내 이름 <b>${esc(cfg.user)}</b>`:""}<br>
     문서 목록 · 회사 설정이 팀원과 함께 저장됩니다.
     <div class="sub">팀원 초대 링크 <span style="font-weight:400;color:var(--ui-sub)">— 팀원이 이 링크를 열면 바로 연결됩니다. 비밀번호와 같으니 우리 팀에게만 보내세요.</span></div>
@@ -1628,8 +1628,8 @@ function openImport(kind,pi){
   impKind=kind; impPi=pi;
   $("#impTitle").textContent={terms:"기존 계약서에서 조항 가져오기",labor:"기존 근로계약서 가져오기"}[kind]||"기존 견적서에서 안내사항 가져오기";
   $("#impHint").innerHTML=kind==="labor"
-    ?"쓰시던 근로계약서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나 내용을 붙여넣으세요.<br><b>\"1. 근로개시일 : …\"</b>처럼 번호 붙은 항목을 나누고, 날짜 · 근무시간 · 임금 · 근로자 이름 같은 값은 <b>근로 조건 칸으로 옮겨</b> 칸에서 고치면 계약서에 바로 반영되게 합니다. 넣기 전에 아래에서 확인할 수 있습니다."
-    :"기존 계약서·견적서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br><b>조항</b>은 \"제1조 (목적)\"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.";
+    ?"쓰시던 근로계약서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나 내용을 붙여넣으세요.<br><b>\"1. 근로개시일 : …\"</b>처럼 번호 붙은 항목을 나누고, 날짜 · 근무시간 · 임금 · 근로자 이름 같은 값은 <b>근로 조건 칸으로 옮겨</b> 칸에서 고치면 계약서에 바로 반영되게 합니다.<br>넣기 전에 아래에서 확인할 수 있습니다."
+    :"기존 계약서·견적서 파일(한글 .hwp · PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br><b>조항</b>은 \"제1조 (목적)\"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다.<br>넣기 전에 아래에서 확인할 수 있습니다.";
   $("#impText").value=""; $("#impPrev").innerHTML=""; $("#impFileR").textContent="";
   $("#impModal").hidden=false; $("#impText").focus();
 }
@@ -2043,8 +2043,8 @@ function renderEsign(){
   let h="";
   if(esBusyMsg) h=`<div class="es-st"><span class="es-badge none">${esc(esBusyMsg)}</span></div>`;
   else if(!e){
-    h=`<p class="hint" style="margin:0 0 8px">계약서를 고객 휴대폰으로 보내 서명을 받습니다. 서명이 끝나면 <b>양측 서명이 들어간 동일한 계약서 PDF</b>가 고객과 우리 회사 메일로 자동 발송되고, 목록 진행상태가 <b>완료</b>로 바뀝니다.</p>
-      ${connected()?"":`<div class="es-warn">전자서명은 서버 연결 후에 쓸 수 있습니다. <a href="#" data-es="settings">회사 설정 → 서버 연결</a></div>`}
+    h=`<p class="hint" style="margin:0 0 8px">계약서를 고객 휴대폰으로 보내 서명을 받습니다.<br>서명이 끝나면 <b>양측 서명이 들어간 동일한 계약서 PDF</b>가 고객과 우리 회사 메일로 자동 발송되고, 목록 진행상태가 <b>완료</b>로 바뀝니다.</p>
+      ${connected()?"":`<div class="es-warn">전자서명은 서버 연결 후에 쓸 수 있습니다.<br><a href="#" data-es="settings">회사 설정 → 서버 연결</a></div>`}
       <div class="es-btns"><button type="button" class="btn go" data-es="create">서명 요청 만들기</button></div>`;
   }else if(e.status==="signed"){
     const sg=e.signer||{};
@@ -2798,10 +2798,10 @@ function laborCardHtml(p,pi){
         ${f("payMethod","지급 방법","근로자 명의 예금통장에 입금")}
         ${f("ins","사회보험","고용보험, 산재보험, 국민연금, 건강보험")}
       </div>
-      <p class="hint"><b>확인해 주세요:</b> 임금이 그해 <b>최저임금</b> 이상인지, 주 15시간 이상 일하면 <b>주휴수당</b>이 반영됐는지, 휴게시간(4시간에 30분 · 8시간에 1시간 이상)이 맞는지는 직접 확인해야 합니다.
+      <p class="hint"><b>확인해 주세요:</b> 임금이 그해 <b>최저임금</b> 이상인지, 주 15시간 이상 일하면 <b>주휴수당</b>이 반영됐는지, 휴게시간(4시간에 30분 · 8시간에 1시간 이상)이 맞는지는 직접 확인해야 합니다.<br>
         예시 양식은 고용노동부 표준근로계약서를 바탕으로 했으며, 법률 자문을 대신하지 않습니다.</p>
       <details class="prodcfg" data-k="${k}-tm" ${isOpen(k+"-tm")}><summary>계약 항목 (${p.terms.length}개)</summary>
-        <p class="hint" style="margin:0 0 8px">번호는 자동입니다. 위 근로 조건이 자동으로 채워지는 칸:
+        <p class="hint" style="margin:0 0 8px">번호는 자동입니다.<br>위 근로 조건이 자동으로 채워지는 칸:
           ${laborFields().map(([,l])=>`<code>{${l}}</code>`).join(" ")} <code>{근로자}</code> <code>{사업주}</code></p>
         <label class="f">머리말<textarea rows="3" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
         <div class="sub">항목</div>
@@ -3164,7 +3164,7 @@ function certCardHtml(p,pi){
         </div>
         <label class="f">증명 문구<textarea rows="2" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
       </details>
-      <p class="hint">성명 · 주소 · 연락처는 위 <b>직원 정보</b> 칸, 발급일은 <b>발급일</b> 칸에서 넣습니다. 회사 직인은 <b>[회사 설정 → 로고 · 사인 → 회사 직인]</b>에 올린 이미지가 찍힙니다${profile.seal?"":` <b style="color:#b3261e">(아직 직인이 없어 대표 사인이 들어갑니다)</b>`}.</p>
+      <p class="hint">성명 · 주소 · 연락처는 위 <b>직원 정보</b> 칸, 발급일은 <b>발급일</b> 칸에서 넣습니다.<br>회사 직인은 <b>[회사 설정 → 로고 · 사인 → 회사 직인]</b>에 올린 이미지가 찍힙니다${profile.seal?"":` <b style="color:#b3261e">(아직 직인이 없어 대표 사인이 들어갑니다)</b>`}.</p>
       <div class="pbtns">
         <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
         <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
