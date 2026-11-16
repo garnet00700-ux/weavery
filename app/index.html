@@ -533,6 +533,13 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
     <li>작성기를 새로고침(<kbd>F5</kbd>)하면 이 알림이 사라집니다.<br>자세한 그림 안내: <a href="guide.html#update" target="_blank" rel="noopener">설치 안내 → 서버 업데이트</a></li>
   </ol>
 </div>
+<!-- 임시저장 중인 서류 알림 (발급하지 않은 증명서 · 7일 뒤 자동 삭제) -->
+<div class="welcome" id="draftBar" hidden>
+  <b id="dbTitle">임시저장 중인 서류가 있어요</b>
+  <span id="dbText"></span>
+  <button class="btn go" type="button" id="dbOpen">목록에서 보기</button>
+  <button class="ib" type="button" id="dbClose" title="닫기 (새로고침하면 다시 보입니다)">✕</button>
+</div>
 
 <!-- 사인 직접 그리기 -->
 <div class="modal" id="padModal" hidden>
@@ -811,6 +818,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       <button type="button" data-s="all" class="on">전체</button>
       <button type="button" data-s="대기">대기</button>
       <button type="button" data-s="완료">완료</button>
+      <button type="button" data-s="미발급">임시저장</button>
       <span class="lfl" style="margin-left:12px">서류 종류</span>
       <label class="lmonth" id="lKindL"><select id="lKind" aria-label="서류 종류"><option value="all">전체</option></select></label>
     </div>
@@ -1116,7 +1124,7 @@ function purgeDrafts(){
   storeList(list.filter(x=>!old.includes(x)));
   old.forEach(x=>{ dirty.delete(x.id); delQ.add(x.id); }); storeQ(); pushSoon();
 }
-const storeList=l=>lsSet(K.list,l);
+const storeList=l=>{ const r=lsSet(K.list,l); if(typeof draftBar==="function") draftBar(); return r; };
 const dirty=new Set(lsGet(K.dirty,[]));
 const delQ=new Set(lsGet(K.del,[]));
 const storeQ=()=>{ lsSet(K.dirty,[...dirty]); lsSet(K.del,[...delQ]); };
@@ -1867,8 +1875,10 @@ function renderList(){
   let list=all.filter(x=>(!q||[x.name,x.ceo,x.phone,typeOf(x.data),...(x.prods||[])].join(" ").toLowerCase().includes(q))&&(!rng||(x.quoteDate&&x.quoteDate>=rng[0]&&x.quoteDate<=rng[1])));
   fillKinds(list);
   if(kindFilter!=="all") list=list.filter(x=>typeOf(x.data)===kindFilter);
-  const byStat={대기:list.filter(x=>stOf(x)==="대기").length,완료:list.filter(x=>stOf(x)==="완료").length};
-  $$("#lStat [data-s]").forEach(b=>{b.classList.toggle("on",b.dataset.s===statusFilter);b.textContent=b.dataset.s==="all"?`전체 ${list.length}`:`${b.dataset.s} ${byStat[b.dataset.s]}`});
+  const byStat={대기:0,완료:0,미발급:0}; list.forEach(x=>{ const s=stOf(x); if(s in byStat) byStat[s]++; });
+  $$("#lStat [data-s]").forEach(b=>{ const s=b.dataset.s; b.classList.toggle("on",s===statusFilter);
+    b.textContent=s==="all"?`전체 ${list.length}`:`${s==="미발급"?"임시저장":s} ${byStat[s]}`;
+    if(s==="미발급") b.hidden=!byStat[s]&&statusFilter!==s; });
   if(statusFilter!=="all") list=list.filter(x=>stOf(x)===statusFilter);
   if(rng) list=list.slice().sort((a,b)=>(b.quoteDate||"").localeCompare(a.quoteDate||"")||(b.updated||0)-(a.updated||0));
   $$("#lFilter [data-f]").forEach(b=>b.classList.toggle("on",b.dataset.f===listFilter));
@@ -2841,6 +2851,21 @@ $("#suCopy").onclick=async()=>{
   setTimeout(()=>{ b.textContent=t; },2500);
 };
 setTimeout(serverVerCheck,1500);
+
+/* ===== 임시저장 중인 서류 알림 (발급하지 않은 증명서: 몇 건 · 가장 빨리 지워지는 날) ===== */
+var draftBarClosed=false;     // var: 앞 파일에서 목록을 저장할 때 먼저 불릴 수 있음
+function draftBar(){
+  const bar=document.getElementById("draftBar"); if(!bar) return;
+  const ds=loadList().filter(x=>x.data&&isCert(x.data)&&!x.data.issuedAt);
+  if(!ds.length||draftBarClosed){ bar.hidden=true; return; }
+  const left=Math.min(...ds.map(draftLeft));
+  $("#dbTitle").textContent=`임시저장 중인 서류 ${ds.length}건`;
+  $("#dbText").innerHTML=`아직 발급하지 않은 증명서입니다.<br>${left<=1?"<b>오늘 · 내일 중</b> 자동으로 지워지는 서류가 있습니다.":`가장 빠른 것은 <b>${left}일 뒤</b> 자동으로 지워집니다.`}<br>필요하면 열어서 [발급하기]를 눌러 주세요.`;
+  bar.hidden=false;
+}
+$("#dbClose").onclick=()=>{ draftBarClosed=true; $("#draftBar").hidden=true; };
+$("#dbOpen").onclick=()=>{ statusFilter="미발급"; listFilter="all"; kindFilter="all"; openList(); };
+draftBar();
 
 /* ===== 주소 검색 (카카오 우편번호 서비스 · 무료 · 키 필요 없음) =====
    data-addr 칸 옆에 [주소 검색] 버튼. 주소를 고르면 칸에 들어가고, 아래 '상세 주소' 칸에 동 · 호수를 이어서 씀.
