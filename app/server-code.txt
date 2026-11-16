@@ -12,13 +12,14 @@
  *  - 팀이 함께 쓰는 견적 목록 · 회사 설정 보관 (이 시트 + 내 구글 드라이브)
  *  - 서명 요청 원본 잠금(SHA-256), 고객 서명 저장 (모든 시각은 서버 기준 KST)
  *  - 서명이 끝나면 최종 계약서 PDF를 드라이브에 저장하고 고객과 우리 회사에 같은 PDF를 메일로 발송
+ *  - 증명서(재직 · 경력 · 퇴직) 발급: PDF를 드라이브에 보관, 원할 때만 직원 · 회사에 메일 발송 (버전 2)
  * 회사 정보 · 로고 · 메일 문구는 모두 작성기 화면의 [회사 설정]에서 바꿉니다.
  */
 const TZ = 'Asia/Seoul';
 const APP_URL = 'https://garnet00700-ux.github.io/weavery/app/';   // 공용 작성기 주소
 // 서버 코드 버전. 서버 코드를 고칠 때마다 1씩 올리고, 작성기(app6.js)의 SERVER_LATEST도 같은 숫자로 맞춥니다.
 // 그러면 예전 버전 서버에 연결된 작성기에 "서버 업데이트" 알림이 뜹니다. (이 줄이 없는 예전 서버는 1로 봅니다)
-const SERVER_VER = 1;
+const SERVER_VER = 2;
 
 /* ============================================================ */
 
@@ -267,6 +268,7 @@ function doPost(e) {
       case 'status':      return json_(status_(b));
       case 'sign':        return json_(sign_(b));
       case 'final':       return json_(final_(b));
+      case 'issue':       return json_(issue_(b));
       default:            return json_({ ok: false, error: '잘못된 요청입니다.' });
     }
   } catch (err) {
@@ -376,6 +378,72 @@ function final_(b) {
   return { ok: true, finalSentAt: f.v[C.finalSentAt] };
 }
 
+/* ===== 증명서 발급 (재직 · 경력 · 퇴직) =====
+   작성기 [발급하기] → 직인 찍힌 PDF를 드라이브에 보관.
+   [이메일로도 보내기]를 고른 경우에만 직원(이메일이 있으면)과 우리 회사에 같은 PDF를 메일로 보냄.
+   발급 기록은 이 시트의 '증명서 발급' 탭에 남음 (모든 시각은 서버 기준 KST). */
+function issueSheet_() {
+  return tab_('증명서 발급', ['발급ID','문서ID','증명서','발급번호','직원','직원 이메일','발급(서버)','PDF 파일','직원 메일','회사 메일']);
+}
+function issue_(b) {
+  needKey_(b);
+  const s = b.summary || {};
+  const name = String(s.employee || '').trim();
+  if (!name) throw new Error('직원 성명이 없습니다.');
+  const bytes = Utilities.base64Decode(String(b.pdf || '').replace(/^data:application\/pdf;[^,]*,/, ''));
+  if (bytes.length < 1000) throw new Error('PDF가 비어 있습니다.');
+  const title = String(s.title || '증명서').replace(/\s+/g, '');
+  const at = nowKst_(), id = Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+  const fname = Utilities.formatDate(new Date(), TZ, 'yyyyMMdd') + '_' + name.replace(/[\\/:*?"<>|]/g, '') + '_' + title + '.pdf';
+  const pdf = folder_().createFile(Utilities.newBlob(bytes, 'application/pdf', fname));
+  const em = String(s.email || '').trim(), to = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em) ? em : '';
+  const send = b.sendMail === true, owner = send ? ownerEmail_(s) : '';
+  if (send) {
+    s.logoFileId = saveImage_(b.logo, '로고');
+    s.cardFileId = saveImage_(b.card, '명함');
+    sendCertMails_(s, pdf.getBlob().setName(fname), to, owner, at);
+  }
+  issueSheet_().appendRow([id, String(b.docId || ''), title, String(s.no || ''), name, to, at, pdf.getUrl(),
+    send ? (to ? '발송' : '이메일 없음') : '안 보냄', send ? owner : '안 보냄']);
+  return { ok: true, issuedAt: at, fileUrl: pdf.getUrl(), mailed: send, sentTo: send ? to : '', owner: owner };
+}
+function sendCertMails_(s, pdfBlob, to, owner, at) {
+  const sup = s.supplier || {}, title = String(s.title || '증명서').replace(/\s+/g, '');
+  const v = { '상호': sup.name || '', '대표': sup.ceo || '', '직원': s.employee || '', '직원메일': to, '증명서': title,
+    '발급번호': s.no || '', '용도': s.purpose || '', '발급일시': at };
+  const subject = tpl_('[{상호}] {직원}님 {증명서} 발급', v);
+  const empText = tpl_('{직원}님, 안녕하세요. {상호}입니다.\n요청하신 {증명서}를 발급해 PDF로 보내드립니다.\n회사 직인이 찍힌 파일이니 필요한 곳에 그대로 제출하시면 됩니다.', v);
+  const ownText = tpl_(to ? '{직원}님 {증명서}가 발급되었습니다.\n직원 메일({직원메일})로 같은 PDF를 보냈습니다.'
+    : '{직원}님 {증명서}가 발급되었습니다.\n직원 이메일이 없어 회사 메일로만 보냈습니다.\n첨부한 PDF를 직원에게 전달해 주세요.', v);
+  const inline = {}, logo = blob_(s.logoFileId), card = blob_(s.cardFileId);
+  if (logo) inline.wqlogo = logo;
+  if (card) inline.wqcard = card;
+  const common = { attachments: [pdfBlob], name: sup.name || '증명서 발급' };
+  if (Object.keys(inline).length) common.inlineImages = inline;
+  if (to) MailApp.sendEmail(to, subject, empText, Object.assign({ htmlBody: certMailHtml_(s, v, empText, !!logo, !!card), replyTo: owner }, common));
+  MailApp.sendEmail(owner, subject, ownText, Object.assign({ htmlBody: certMailHtml_(s, v, ownText, !!logo, !!card) }, common));
+}
+function certMailHtml_(s, v, text, hasLogo, hasCard) {
+  const b = s.brand || {}, sup = s.supplier || {};
+  const G = /^#[0-9a-fA-F]{6}$/.test(b.color || '') ? b.color : '#17320B', L = '#D9D9D9', BG = '#EDEDED', T = '#545454';
+  const row = (k, val) => '<tr><td style="padding:8px 12px;background:' + BG + ';border:1px solid ' + L + ';width:34%;font-size:13px;color:#222">' + k +
+    '</td><td style="padding:8px 12px;border:1px solid ' + L + ';font-size:13px;color:#111">' + val + '</td></tr>';
+  return '<div style="background:#f4f2ee;padding:24px 12px;font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif">' +
+    '<div style="max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid ' + L + '">' +
+    '<div style="padding:22px 26px 14px;border-bottom:2px solid ' + G + '">' +
+    (hasLogo ? '<img src="cid:wqlogo" alt="' + esc_(sup.name) + '" height="44" style="display:block;margin-bottom:8px">' : '<div style="font-weight:700;font-size:18px;color:' + G + '">' + esc_(sup.name) + '</div>') +
+    '<div style="font-size:19px;font-weight:700;color:#111">' + esc_(v['증명서']) + '가 발급되었습니다</div></div>' +
+    '<div style="padding:20px 26px;font-size:14px;line-height:1.7;color:#222">' + esc_(text).replace(/\n/g, '<br>') + '</div>' +
+    '<div style="padding:0 26px"><table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse">' +
+    row('증명서', esc_(v['증명서'])) + row('성명', esc_(v['직원'])) +
+    (v['발급번호'] ? row('발급번호', esc_(v['발급번호'])) : '') + (v['용도'] ? row('용도', esc_(v['용도'])) : '') +
+    row('발급처', esc_(sup.name) + (sup.ceo ? ' · 대표 ' + esc_(sup.ceo) : '')) +
+    row('발급 일시 <span style="font-size:11px;color:' + T + '">(서버 기준)</span>', esc_(v['발급일시'])) +
+    '</table></div>' +
+    '<div style="padding:24px 26px 26px">' + mailCard_(sup, b, hasLogo, hasCard) + '</div>' +
+    '</div></div>';
+}
+
 /* ===== 최종본 메일 (작성기 [회사 설정 → 메일 문구]로 바꿀 수 있음) ===== */
 const MAIL_DEFAULT = {
   subject: '[{상호}] {의뢰인} 계약서 서명 완료 · 최종 계약서 ({문서번호})',
@@ -424,19 +492,7 @@ function mailHtml_(f, s, M, v, who, hasLogo, hasCard) {
       (it.deliver ? '<br><span style="color:' + T + ';font-size:12px">납품일 ' + esc_(it.deliver) + '</span>' : ''))).join('');
   const monthly = (s.monthly || []).map(m => row(esc_(m.name), '월 ' + won_(m.price) + ' <span style="color:' + T + ';font-size:12px">(총액과 별도)</span>')).join('');
   const greet = para(tpl_(who === 'client' ? M.client : M.owner, v));
-
-  const card = hasCard
-    ? '<img src="cid:wqcard" alt="' + esc_(sup.name) + ' 명함" style="max-width:440px;width:100%;border:1px solid ' + L + ';border-radius:10px;display:block">'
-    : '<table cellpadding="0" cellspacing="0" style="width:100%;max-width:440px;border:1px solid ' + L + ';border-radius:10px;border-collapse:separate"><tr>' +
-      (hasLogo ? '<td style="padding:18px 8px 18px 18px;vertical-align:middle;width:92px"><img src="cid:wqlogo" alt="" width="84" style="display:block"></td>' : '') +
-      '<td style="padding:18px 18px 18px 12px;vertical-align:middle;border-left:2px solid ' + G + '">' +
-      '<div style="font-size:16px;font-weight:700;color:#111">' + esc_(sup.ceo) + ' <span style="font-size:12px;font-weight:400;color:' + T + '">대표</span></div>' +
-      '<div style="font-size:13px;font-weight:700;color:' + G + ';margin:2px 0 8px">' + esc_(sup.name) + '</div>' +
-      '<div style="font-size:12px;color:#333;line-height:1.7">' +
-      (sup.phone ? 'T. ' + esc_(sup.phone) + '<br>' : '') + (sup.email ? 'E. ' + esc_(sup.email) + '<br>' : '') +
-      (sup.web ? 'W. ' + esc_(sup.web) + '<br>' : '') + (sup.address ? esc_(sup.address) + '<br>' : '') +
-      '</div>' + (b.slogan ? '<div style="font-size:11px;color:' + T + ';margin-top:6px">' + esc_(b.slogan) + '</div>' : '') +
-      '</td></tr></table>';
+  const card = mailCard_(sup, b, hasLogo, hasCard);
 
   return '<div style="background:#f4f2ee;padding:24px 12px;font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif">' +
     '<div style="max-width:640px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid ' + L + '">' +
@@ -468,4 +524,21 @@ function mailHtml_(f, s, M, v, who, hasLogo, hasCard) {
     '<div style="padding:24px 26px 26px">' + (M.footer ? '<div style="font-size:12px;color:' + T + ';margin-bottom:8px">' + para(tpl_(M.footer, v)) + '</div>' : '') +
     (M.card ? card : '') + '</div>' +
     '</div></div>';
+}
+
+/* 메일 아래 명함 (명함 이미지가 있으면 그 이미지, 없으면 회사 정보로 만든 기본 명함) */
+function mailCard_(sup, b, hasLogo, hasCard) {
+  const G = /^#[0-9a-fA-F]{6}$/.test(b.color || '') ? b.color : '#17320B', L = '#D9D9D9', T = '#545454';
+  return hasCard
+    ? '<img src="cid:wqcard" alt="' + esc_(sup.name) + ' 명함" style="max-width:440px;width:100%;border:1px solid ' + L + ';border-radius:10px;display:block">'
+    : '<table cellpadding="0" cellspacing="0" style="width:100%;max-width:440px;border:1px solid ' + L + ';border-radius:10px;border-collapse:separate"><tr>' +
+      (hasLogo ? '<td style="padding:18px 8px 18px 18px;vertical-align:middle;width:92px"><img src="cid:wqlogo" alt="" width="84" style="display:block"></td>' : '') +
+      '<td style="padding:18px 18px 18px 12px;vertical-align:middle;border-left:2px solid ' + G + '">' +
+      '<div style="font-size:16px;font-weight:700;color:#111">' + esc_(sup.ceo) + ' <span style="font-size:12px;font-weight:400;color:' + T + '">대표</span></div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + G + ';margin:2px 0 8px">' + esc_(sup.name) + '</div>' +
+      '<div style="font-size:12px;color:#333;line-height:1.7">' +
+      (sup.phone ? 'T. ' + esc_(sup.phone) + '<br>' : '') + (sup.email ? 'E. ' + esc_(sup.email) + '<br>' : '') +
+      (sup.web ? 'W. ' + esc_(sup.web) + '<br>' : '') + (sup.address ? esc_(sup.address) + '<br>' : '') +
+      '</div>' + (b.slogan ? '<div style="font-size:11px;color:' + T + ';margin-top:6px">' + esc_(b.slogan) + '</div>' : '') +
+      '</td></tr></table>';
 }
