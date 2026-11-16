@@ -3753,11 +3753,12 @@ function prodPickHtml(){
 }
 function prodDelete(pi){
   const p=P()[pi]; if(!p) return;
-  const locked=!!(state.esign&&state.esign.id)||state.status==="완료", keep=locked&&p.on;
+  // 지금 문서에서 쓰는(체크된) 양식은 문서 안에 그대로 둔다 — 지우면 작성 중이던 내용이 문서에서 빠져 버림
+  const keep=!!p.on;
   const msg=[`'${p.name||"이름 없음"}' 양식을 상품 목록에서 지울까요?`,"",
     "다음 새 문서부터 목록에 나오지 않습니다."+(connected()?" (팀 전체)":""),
     "이미 만든 문서와 서명 받은 문서는 [문서 목록]에 그대로 남아,","언제든 다시 열고 저장할 수 있습니다."];
-  if(keep) msg.push("","지금 문서는 서명 요청한 문서라,","이 문서 안에서는 양식을 그대로 둡니다.");
+  if(keep) msg.push("","지금 문서에서 쓰고 있는 양식이라,","작성 중인 내용은 이 문서에 그대로 남습니다.");
   if(!confirm(msg.join("\n"))) return;
   profile.templates=profile.templates.filter(x=>!sameTpl(x,p));
   if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
