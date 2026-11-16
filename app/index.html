@@ -338,6 +338,14 @@ textarea{resize:vertical;line-height:1.5}
 .cert-issue.done .ci-st{color:#2c5a8c}
 .cert-issue.done .ci-btn{background:#eef4fb;color:#2c5a8c;border-color:#b9cde3;cursor:default;filter:none}
 .lst.unissued{color:#9a5b00;border-color:#e8c98f;background:#fff6e5;cursor:default;text-align:center;line-height:1.25}
+/* 임시저장 버튼 (발급하기 · 서명 요청 만들기 옆) */
+.cert-issue .ci-row{display:flex;gap:8px}
+.cert-issue .ci-row .ci-btn{flex:1;width:auto}
+.tmp-b{flex:none;background:#fff;color:var(--green);border:1.5px solid var(--green);font-weight:700;padding:12px 18px;font-size:15px}
+.tmp-b:hover{background:#f4f8f2}
+.tmp-b[hidden]{display:none}
+.tmp-b:disabled{opacity:.7;cursor:default}
+.es-btns .btn.tmp-b{flex:0 0 auto;padding-left:18px;padding-right:18px}
 /* 증명서 종류 고르기 */
 .cert-type{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 12px;padding:10px 12px;border:1px solid #c9d6c4;border-radius:10px;background:#f4f8f2}
 .cert-type .ct-l{font-size:13px;font-weight:700;color:#333;margin-right:4px}
@@ -2192,7 +2200,7 @@ function renderEsign(){
   else if(!e){
     h=`<p class="hint" style="margin:0 0 8px">계약서를 고객 휴대폰으로 보내 서명을 받습니다.<br>서명이 끝나면 <b>양측 서명이 들어간 동일한 계약서 PDF</b>가 고객과 우리 회사 메일로 자동 발송되고,<br>목록 진행상태가 <b>완료</b>로 바뀝니다.</p>
       ${connected()?"":`<div class="es-warn">전자서명은 서버 연결 후에 쓸 수 있습니다.<br><a href="#" data-es="settings">회사 설정 → 서버 연결</a></div>`}
-      <div class="es-btns"><button type="button" class="btn go" data-es="create">서명 요청 만들기</button></div>`;
+      <div class="es-btns"><button type="button" class="btn tmp-b" data-tmpsave>임시저장</button><button type="button" class="btn go" data-es="create">서명 요청 만들기</button></div>`;
   }else if(e.status==="signed"){
     const sg=e.signer||{};
     h=`<div class="es-st"><span class="es-badge signed">서명 완료</span><span>${esc(sg.name||"")}</span></div>
@@ -3404,7 +3412,7 @@ function certCardHtml(p,pi){
         <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
         <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
       </div>
-      ${p.on?`<div class="cert-issue" id="certIssue"><p class="ci-st"></p><label class="ci-mail" hidden><input type="checkbox" data-cimail> 이메일로도 보내기 <small></small></label><button class="btn ci-btn" type="button" data-certissue>발급하기</button></div>`:""}
+      ${p.on?`<div class="cert-issue" id="certIssue"><p class="ci-st"></p><label class="ci-mail" hidden><input type="checkbox" data-cimail> 이메일로도 보내기 <small></small></label><div class="ci-row"><button class="btn tmp-b" type="button" data-tmpsave>임시저장</button><button class="btn ci-btn" type="button" data-certissue>발급하기</button></div></div>`:""}
     </div>
   </details>`;
 }
@@ -3432,11 +3440,23 @@ function certIssueUI(){
   ml.hidden=!(connected()&&pend);
   ml.querySelector("input").checked=certMailWant;
   ml.querySelector("small").textContent=EMAIL_OK(em)?`(직원 ${em} · 회사 메일)`:"(직원 이메일이 없어 회사 메일로만)";
+  box.querySelector("[data-tmpsave]").hidden=!!state.issuedAt;     // 발급한 증명서는 [다시 발급]으로만 저장
   const b=box.querySelector("[data-certissue]");
   b.textContent=!inList?"발급하기":pend?"고친 내용으로 다시 발급":"발급 완료";
   b.disabled=inList&&!pend;
 }
 $("#editor").addEventListener("change",e=>{ if(e.target.matches("[data-cimail]")) certMailWant=e.target.checked; });
+// [임시저장] 버튼 (증명서: 발급하기 옆 · 계약서: 서명 요청 만들기 옆) — 지금 내용을 문서 목록에 바로 저장
+$("#editor").addEventListener("click",e=>{
+  const b=e.target.closest("[data-tmpsave]"); if(!b) return;
+  e.preventDefault();
+  if(!onProds().length) return alert("왼쪽 [상품 선택]에서 양식을 먼저 고르세요.");
+  if(isCert(state)&&state.issuedAt) return alert("이미 발급한 증명서입니다.\n고친 내용은 [다시 발급]을 눌러야 저장됩니다.");
+  state._t=1; lsSet(K.doc,state); saveToList(true); saveNow();
+  $("#saved").textContent=isCert(state)?`임시저장했습니다 · 문서 목록에 ${DRAFT_DAYS}일 동안 보관됩니다`:"임시저장했습니다 · 문서 목록에 저장됐습니다";
+  const t=b.textContent; b.textContent="저장됨 ✓"; b.disabled=true;
+  setTimeout(()=>{ b.textContent=t; b.disabled=false; },1800);
+});
 // 증명서 종류 고르기 (재직 · 경력 · 퇴직)
 $("#editor").addEventListener("click",e=>{
   const b=e.target.closest("[data-certtype]"); if(!b) return;
