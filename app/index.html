@@ -319,6 +319,13 @@ textarea{resize:vertical;line-height:1.5}
 .fm-guide>b{font-size:13.5px;color:#5a4200}
 .fm-guide ul{margin:4px 0 6px;padding-left:18px}
 .fm-guide p{margin:0}
+/* 상품 선택: 지우기 · 다시 넣기 */
+.prods label .pp-n{flex:1;min-width:0;word-break:keep-all;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.prods label small{font-size:10.5px;font-weight:700;color:#8a5a00;background:#fff3d6;border-radius:99px;padding:1px 7px}
+.prods label.gone{border-style:dashed}
+.pp-x{margin-left:auto;border:0;background:none;color:var(--ui-sub);font-size:13px;line-height:1;padding:5px 7px;border-radius:6px;cursor:pointer;flex:none}
+.pp-x:hover{background:#fdecea;color:#b3261e}
+.prods label.gone .pp-x:hover{background:#e8f5e9;color:#2f7d32}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -813,7 +820,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         </label>
         <button class="btn fm-entry" type="button" id="bFormImp" title="쓰던 양식 파일(PDF · 한글 · 워드 · 엑셀 · 사진)을 올리면 서류 종류 · 칸 · 서명 자리를 찾아 줍니다">📄 쓰던 양식 불러오기 <span>자동 인식</span></button>
         <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다.<br>품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
-          근로계약서 · 증명서는 견적서 없이 그 문서만 만들어지며,<br>한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
+          근로계약서 · 증명서는 견적서 없이 그 문서만 만들어지며,<br>한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.<br>필요 없는 양식은 이름 옆 <b>✕</b>로 목록에서 지울 수 있습니다.</p>
       </div>
     </details>
 
@@ -1296,7 +1303,7 @@ function prodCardHtml(p,pi){
   </details>`;
 }
 function renderProds(){
-  $("#prodPick").innerHTML=P().map((p,i)=>`<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}>${esc(p.name||"(이름 없음)")}</label>`).join("");
+  $("#prodPick").innerHTML=prodPickHtml();
   $("#deliverBox").innerHTML=P().map((p,i)=>p.on&&!special(p)?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
   $("#prodCards").innerHTML=P().map(prodCardHtml).join("");
   // 텍스트 칸 값 넣기 (value 속성 대신 직접 넣어야 줄바꿈 등 정확)
@@ -1322,7 +1329,7 @@ $("#editor").addEventListener("input",e=>{
   if(m&&m[2]==="disc"&&!v){ const it=getAt(state,m[1]); it.amount=null; it.note=""; }
   if(m&&/^(cat|desc|qty)$/.test(m[2])){ const h=document.querySelector(`[data-h="${m[1]}"]`); if(h) h.innerHTML=itemHead(getAt(state,m[1])); }
   if(el.hasAttribute("data-struct")) renderProds();
-  else if(el.hasAttribute("data-title")){ $("#prodPick").innerHTML=P().map((p,i)=>`<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}>${esc(p.name||"(이름 없음)")}</label>`).join(""); }
+  else if(el.hasAttribute("data-title")){ $("#prodPick").innerHTML=prodPickHtml(); }
   updateSums(); esMarkStale(); save(); schedule();
 });
 $("#editor").addEventListener("change",e=>{
@@ -1366,13 +1373,7 @@ $("#editor").addEventListener("click",e=>{
       if(!confirm(`'${p.name}' 상품을 저장된 기본값으로 되돌릴까요?\n(지금 입력한 품목 금액 · 조항 수정 내용이 바뀝니다)`)) return;
       P()[pi]=Object.assign(clone(t),{on:p.on,deliver:p.deliver});
     }
-    if(a==="del"){
-      if(!confirm(`'${p.name}' 상품 종류를 삭제할까요?\n이 견적서와 기본 상품 목록(팀 공유)에서 모두 빠집니다.`)) return;
-      P().splice(pi,1);
-      profile.templates=profile.templates.filter(x=>x.pid!==p.pid);
-      if(!profile.templates.length) profile.templates=[GENERIC_PRODUCT()];
-      saveProfile();
-    }
+    if(a==="del"){ prodDelete(pi); return; }
   }else if(b.dataset.imp){ if(b.dataset.imp==="quote") openQuoteImport(+b.dataset.pi); else openImport(b.dataset.imp,+b.dataset.pi); return; }
   else return;
   renderProds(); esMarkStale(); save(); schedule();
@@ -3598,7 +3599,6 @@ $("#editor").addEventListener("click",e=>{
   if(d){ const p=P()[+d.dataset.pi]; p.form.marks.splice(+d.dataset.fmdel,1); renderProds(); esMarkStale(); save(); schedule(); return; }
   const r=e.target.closest("[data-mrow]");
   if(r&&!e.target.closest("input,select,button,label")) fmSelect(r.dataset.mrow);
-  if(e.target.closest('[data-pact="del"]')) setTimeout(fmPrune,0);
 });
 $("#editor").addEventListener("input",e=>{
   const el=e.target.closest("[data-fmsz]"); if(!el) return;
@@ -3727,6 +3727,44 @@ SAMPLES.stmt=()=>{
   statementNotices(Object.assign(p,{on:true}));
   return p;
 };
+
+/* --- 상품 선택: 필요 없는 양식 지우기 · 다시 넣기 ---
+   지우면 '상품 목록(팀 공유 기본값)'에서만 빠집니다. 문서마다 자기 양식을 통째로 갖고 있어서
+   이미 만든 문서 · 서명 받은 문서는 [문서 목록]에서 언제든 다시 열고 저장할 수 있습니다.
+   원본 모양 양식의 그림(profile.forms)도 예전 문서가 쓸 수 있게 지우지 않습니다. */
+function prodPickHtml(){
+  const T=new Set(profile.templates.map(x=>x.pid));
+  return P().map((p,i)=>{ const gone=!T.has(p.pid);
+    return `<label class="${gone?"gone":""}"><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}><span class="pp-n">${esc(p.name||"(이름 없음)")}${gone?`<small>목록에서 지움</small>`:""}</span>`+
+      `<button type="button" class="pp-x" data-${gone?"prest":"pdel"}="${i}" title="${gone?"상품 목록에 다시 넣기":"상품 목록에서 지우기"}" aria-label="${esc(p.name)} ${gone?"다시 넣기":"지우기"}">${gone?"↺":"✕"}</button></label>`; }).join("");
+}
+function prodDelete(pi){
+  const p=P()[pi]; if(!p) return;
+  const locked=!!(state.esign&&state.esign.id)||state.status==="완료", keep=locked&&p.on;
+  const msg=[`'${p.name||"이름 없음"}' 양식을 상품 목록에서 지울까요?`,"",
+    "다음 새 문서부터 목록에 나오지 않습니다."+(connected()?" (팀 전체)":""),
+    "이미 만든 문서와 서명 받은 문서는 [문서 목록]에 그대로 남아,","언제든 다시 열고 저장할 수 있습니다."];
+  if(keep) msg.push("","지금 문서는 서명 요청한 문서라,","이 문서 안에서는 양식을 그대로 둡니다.");
+  if(!confirm(msg.join("\n"))) return;
+  profile.templates=profile.templates.filter(x=>x.pid!==p.pid);
+  if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
+  saveProfile();
+  if(!keep) P().splice(pi,1);
+  renderProds(); esMarkStale(); save(); schedule();
+  $("#saved").textContent=`'${p.name}' 양식을 목록에서 지웠습니다 — 예전 문서는 문서 목록에 그대로 있습니다`;
+}
+function prodRestore(pi){
+  const p=P()[pi]; if(!p) return;
+  if(!confirm(`'${p.name}' 양식을 상품 목록에 다시 넣을까요?\n다음 새 문서부터 다시 고를 수 있습니다.`)) return;
+  const t=clone(p); t.on=false; t.deliver="";
+  profile.templates.push(t); saveProfile();
+  renderProds(); $("#saved").textContent=`'${p.name}' 양식을 상품 목록에 다시 넣었습니다`;
+}
+$("#prodPick").addEventListener("click",e=>{
+  const b=e.target.closest("[data-pdel],[data-prest]"); if(!b) return;
+  e.preventDefault(); e.stopPropagation();
+  if(b.dataset.pdel!==undefined) prodDelete(+b.dataset.pdel); else prodRestore(+b.dataset.prest);
+});
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다. */
