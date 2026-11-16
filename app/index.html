@@ -344,6 +344,11 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 .page .logo-t{position:absolute;left:9mm;top:16.3mm;transform:translateY(-50%);max-width:40mm;font-size:13pt;font-weight:800;color:var(--green);line-height:1.15;word-break:keep-all}
 .page img.logo{top:16.3mm;transform:translateY(-50%);width:auto;height:auto;max-width:40mm;max-height:11mm;object-fit:contain;object-position:left center}
 .page .wmark{object-fit:contain;max-height:100mm}
+/* 거래명세서 하단 인수자 서명란 */
+.recv{margin-top:7mm}
+.recv-t{text-align:center;font-weight:700;font-size:10pt;margin-bottom:4mm}
+.t.recv-tb td{padding:3.2mm 2mm;font-size:9.6pt}
+.t.recv-tb td.lb{background:var(--g2);font-weight:700}
 /* 증명서 (재직 · 경력 · 퇴직) */
 .cert-no{text-align:right;font-size:8.5pt;min-height:4mm;margin:2mm 2mm 0}
 .cert-ttl{text-align:center;font-size:21pt;font-weight:800;letter-spacing:2mm;margin:7mm 0 10mm}
@@ -1124,6 +1129,7 @@ function prodCardHtml(p,pi){
         <option value="quote"${d==="quote"?" selected":""}>${esc(qn)}만 (계약서 없음 — 거래명세서 · 청구서 · 영수증 등)</option>
         <option value="contract"${d==="contract"?" selected":""}>계약서만</option>
       </select></label>
+      ${d==="quote"?`<label class="chk" style="margin-top:8px"><input type="checkbox" data-p="prods.${pi}.recvSign" data-bool data-struct ${recvOn(p)?"checked":""}>하단에 <b>인수자 서명란</b> 넣기 <span style="font-weight:400;color:var(--ui-sub)">(받는 분 서명 · 전자서명 가능, 날짜는 아래 '날짜 · 서명' 칸)</span></label>`:""}
       <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>상품 이름 · 문서 제목</summary>
         <div class="grid3">
           <label class="f">상품 이름<input data-p="prods.${pi}.name" data-title></label>
@@ -1980,7 +1986,25 @@ function quoteBlocks(p){
   if(p.noticeIntro||list.length) out.push(`<fieldset class="notice"><legend>작업안내 및 안내사항.</legend>
     ${p.noticeIntro?`<p>${bold(esc(fill(p.noticeIntro,p))).replace(/\n/g,"<br>")}</p>`:""}
     <ul>${list.map(x=>`<li>- ${bold(esc(fill(x,p)))}</li>`).join("")}</ul></fieldset>`);
+  if(recvOn(p)) out.push(recvBlock());
   return out;
+}
+// 하단 인수자 서명란: 직접 켜고 끌 수 있고, 정하지 않았으면 '○○명세서 · 명세표'만 문서일 때 켜짐
+function recvOn(p){
+  if(special(p)||docsOf(p)!=="quote") return false;
+  return p.recvSign!=null?!!p.recvSign:/명세(서|표)$/.test(quoteTitleOf(p));
+}
+function recvBlock(){
+  const c=state.client, d=esignMode?{y:"",m:"",d:""}:state.date, bl="&nbsp;&nbsp;&nbsp;";
+  const cs=state.clientSign&&!esignMode?`<img src="${state.clientSign}" alt="">`:"";
+  // 서명 자리(data-client-seal)는 전자서명 · 고객 사인 이미지가 들어가는 곳 — 계약서와 같은 방식
+  return `<div class="recv">
+    <div class="recv-t">위 내역을 정히 인수하였음을 확인합니다.</div>
+    <table class="t recv-tb">
+      <colgroup><col style="width:15%"><col style="width:30%"><col style="width:15%"><col style="width:40%"></colgroup>
+      <tr><td class="lb">인수일</td><td><span data-cdate data-blank="${d.y&&d.m&&d.d?0:1}">${esc(d.y)||bl} 년 ${esc(d.m)||bl} 월 ${esc(d.d)||bl} 일</span></td>
+          <td class="lb">인수자</td><td><div class="nm"><span>${esc(c.ceo||c.name)}</span><span class="seal" data-client-seal data-mark="(서명)">${cs}(서명)</span></div></td></tr>
+    </table></div>`;
 }
 /* ===== 미리보기: 계약서 ===== */
 function termBody(text,p){
