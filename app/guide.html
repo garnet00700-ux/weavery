@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>계약·서류 작성기 설치 안내</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&family=Noto+Serif+KR:wght@500;700&display=swap">
 <style>
 /* 슬라이드형 설치 안내: 한 화면에 한 동작. 왼쪽 목차 · 가운데 슬라이드 · 아래 [이전]/[다음] */
 :root{
@@ -17,6 +17,8 @@
   --gbar:#f1f3f4; --gline:#dadce0; --gblue:#1a73e8; --gtext:#3c4043;
   --f:"Noto Sans KR","맑은 고딕","Malgun Gothic",system-ui,sans-serif;
   --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --serif:"Noto Serif KR","Nanum Myeongjo",serif;
+  --gold:#a8874d; --gold-l:#d9c18f;
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%}
@@ -91,7 +93,7 @@ kbd{font-family:var(--f);font-size:.9em;background:#fff;border:1px solid var(--l
 .toc button:hover{background:rgba(255,255,255,.08)}
 .toc button .c{width:26px;height:26px;border-radius:50%;border:1.5px solid rgba(255,255,255,.45);display:grid;place-items:center;font-size:12.5px;font-weight:700}
 .toc button.cur{background:rgba(255,255,255,.14);font-weight:700}
-.toc button.cur .c{background:#f0c000;border-color:#f0c000;color:#1d1d1d}
+.toc button.cur .c{background:var(--gold-l);border-color:var(--gold-l);color:var(--green)}
 .toc button.done .c{background:rgba(255,255,255,.2);border-color:transparent}
 .toc button.done .c::after{content:"✓"}
 .toc button.done .c b{display:none}
@@ -112,8 +114,9 @@ kbd{font-family:var(--f);font-size:.9em;background:#fff;border:1px solid var(--l
 .nav{display:flex;align-items:center;gap:12px;padding:12px clamp(16px,3vw,32px) max(12px,env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
 .nav .sp{flex:1;font-size:13px;color:var(--sub);text-align:center}
 .nav .prev{background:#fff;color:var(--green);font-size:16px;padding:12px 20px}
-.nav .next{font-size:18px;font-weight:800;padding:13px 30px;border-radius:12px;background:#f0c000;border-color:#d9ad00;color:#1d1d1d;box-shadow:0 4px 0 #c99f00}
-.nav .next:active{transform:translateY(2px);box-shadow:0 2px 0 #c99f00}
+.nav .next{font-size:17px;font-weight:700;padding:13px 32px;border-radius:999px;background:var(--green);border-color:var(--green);color:#fff;letter-spacing:.01em;box-shadow:0 6px 18px rgba(23,50,11,.22)}
+.nav .next:hover{filter:brightness(1.12)}
+.nav .next:active{transform:translateY(1px)}
 .nav button:disabled{opacity:.35;cursor:default;box-shadow:none}
 
 /* ===== 슬라이드 ===== */
@@ -144,16 +147,45 @@ details.stuck summary::-webkit-details-marker{display:none}
 details.stuck>div{padding:0 16px 14px;line-height:1.7}
 .linkbox{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
 .linkbox input{flex:1 1 240px;min-width:0;font:13px var(--mono);border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;color:var(--text)}
-.bigbtn{font-size:19px;font-weight:800;padding:15px 26px;border-radius:14px;background:#f0c000;border-color:#d9ad00;color:#1d1d1d;box-shadow:0 4px 0 #c99f00}
-.bigbtn:hover{background:#ffd21a}
+.bigbtn{font-size:17px;font-weight:700;padding:14px 28px;border-radius:999px;background:var(--green);border-color:var(--green);color:#fff;box-shadow:0 6px 18px rgba(23,50,11,.2)}
+.bigbtn:hover{filter:brightness(1.12)}
 .slide .shot{margin:0;font-size:14px}
 .chk{display:inline-block;width:15px;height:15px;border:2px solid var(--gblue);border-radius:3px;background:var(--gblue);vertical-align:-2px;margin-right:6px;position:relative}
 .chk::after{content:"✓";color:#fff;font-size:11px;position:absolute;top:-3px;left:2px}
 
 /* 표지 */
-.cover{background:var(--green);color:#fff;border-radius:22px;padding:clamp(28px,5vw,56px);display:grid;gap:22px}
-.cover .ey{font-size:13px;letter-spacing:.14em;opacity:.75}
-.cover h1{margin:0;font-size:clamp(30px,5vw,52px);line-height:1.2;font-weight:800;text-wrap:balance}
+.cover{background:radial-gradient(120% 90% at 100% 0%,#24461a 0%,var(--green) 55%,#10240a 100%);color:#fff;border-radius:22px;padding:clamp(30px,5.5vw,64px);display:grid;gap:24px;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;inset:14px;border:1px solid rgba(201,176,122,.28);border-radius:14px;pointer-events:none}
+.cover .ey{font-size:12px;letter-spacing:.24em;color:var(--gold-l)}
+.cover h1{margin:0;font-family:var(--serif);font-size:clamp(30px,4.8vw,50px);line-height:1.28;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.cover .facts span{background:transparent;border-color:rgba(255,255,255,.22);font-size:13px;letter-spacing:.02em}
+.cover .bigbtn{background:#f6f3ec;border-color:#f6f3ec;color:var(--green);box-shadow:none}
+.cover .bigbtn:hover{background:#fff;filter:none}
+.cover .ghost-l{all:unset;cursor:pointer;color:#fff;font-size:15px;padding:14px 4px;border-bottom:1px solid rgba(201,176,122,.6);align-self:center;position:relative;z-index:1}
+.cover .ghost-l:hover{color:var(--gold-l)}
+.cover>*{position:relative;z-index:1}
+
+/* ===== 주요 기능 (에디토리얼) ===== */
+.fx{background:#fbfaf6;border:1px solid #e6e0d3;border-radius:22px;padding:clamp(26px,4.5vw,52px)}
+.fx-head{display:grid;gap:12px;margin-bottom:clamp(22px,3vw,34px)}
+.fx-ey{font-size:12px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);font-weight:700;display:flex;gap:14px;align-items:center}
+.fx-ey::after{content:"";flex:0 0 56px;height:1px;background:var(--gold);opacity:.6}
+.fx-ey span{order:2;letter-spacing:.12em;color:#a99a7a;font-weight:500}
+.fx-h{margin:0!important;font-family:var(--serif);font-weight:700;font-size:clamp(26px,3.4vw,38px)!important;line-height:1.32!important;color:var(--green)!important;letter-spacing:-.015em}
+.fx-lead{margin:0;font-size:16px;color:#6b665d;line-height:1.75}
+.fx-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid #d8d0bf}
+.fx-grid li{padding:22px 24px 24px 0;border-bottom:1px solid #e6e0d3;display:grid;gap:8px;align-content:start}
+.fx-grid li:not(:nth-child(3n+1)){padding-left:24px;border-left:1px solid #ece6da}
+.fx-grid .n{font-family:var(--serif);font-size:15px;color:var(--gold);letter-spacing:.06em}
+.fx-grid b{font-size:17px;color:#1f2a1a;letter-spacing:-.01em}
+.fx-grid p{margin:0;font-size:14px;line-height:1.7;color:#6b665d}
+.fx-foot{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;margin-top:26px}
+.fx-foot span{font-size:13.5px;color:#8b8371;letter-spacing:.02em}
+.fx-cta{font-size:16px;font-weight:700;padding:13px 26px;border-radius:999px;background:var(--green);border-color:var(--green);color:#fff}
+.fx-cta i{font-style:normal;transition:transform .2s;display:inline-block}
+.fx-cta:hover i{transform:translateX(4px)}
+@media (max-width:1100px){.fx-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fx-grid li:not(:nth-child(3n+1)){padding-left:0;border-left:0}.fx-grid li:nth-child(2n){padding-left:22px;border-left:1px solid #ece6da}}
+@media (max-width:640px){.fx-grid{grid-template-columns:minmax(0,1fr)}.fx-grid li:nth-child(2n){padding-left:0;border-left:0}.fx-grid li{padding:18px 0}}
 .cover p{margin:0;font-size:18px;opacity:.92;max-width:42ch}
 .facts{display:flex;flex-wrap:wrap;gap:8px}
 .facts span{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:5px 14px;font-size:14px}
@@ -224,7 +256,7 @@ body.all details.stuck{display:block}
 .cur-m{position:absolute;left:0;top:0;width:26px;height:30px;pointer-events:none;z-index:30;opacity:0;transition:left .8s cubic-bezier(.45,.05,.3,1),top .8s cubic-bezier(.45,.05,.3,1),opacity .3s;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
 .cur-m.show{opacity:1}
 .cur-m svg{display:block;width:100%;height:100%}
-.cur-m .rip{position:absolute;left:-14px;top:-14px;width:30px;height:30px;border-radius:50%;border:3px solid #f0c000;opacity:0;transform:scale(.3)}
+.cur-m .rip{position:absolute;left:-14px;top:-14px;width:30px;height:30px;border-radius:50%;border:3px solid var(--gold);opacity:0;transform:scale(.3)}
 .cur-m.clk .rip{animation:rip .55s ease-out}
 @keyframes rip{0%{opacity:1;transform:scale(.3)}100%{opacity:0;transform:scale(1.8)}}
 .cur-m .say{position:absolute;left:24px;top:22px;background:#1d1d1d;color:#fff;font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;opacity:0;transition:opacity .2s}
@@ -261,38 +293,50 @@ body.all details.stuck{display:block}
     <div class="facts"><span>약 20분</span><span>비용 0원</span><span>PC + 크롬</span><span>구글 계정 1개</span><span>처음 한 번만</span></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn bigbtn go" type="button" data-go="ready">설치 시작하기 →</button>
-      <button class="btn go" type="button" data-go="features" style="background:transparent;border-color:rgba(255,255,255,.6);font-size:16px;padding:12px 20px">무엇을 할 수 있나요? (주요 기능)</button>
+      <button class="ghost-l" type="button" data-go="features">주요 기능 먼저 보기</button>
     </div>
     <div class="sig"><i></i><b>weavery lab</b><em>weaving your brand and the mood of your space</em></div>
   </div>
 </section>
 
 <section class="slide" id="features" data-chap="주요 기능">
-  <div class="kick">주요 기능 <small>1/2 · 서류 만들기 · 서명</small></div>
-  <h2>서류 작성부터 서명까지 <em>한곳에서</em></h2>
-  <div class="tiles feat">
-    <div class="tile"><div class="ic">📄</div><b>견적서 + 계약서 한 번에</b><span>상품을 고르면 견적서와 계약서가 함께 만들어집니다.<br>합계 · 부가세 · 계약금은 자동 계산됩니다.</span></div>
-    <div class="tile"><div class="ic">💬</div><b>카카오톡으로 서명 받기</b><span>[서명 요청 만들기] → 카카오톡으로 링크를 보냅니다.<br>고객은 휴대폰에서 손가락으로 서명합니다.</span></div>
-    <div class="tile"><div class="ic">✉️</div><b>서명 끝나면 메일 자동 발송</b><span>양측 서명이 들어간 같은 PDF가 고객과 우리 회사 메일로 갑니다.<br>목록 상태도 자동으로 '완료'가 됩니다.</span></div>
-    <div class="tile"><div class="ic">🤝</div><b>근로계약서</b><span>고용노동부 표준 양식 (정규직 · 기간제 · 아르바이트).<br>근로자에게도 카카오톡으로 서명을 받습니다.</span></div>
-    <div class="tile"><div class="ic">🏅</div><b>재직 · 경력 · 퇴직 증명서</b><span>회사 직인이 찍힌 증명서를 바로 발급합니다.<br>PDF는 구글 드라이브에 보관되고, 원하면 메일로도 보냅니다.</span></div>
-    <div class="tile"><div class="ic">🧾</div><b>거래명세서 · 청구서</b><span>견적서 없이 명세서만 만들 수도 있습니다.<br>인수자 서명란도 넣을 수 있습니다.</span></div>
+  <div class="fx">
+    <div class="fx-head">
+      <div class="fx-ey">Features <span>01 / 02</span></div>
+      <h2 class="fx-h">서류 작성부터 서명까지,<br>한곳에서 끝냅니다.</h2>
+      <p class="fx-lead">견적 · 계약 · 근로 · 증명 서류를 만들고,<br>고객의 휴대폰으로 서명까지 받습니다.</p>
+    </div>
+    <ol class="fx-grid">
+      <li><span class="n">01</span><b>견적서와 계약서를 한 번에</b><p>상품을 고르면 두 서류가 함께 만들어집니다.<br>합계 · 부가세 · 계약금은 자동으로 계산됩니다.</p></li>
+      <li><span class="n">02</span><b>카카오톡 전자서명</b><p>서명 요청 링크를 카카오톡으로 보냅니다.<br>고객은 휴대폰에서 바로 서명합니다.</p></li>
+      <li><span class="n">03</span><b>완료 계약서 메일 발송</b><p>양측 서명이 담긴 동일한 PDF가<br>고객과 우리 회사 메일로 자동 발송됩니다.</p></li>
+      <li><span class="n">04</span><b>근로계약서</b><p>고용노동부 표준 양식을 기본으로 제공합니다.<br>정규직 · 기간제 · 단시간 근로를 지원합니다.</p></li>
+      <li><span class="n">05</span><b>재직 · 경력 · 퇴직 증명서</b><p>회사 직인이 찍힌 증명서를 즉시 발급합니다.<br>PDF는 구글 드라이브에 보관됩니다.</p></li>
+      <li><span class="n">06</span><b>거래명세서 · 청구서</b><p>명세서만 따로 만들 수 있습니다.<br>인수자 서명란도 함께 넣을 수 있습니다.</p></li>
+    </ol>
   </div>
 </section>
 
 <section class="slide" id="features2" data-chap="주요 기능">
-  <div class="kick">주요 기능 <small>2/2 · 저장 · 관리</small></div>
-  <h2>저장 · 찾기 · 팀 공유는 <em>자동으로</em></h2>
-  <div class="tiles feat">
-    <div class="tile"><div class="ic">💾</div><b>자동 저장 · 임시저장</b><span>작성을 시작하면 문서 목록에 자동 저장됩니다.<br>발급 전 증명서는 물어보고 임시저장 (7일 보관),<br>위쪽 배너로 몇 건 남았는지 알려 줍니다.</span></div>
-    <div class="tile"><div class="ic">🗂️</div><b>문서 목록에서 찾기</b><span>날짜 · 서류 종류 · 진행상태(대기 · 완료 · 임시저장)로 골라 봅니다.<br>이름 · 연락처로 검색하고, 복제해서 새 문서로 씁니다.</span></div>
-    <div class="tile"><div class="ic">👥</div><b>팀 공유</b><span>초대 링크 하나로 팀원이 같은 목록을 함께 씁니다.<br>모든 문서는 우리 회사 구글 계정(시트 · 드라이브)에 보관됩니다.</span></div>
-    <div class="tile"><div class="ic">📥</div><b>쓰던 서류 불러오기</b><span>예전 견적서 · 근로계약서(엑셀 · 워드 · PDF)를 읽어 칸을 채웁니다.<br>쓰던 PDF 양식을 그대로 쓸 수도 있습니다.</span></div>
-    <div class="tile"><div class="ic">📍</div><b>주소 검색</b><span>[주소 검색]으로 도로명 주소를 찾고,<br>동 · 호수 같은 상세 주소만 이어서 씁니다.</span></div>
-    <div class="tile"><div class="ic">🎨</div><b>우리 회사 서류처럼</b><span>로고 · 직인 · 대표 사인 · 회사 색을 한 번만 넣으면 모든 서류에 들어갑니다.<br>PDF 저장 · 인쇄 · 앱 설치(자동 업데이트)도 됩니다.</span></div>
+  <div class="fx">
+    <div class="fx-head">
+      <div class="fx-ey">Features <span>02 / 02</span></div>
+      <h2 class="fx-h">저장과 관리는,<br>알아서 정돈됩니다.</h2>
+      <p class="fx-lead">모든 서류는 우리 회사 구글 계정에 보관되고,<br>팀원과 같은 목록을 함께 씁니다.</p>
+    </div>
+    <ol class="fx-grid">
+      <li><span class="n">07</span><b>자동 저장 · 임시저장</b><p>작성하는 동안 문서 목록에 자동 저장됩니다.<br>발급 전 증명서는 확인 후 7일간 임시 보관합니다.</p></li>
+      <li><span class="n">08</span><b>문서 목록</b><p>날짜 · 서류 종류 · 진행 상태로 정리해 봅니다.<br>검색과 복제로 다음 서류를 빠르게 만듭니다.</p></li>
+      <li><span class="n">09</span><b>팀 공유</b><p>초대 링크 하나로 팀원이 함께 사용합니다.<br>데이터는 우리 회사 시트와 드라이브에 남습니다.</p></li>
+      <li><span class="n">10</span><b>기존 서류 불러오기</b><p>엑셀 · 워드 · PDF 서류를 읽어 내용을 채웁니다.<br>쓰던 PDF 양식도 그대로 사용할 수 있습니다.</p></li>
+      <li><span class="n">11</span><b>주소 검색</b><p>도로명 주소를 검색해 넣고,<br>상세 주소만 이어서 적습니다.</p></li>
+      <li><span class="n">12</span><b>우리 회사의 서류로</b><p>로고 · 직인 · 대표 서명 · 브랜드 색을<br>모든 서류에 한 번에 적용합니다.</p></li>
+    </ol>
+    <div class="fx-foot">
+      <span>비용 0원 · 구글 계정 하나 · 설치는 처음 한 번</span>
+      <button class="btn fx-cta" type="button" data-go="ready">설치 시작하기 <i aria-hidden="true">→</i></button>
+    </div>
   </div>
-  <div class="note" style="margin-top:16px">비용은 0원입니다.<br>필요한 건 구글 계정 하나뿐이고, 설치는 처음 한 번만 하면 됩니다.</div>
-  <div style="margin-top:16px"><button class="btn bigbtn" type="button" data-go="ready">설치 시작하기 →</button></div>
 </section>
 
 <section class="slide" id="ready" data-chap="설치 준비">
