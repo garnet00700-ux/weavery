@@ -1372,7 +1372,7 @@ $("#editor").addEventListener("click",e=>{
       const t=clone(p); t.deliver=""; t.items.forEach(it=>{ it.amount=null; it.disc=false; });
       const j=profile.templates.findIndex(x=>x.pid===p.pid);
       if(j>=0) profile.templates[j]=t; else profile.templates.push(t);
-      saveProfile(); $("#saved").textContent=`'${p.name}' 기본값을 저장했습니다`; return;
+      saveProfile(); renderProds(); $("#saved").textContent=`'${p.name}' 기본값을 저장했습니다`; return;
     }
     if(a==="reset"){
       const t=profile.templates.find(x=>x.pid===p.pid);
@@ -3742,24 +3742,35 @@ SAMPLES.stmt=()=>{
    지우면 '상품 목록(팀 공유 기본값)'에서만 빠집니다. 문서마다 자기 양식을 통째로 갖고 있어서
    이미 만든 문서 · 서명 받은 문서는 [문서 목록]에서 언제든 다시 열고 저장할 수 있습니다.
    원본 모양 양식의 그림(profile.forms)도 예전 문서가 쓸 수 있게 지우지 않습니다. */
+// 목록에서 지운 양식은 상품 선택에 보이지 않는다.
+// 단, 예전 문서를 다시 열었을 때 그 문서가 쓰고 있는(체크된) 양식은 내용을 고칠 수 있게 표시만 한다 (지우기 버튼 없음).
+// 다시 목록에 넣으려면 그 양식 카드의 [기본값으로 저장]을 누르면 된다.
 function prodPickHtml(){
   return P().map((p,i)=>{ const gone=!inTemplates(p);
-    return `<label class="${gone?"gone":""}"><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}><span class="pp-n">${esc(p.name||"(이름 없음)")}${gone?`<small>목록에서 지움</small>`:""}</span>`+
-      `<button type="button" class="pp-x" data-${gone?"prest":"pdel"}="${i}" title="${gone?"상품 목록에 다시 넣기":"상품 목록에서 지우기"}" aria-label="${esc(p.name)} ${gone?"다시 넣기":"지우기"}">${gone?"↺":"✕"}</button></label>`; }).join("");
+    if(gone&&!p.on) return "";
+    return `<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}><span class="pp-n">${esc(p.name||"(이름 없음)")}</span>`+
+      (gone?"":`<button type="button" class="pp-x" data-pdel="${i}" title="상품 목록에서 지우기" aria-label="${esc(p.name)} 지우기">✕</button>`)+`</label>`; }).join("");
 }
 function prodDelete(pi){
   const p=P()[pi]; if(!p) return;
-  // 지금 문서에서 쓰는(체크된) 양식은 문서 안에 그대로 둔다 — 지우면 작성 중이던 내용이 문서에서 빠져 버림
+  // 지금 문서에서 쓰는(체크된) 양식이면: 작성하던 문서는 그 양식 그대로 문서 목록에 저장하고, 새 문서로 넘어간다
   const keep=!!p.on;
   const msg=[`'${p.name||"이름 없음"}' 양식을 상품 목록에서 지울까요?`,"",
     "다음 새 문서부터 목록에 나오지 않습니다."+(connected()?" (팀 전체)":""),
     "이미 만든 문서와 서명 받은 문서는 [문서 목록]에 그대로 남아,","언제든 다시 열고 저장할 수 있습니다."];
-  if(keep) msg.push("","지금 문서에서 쓰고 있는 양식이라,","작성 중인 내용은 이 문서에 그대로 남습니다.");
+  if(keep) msg.push("","지금 작성하던 문서는 [문서 목록]에 저장하고,","새 문서로 넘어갑니다.");
   if(!confirm(msg.join("\n"))) return;
   profile.templates=profile.templates.filter(x=>!sameTpl(x,p));
   if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
   saveProfile();
-  if(!keep) P().splice(pi,1);
+  if(keep){
+    state._t=1; saveNow();                       // 작성하던 내용을 목록에 확정 저장
+    state=newDocFrom(profile); lastSaved=JSON.stringify(state); lsSet(K.doc,state);
+    renderEditor(); renderPreview();
+    $("#saved").textContent=`'${p.name}' 양식을 목록에서 지웠습니다 — 작성하던 문서는 문서 목록에 저장됐습니다`;
+    return;
+  }
+  P().splice(pi,1);
   renderProds(); esMarkStale(); save(); schedule();
   $("#saved").textContent=`'${p.name}' 양식을 목록에서 지웠습니다 — 예전 문서는 문서 목록에 그대로 있습니다`;
 }
