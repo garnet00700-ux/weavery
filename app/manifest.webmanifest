@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "계약·서류 작성기",
+  "short_name": "계약·서류",
+  "description": "견적서 · 계약서 · 근로계약서 · 증명서 작성과 카카오톡 전자서명",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f2ee",
+  "theme_color": "#17320B",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

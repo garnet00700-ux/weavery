@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "name": "weavery LAB 견적서 작성기",
+  "short_name": "weavery 견적서",
+  "description": "weavery lab 견적서 · 계약서 작성",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f2ee",
+  "theme_color": "#17320B",
+  "lang": "ko",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
