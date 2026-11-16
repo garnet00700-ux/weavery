@@ -326,6 +326,10 @@ textarea{resize:vertical;line-height:1.5}
 .pp-x{margin-left:auto;border:0;background:none;color:var(--ui-sub);font-size:13px;line-height:1;padding:5px 7px;border-radius:6px;cursor:pointer;flex:none}
 .pp-x:hover{background:#fdecea;color:#b3261e}
 .prods label.gone .pp-x:hover{background:#e8f5e9;color:#2f7d32}
+/* 문서 목록: 증명서 '발급' 표시 · 삭제 버튼 글자로 */
+.lst.issued{color:#2c5a8c;border-color:#b9cde3;background:#eef4fb;cursor:default}
+.ib.ldel{width:auto;padding:0 9px;font-size:12px;font-weight:700}
+#lFootNote{white-space:pre-line}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -1065,7 +1069,7 @@ function totalsFor(d,p){ const keep=state; state=d; try{ return totals(p); } fin
 let lastSaved="";
 function saveToList(){
   const list=loadList(), i=list.findIndex(x=>x.id===state.docId);
-  if(i<0&&!state.client.name.trim()&&!state.client.ceo.trim()) return;     // 빈 견적서는 목록에 넣지 않음
+  if(i<0&&!state._t&&!state.client.name.trim()&&!state.client.ceo.trim()) return;     // 아직 아무것도 안 쓴 새 문서는 목록에 넣지 않음 (작성을 시작하면 _t)
   const snap=JSON.stringify(state);
   if(i>=0&&snap===lastSaved) return;
   lastSaved=snap;
@@ -1743,7 +1747,10 @@ $("#impOk").onclick=()=>{
 /* ===== 문서 목록 ===== */
 const fmtTime=t=>{const d=new Date(t);return `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`};
 let listFilter="all", statusFilter="all";
-const stOf=x=>x.status==="완료"?"완료":"대기";
+// 대기 · 완료: 전자서명이 끝나면 자동으로 '완료'. 종이로 서명받은 건 목록에서 눌러 직접 바꿈.
+// 증명서(재직 · 경력 · 퇴직)는 서명을 받는 문서가 아니라 대기 · 완료 없이 '발급'으로만 저장.
+const stOf=x=>entryIsCert(x)?"발급":x.status==="완료"?"완료":"대기";
+function entryIsCert(x){ return !!(x&&x.data&&isCert(x.data)); }
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 function dateRange(f){
   const t=new Date(); t.setHours(0,0,0,0);
@@ -1777,23 +1784,24 @@ function renderList(){
   $("#lCount").textContent=`전체 ${all.length}건`;
   const sum=list.reduce((s,x)=>s+(x.total||0),0);
   $("#lSum").innerHTML=`${rng?`${fmtDate(rng[0])}${rng[0]!==rng[1]?" ~ "+fmtDate(rng[1]):""} · `:""}<b>${list.length}건</b>${sum?` · 합계 <b>₩ ${won(sum)}</b>`:""}`;
-  $("#lFootNote").textContent=connected()?"견적서는 입력하는 대로 자동 저장되고 팀원과 함께 보입니다. 서버(구글 시트)에도 보관됩니다.":"서버 미연결: 이 컴퓨터 · 이 브라우저에만 저장됩니다. [회사 설정 → 서버 연결]을 하면 팀이 함께 씁니다.";
+  $("#lFootNote").textContent=connected()?"문서는 작성을 시작하면 자동 저장되고 팀원과 함께 보입니다.\n서버(구글 시트)에도 보관됩니다.":"서버 미연결: 이 컴퓨터 · 이 브라우저에만 저장됩니다.\n[회사 설정 → 서버 연결]을 하면 팀이 함께 씁니다.";
   $("#lBody").innerHTML=list.length?list.map(x=>{
-    const es=x.data&&x.data.esign;
+    const es=x.data&&x.data.esign, k=x.data?docKind(x.data):"quote", dl={cert:"발급일",labor:"작성일"}[k]||(x.data&&onProdsOf(x.data).length&&onProdsOf(x.data).every(p=>docWords(p))?"거래일":"견적일");
     return `<div class="lrow${x.id===state.docId?" cur":""}" data-id="${esc(x.id)}" title="눌러서 불러오기">
       <div class="lmain">
-        <div class="lname">${esc(x.name||"(업체명 없음)")}${x.ceo?` <span style="font-weight:400;color:#333">· ${esc(x.ceo)}</span>`:""}</div>
+        <div class="lname">${esc(x.name||"(이름 미입력)")}${x.ceo&&x.ceo!==x.name?` <span style="font-weight:400;color:#333">· ${esc(x.ceo)}</span>`:""}</div>
         <div class="lsub">${x.id===state.docId?`<span class="tag now">작성 중</span>`:""}${(x.prods||[]).map(n=>`<span class="tag">${esc(n)}</span>`).join("")}${es?(es.status==="signed"?`<span class="tag es ok">서명 완료</span>`:`<span class="tag es">서명 요청됨${es.viewedAt?" · 열람":""}</span>`):""}
-          견적일 ${esc(fmtDate(x.quoteDate))||"-"}${dirty.has(x.id)&&connected()?` · <span class="by">올리는 중</span>`:""}</div>
+          ${dl} ${esc(fmtDate(x.quoteDate))||"-"}${dirty.has(x.id)&&connected()?` · <span class="by">올리는 중</span>`:""}</div>
       </div>
-      <button type="button" class="lst ${stOf(x)==="완료"?"done":"wait"}" data-lact="status" title="눌러서 ${stOf(x)==="완료"?"대기":"완료"}로 바꾸기">${stOf(x)}</button>
-      <div class="lamt"><b>${x.total?"₩ "+won(x.total):"금액 미입력"}</b>수정 ${fmtTime(x.updated)}${x.by?` · ${esc(x.by)}`:""}</div>
+      ${stOf(x)==="발급"?`<span class="lst issued" title="증명서는 대기 · 완료 없이 저장만 됩니다">발급</span>`
+        :`<button type="button" class="lst ${stOf(x)==="완료"?"done":"wait"}" data-lact="status" title="${es&&es.status==="signed"?"전자서명이 끝나 자동으로 완료됐습니다":`전자서명이 끝나면 자동으로 완료됩니다.\n종이로 서명받았으면 눌러서 ${stOf(x)==="완료"?"대기":"완료"}로 바꾸세요`}">${stOf(x)}</button>`}
+      <div class="lamt"><b>${k!=="quote"?"":x.total?"₩ "+won(x.total):"금액 미입력"}</b>수정 ${fmtTime(x.updated)}${x.by?` · ${esc(x.by)}`:""}</div>
       <div class="lact">
         <button class="ib" type="button" data-lact="dup" title="복제해서 새 문서로">⧉</button>
-        <button class="ib del" type="button" data-lact="del" title="목록에서 삭제">✕</button>
+        <button class="ib del ldel" type="button" data-lact="del" title="목록에서 삭제">삭제</button>
       </div>
     </div>`;}).join("")
-    :`<div class="lempty">${all.length?(rng?"이 기간에 견적일이 있는 견적서가 없습니다.":"검색 결과가 없습니다."):"아직 저장된 견적서가 없습니다.<br>업체명이나 대표자를 입력하면 자동으로 이 목록에 저장됩니다."}</div>`;
+    :`<div class="lempty">${all.length?(rng?"이 기간에 견적일이 있는 견적서가 없습니다.":"검색 결과가 없습니다."):"아직 저장된 문서가 없습니다.<br>작성을 시작하면 자동으로 이 목록에 저장됩니다."}</div>`;
 }
 function openDoc(data){ saveNow(); state=normDoc(clone(data)); lastSaved=JSON.stringify(state); lsSet(K.doc,state); renderEditor(); renderPreview(); }
 async function openList(){
@@ -1827,7 +1835,8 @@ $("#lBody").addEventListener("click",e=>{
     dirty.add(x.id); storeQ(); pushSoon(); renderList(); return;
   }
   if(act==="del"){
-    if(!confirm(`'${x.name||"(업체명 없음)"}' 견적서를 목록에서 삭제할까요?${connected()?"\n팀원 목록에서도 함께 사라집니다.":""}\n삭제하면 되돌릴 수 없습니다.`)) return;
+    const signed=x.data&&x.data.esign&&x.data.esign.status==="signed";
+    if(!confirm(`'${x.name||"(이름 미입력)"}' 문서를 목록에서 삭제할까요?${connected()?"\n팀원 목록에서도 함께 사라집니다.":""}${signed?"\n\n서명 완료된 문서입니다.\n양측 서명이 들어간 최종 PDF는 구글 드라이브에 그대로 남습니다.":""}\n\n삭제하면 되돌릴 수 없습니다.`)) return;
     storeList(list.filter(v=>v.id!==x.id)); dirty.delete(x.id); delQ.add(x.id); storeQ(); pushSoon();
     if(x.id===state.docId){ state.docId=newId(); lsSet(K.doc,state); }
     renderList(); return;
@@ -3770,10 +3779,19 @@ $("#prodPick").addEventListener("click",e=>{
 // 아무것도 안 쓴 새 문서인지 (의뢰자 · 서명 요청 없음, 문서 목록에 아직 없음)
 function docUntouched(){
   const c=state.client||{};
-  return !c.name&&!c.ceo&&!c.phone&&!c.email&&!state.esign&&!state.clientSign&&!loadList().some(x=>x.id===state.docId);
+  return !state._t&&!c.name&&!c.ceo&&!c.phone&&!c.email&&!state.esign&&!state.clientSign&&!loadList().some(x=>x.id===state.docId);
 }
 function sameTpl(t,p){ return t.pid===p.pid||((t.name||"").trim()&&(t.name||"").trim()===(p.name||"").trim()&&(t.kind||"")===(p.kind||"")); }
 function inTemplates(p){ return profile.templates.some(t=>sameTpl(t,p)); }
+
+/* --- 작성을 시작하면 바로 자동 저장 ---
+   편집 칸에 입력하거나 고르기 · 버튼을 누르거나, 불러오기 창에서 넣으면 '작성 시작'(state._t)으로 보고
+   이름을 아직 안 넣었어도 문서 목록에 자동 저장합니다. */
+function markTouched(){ if(!state._t){ state._t=1; save(); } }
+["input","change"].forEach(t=>$("#editor").addEventListener(t,e=>{ if(!e.target.closest("#prodPick .pp-x")) markTouched(); },true));
+$("#editor").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&!b.closest("#prodPick")&&!b.dataset.pact) markTouched(); },true);
+["#qiOk","#impOk","#fmOkA","#fmOkB","#sampleSel"].forEach(s=>{ const el=$(s); if(el) el.addEventListener(s==="#sampleSel"?"change":"click",()=>setTimeout(markTouched,0),true); });
+function onProdsOf(d){ return (d.prods||[]).filter(p=>p.on); }
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다. */
