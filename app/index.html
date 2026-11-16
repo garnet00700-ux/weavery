@@ -777,7 +777,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <div class="mbox" role="dialog" aria-label="문서 목록">
     <div class="mhead">
       <b>문서 목록</b><span class="mcount" id="lCount"></span>
-      <input id="lq" type="search" placeholder="업체명 · 대표자 · 연락처 검색">
+      <input id="lq" type="search" placeholder="업체명 · 대표자 · 연락처 · 서류 이름 검색">
       <button class="btn" id="lClose" type="button">닫기</button>
     </div>
     <div class="lfilter" id="lFilter">
@@ -797,6 +797,8 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       <button type="button" data-s="all" class="on">전체</button>
       <button type="button" data-s="대기">대기</button>
       <button type="button" data-s="완료">완료</button>
+      <span class="lfl" style="margin-left:12px">서류 종류</span>
+      <label class="lmonth" id="lKindL"><select id="lKind" aria-label="서류 종류"><option value="all">전체</option></select></label>
     </div>
     <div class="mbody" id="lBody"></div>
     <div class="mfoot">
@@ -1819,12 +1821,38 @@ function fillYears(all){
   sel.innerHTML=ys.map(y=>`<option value="${y}">${y}년</option>`).join("");
   sel.value=ys.includes(cur)?cur:ys[0];
 }
+// 서류 종류 (문서 목록 드롭박스 · 검색에 씀)
+const KIND_ORDER=["견적서 · 계약서","견적서","계약서","거래명세서","청구서","영수증","근로계약서","재직증명서","경력증명서","퇴직증명서","원본 양식 문서"];
+function typeOf(d){
+  if(!d) return "기타";
+  const ps=onProdsOf(d); if(!ps.length) return "양식 미선택";
+  if(isCert(d)){ const p=ps.find(p=>p.kind==="cert")||{}; return certTypes()[(p.cert||{}).type]||"증명서"; }
+  if(isLabor(d)) return "근로계약서";
+  const p=ps[0];
+  if(p.kind==="form") return "원본 양식 문서";
+  const ds=docsOf(p);
+  if(ds==="contract") return "계약서";
+  if(docWords(p)){ const t=quoteTitleOf(p).replace(/\s+/g,""), m=t.match(/(거래명세서|명세서|명세표|계산서|내역서|청구서|영수증|발주서|주문서)$/); return m?(m[1]==="명세서"?"거래명세서":m[1]):t; }
+  return ds==="both"?"견적서 · 계약서":"견적서";
+}
+let kindFilter="all";
+function fillKinds(list){
+  const sel=$("#lKind"), n={};
+  list.forEach(x=>{ const k=typeOf(x.data); n[k]=(n[k]||0)+1; });
+  const ks=Object.keys(n).sort((a,b)=>{ const i=KIND_ORDER.indexOf(a), j=KIND_ORDER.indexOf(b); return (i<0?99:i)-(j<0?99:j)||a.localeCompare(b); });
+  if(kindFilter!=="all"&&!ks.includes(kindFilter)) ks.push(kindFilter);
+  sel.innerHTML=`<option value="all">전체 ${list.length}</option>`+ks.map(k=>`<option value="${esc(k)}">${esc(k)} ${n[k]||0}</option>`).join("");
+  sel.value=kindFilter;
+  $("#lKindL").classList.toggle("on",kindFilter!=="all");
+}
 function renderList(){
   purgeDrafts();
   const q=$("#lq").value.trim().toLowerCase(), all=loadList();
   fillYears(all);
   const rng=dateRange(listFilter);
-  let list=all.filter(x=>(!q||[x.name,x.ceo,x.phone].join(" ").toLowerCase().includes(q))&&(!rng||(x.quoteDate&&x.quoteDate>=rng[0]&&x.quoteDate<=rng[1])));
+  let list=all.filter(x=>(!q||[x.name,x.ceo,x.phone,typeOf(x.data),...(x.prods||[])].join(" ").toLowerCase().includes(q))&&(!rng||(x.quoteDate&&x.quoteDate>=rng[0]&&x.quoteDate<=rng[1])));
+  fillKinds(list);
+  if(kindFilter!=="all") list=list.filter(x=>typeOf(x.data)===kindFilter);
   const byStat={대기:list.filter(x=>stOf(x)==="대기").length,완료:list.filter(x=>stOf(x)==="완료").length};
   $$("#lStat [data-s]").forEach(b=>{b.classList.toggle("on",b.dataset.s===statusFilter);b.textContent=b.dataset.s==="all"?`전체 ${list.length}`:`${b.dataset.s} ${byStat[b.dataset.s]}`});
   if(statusFilter!=="all") list=list.filter(x=>stOf(x)===statusFilter);
@@ -1873,6 +1901,7 @@ $("#lFilter").addEventListener("click",e=>{
 });
 $("#lStat").addEventListener("click",e=>{ const b=e.target.closest("[data-s]"); if(!b) return; statusFilter=b.dataset.s; renderList(); });
 $("#lYear").addEventListener("change",()=>{ listFilter="year"; renderList(); });
+$("#lKind").addEventListener("change",()=>{ kindFilter=$("#lKind").value; renderList(); });
 $("#lMonth").addEventListener("change",()=>{ listFilter=$("#lMonth").value?"month":"all"; renderList(); });
 $("#lBody").addEventListener("click",e=>{
   const row=e.target.closest(".lrow"); if(!row) return;
