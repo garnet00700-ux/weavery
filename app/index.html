@@ -263,6 +263,58 @@ textarea{resize:vertical;line-height:1.5}
 .sample-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:12px;color:var(--ui-sub)}
 .sample-row .btn{padding:5px 10px;font-size:12px}
 .sample-row select{flex:1;min-width:180px;padding:7px 8px;border:1px solid var(--ui-border);border-radius:7px;font:inherit;font-size:13px;background:#fff;color:var(--ui-text)}
+/* 쓰던 양식 불러오기 (자동 인식) */
+.fm-entry{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:8px;padding:10px;font-weight:700;border:1.5px dashed var(--green);background:#f6f9f3;color:var(--green)}
+.fm-entry span{font-size:11px;font-weight:700;background:var(--green);color:#fff;border-radius:99px;padding:2px 8px}
+.fmbox{width:min(1100px,100%);max-height:92vh}
+.fmbox .mbody{padding:14px 16px;overflow:auto}
+.fm-opts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fm-opt{border:1px solid var(--ui-border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.fm-opt.off{opacity:.65}
+.fm-opt.off .btn.go{display:none}
+.fm-oh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between}
+.fm-oh b{color:var(--green);font-size:15px}
+.fm-oh label{font-size:12px;color:var(--ui-sub);display:flex;align-items:center;gap:6px}
+.fm-oh select{padding:5px 6px;border:1px solid var(--ui-border);border-radius:6px;font:inherit;font-size:12.5px}
+.fm-opt .hint{margin:0}
+.fm-info{font-size:12.5px;font-weight:700;color:var(--ui-text);min-height:16px}
+.fm-prev{height:min(56vh,560px);overflow:auto;background:#e6e9e3;border-radius:8px;padding:8px}
+.fm-z .page{margin:0 auto 14px;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.fm-msg{background:#fff;border-radius:8px;padding:16px;font-size:13px;line-height:1.6;color:var(--ui-sub)}
+.fm-msg.warn{color:#8a5a00;background:#fff7e0;margin-bottom:8px;padding:8px 12px}
+.fm-opt .btn.go{align-self:stretch;padding:10px;font-weight:700}
+@media (max-width:760px){ .fm-opts{grid-template-columns:1fr} .fm-prev{height:46vh} }
+/* 원본 양식 편집 카드 */
+.fm-tools{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--ui-sub);margin-bottom:8px}
+.fm-tools .btn{padding:5px 10px;font-size:12px}
+.fm-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.fm-thumb{position:relative;border:1px solid var(--ui-border);border-radius:6px;overflow:hidden;background:#fff}
+.fm-thumb.adding{outline:2px solid var(--green);cursor:crosshair}
+.fm-tn{position:absolute;right:4px;bottom:4px;font-size:11px;background:rgba(0,0,0,.55);color:#fff;border-radius:4px;padding:1px 6px}
+.fm-box.ed{position:relative;width:100%;container-type:inline-size;touch-action:none;user-select:none}
+.fm-box.ed .fm-bg{position:static;width:100%;height:auto;display:block}
+.fm-box.ed [data-mid]{cursor:move;outline:1.5px dashed #2f7d32;background:rgba(232,245,233,.55)}
+.fm-box.ed .fm-t.ph{color:#2f7d32;font-weight:600}
+.fm-box.ed .fm-s{font-size:2.2cqw;color:#2f7d32;text-align:center;line-height:1.1}
+.fm-box.ed .fm-s.co{outline-color:#b3261e;color:#b3261e;background:rgba(253,236,234,.5)}
+.fm-box.ed .sel{outline:2.5px solid #1565c0!important;z-index:3}
+.fm-box.ed .fm-no{position:absolute;left:-1px;top:-1px;transform:translate(-60%,-60%);font:700 9px/14px sans-serif;font-style:normal;min-width:14px;height:14px;border-radius:7px;background:#2f7d32;color:#fff;text-align:center;padding:0 2px}
+.fm-box.ed .co .fm-no{background:#b3261e}
+.fm-rows{display:flex;flex-direction:column;gap:6px}
+.fm-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px;border:1px solid var(--ui-border);border-radius:8px;font-size:12.5px}
+.fm-row.sel{border-color:#1565c0;background:#f1f6fd}
+.fm-row>.fm-no{min-width:20px;height:20px;border-radius:10px;background:#2f7d32;color:#fff;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center}
+.fm-row .fm-pg{font-size:11px;color:var(--ui-sub)}
+.fm-row select,.fm-row input:not([type=checkbox]){padding:5px 6px;border:1px solid var(--ui-border);border-radius:6px;font:inherit;font-size:12.5px;min-width:0}
+.fm-row input[data-p$=".v"]{flex:1;min-width:140px}
+.fm-row .fm-sz{display:flex;align-items:center;gap:3px;font-size:11.5px;color:var(--ui-sub)}
+.fm-row .fm-sz input{width:52px}
+.fm-row .chk{font-size:11.5px;margin:0}
+.fm-row .btn{padding:3px 8px}
+.fm-box.pv [data-pv]{outline:2px dashed #2f7d32;background:rgba(232,245,233,.6)}
+.fm-box.pv .fm-t.ph{color:#2f7d32;font-weight:700}
+.fm-box.pv .fm-s{color:#2f7d32;font-size:9pt;text-align:center;line-height:1.2;font-weight:700}
+.fm-box.pv .fm-s.co{outline-color:#b3261e;color:#b3261e;background:rgba(253,236,234,.55)}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -369,6 +421,16 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 .recv .seal{position:relative;display:inline-block}
 .recv .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;object-fit:contain;transform:translate(-50%,-55%)}
 .totals .vin{font-size:.82em;font-weight:500;margin-left:1.5mm}
+/* 원본 모양 양식 (B 방식): 올린 양식 그림 위에 글자 · 서명 · 직인만 얹음. html2canvas로 PDF를 만들기 때문에 mm · % 단위만 씀 */
+.page.fm-page{padding:0;display:flex;align-items:center;justify-content:center}
+.fm-box{position:relative;overflow:hidden;background:#fff}
+.fm-box .fm-bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+.fm-box .fm-t{position:absolute;white-space:nowrap;color:#111;font-weight:500;padding:0 .3mm;font-family:inherit}
+.fm-box .fm-t.o{background:#fff}
+.fm-box .fm-s{position:absolute;display:flex;align-items:center;justify-content:center}
+.fm-box .fm-s img{max-width:100%;max-height:100%;display:block}
+.fm-box .fm-s.co img{opacity:.92}
+.fm-miss{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#999;font-size:11pt;line-height:1.7;background:#f7f7f7}
 </style>
 <style>
 
@@ -488,6 +550,36 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       <label class="chk"><input type="checkbox" id="qiReplace" checked>기존 품목을 지우고 바꾸기</label>
       <span style="flex:1"></span>
       <button class="btn go" id="qiOk" type="button">불러오기</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="fmModal" hidden>
+  <div class="mbox fmbox" role="dialog" aria-label="쓰던 양식 불러오기">
+    <div class="mhead"><b>쓰던 양식 불러오기</b><span style="flex:1"></span><button class="btn" id="fmCancel" type="button">닫기</button></div>
+    <div class="mbody">
+      <p class="hint" style="margin:0 0 8px">쓰던 양식 파일을 올리면 <b>어떤 서류인지</b>, <b>칸과 내용</b>, <b>서명 · 도장 자리</b>를 찾아 두 가지 방식으로 보여 드립니다. 미리보기를 보고 마음에 드는 쪽을 고르세요.</p>
+      <div class="padbtns" style="margin:0 0 8px">
+        <button class="btn go" type="button" id="fmFileBtn">양식 파일 올리기</button>
+        <input type="file" id="fmFile" accept=".pdf,.hwp,.hwpx,.docx,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg,.webp" hidden>
+        <span class="hint" id="fmFileR" style="margin:0;align-self:center"></span>
+      </div>
+      <div class="fm-opts" id="fmOpts" hidden>
+        <section class="fm-opt" id="fmA">
+          <div class="fm-oh"><b>A. 우리 양식에 채우기</b><label>서류 종류 <select id="fmKind"></select></label></div>
+          <p class="hint">읽은 내용을 이 작성기의 깔끔한 양식으로 옮깁니다. 칸을 고치기 쉽고 금액 계산 · 전자서명 · 직인이 자동으로 들어갑니다.</p>
+          <div class="fm-info" id="fmInfoA"></div>
+          <div class="fm-prev" id="fmPrevA"></div>
+          <button class="btn go" id="fmOkA" type="button">A 방식으로 넣기</button>
+        </section>
+        <section class="fm-opt" id="fmB">
+          <div class="fm-oh"><b>B. 원본 모양 그대로</b></div>
+          <p class="hint">올린 양식을 그대로 바탕에 깔고, 찾은 빈칸에 내용 · 서명 · 직인만 얹습니다. 칸은 넣은 뒤에 끌어서 옮기거나 더할 수 있습니다.</p>
+          <div class="fm-info" id="fmInfoB"></div>
+          <div class="fm-prev" id="fmPrevB"></div>
+          <button class="btn go" id="fmOkB" type="button">B 방식으로 넣기</button>
+        </section>
+      </div>
     </div>
   </div>
 </div>
@@ -706,6 +798,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
             </optgroup>
           </select>
         </label>
+        <button class="btn fm-entry" type="button" id="bFormImp" title="쓰던 양식 파일(PDF · 한글 · 워드 · 엑셀 · 사진)을 올리면 서류 종류 · 칸 · 서명 자리를 찾아 줍니다">📄 쓰던 양식 불러오기 <span>자동 인식</span></button>
         <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
           근로계약서 · 증명서는 견적서 없이 그 문서만 만들어지며, 한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
       </div>
@@ -1136,6 +1229,7 @@ function termsHtml(pi){
 function prodCardHtml(p,pi){
   if(p.kind==="labor") return laborCardHtml(p,pi);
   if(p.kind==="cert") return certCardHtml(p,pi);
+  if(p.kind==="form") return formCardHtml(p,pi);
   statementNotices(p);
   const k=`p${p.pid}`, d=docsOf(p), qn=quoteTitleOf(p)||"견적서";
   const kindTxt={both:"견적 · 계약",quote:"계약서 없음",contract:"계약서만"}[d];
@@ -2127,6 +2221,7 @@ function flow(kind,blocks){
 function renderPreview(){
   $("#pages").innerHTML="";
   onProds().forEach(p=>{
+    if(p.kind==="form") return fmRender(p);
     const d=special(p)?"contract":docsOf(p);
     if(d!=="contract") flow("quote",quoteBlocks(p));
     if(d!=="quote") flow("contract",contractBlocks(p));
@@ -2994,13 +3089,13 @@ async function hwpText(f){
    근로계약서 · 견적 상품과 함께 고를 수 없습니다.
    ※ 이 파일의 함수는 앞 파일에서 먼저 불릴 수 있어 파일 맨 위 const를 쓰지 않습니다. */
 function isCert(d){ return ((d||state).prods||[]).some(p=>p.on&&p.kind==="cert"); }
-function special(p){ return p.kind==="labor"||p.kind==="cert"; }
+function special(p){ return p.kind==="labor"||p.kind==="cert"||p.kind==="form"; }
 function docKind(d){ return isCert(d)?"cert":isLabor(d)?"labor":"quote"; }
 // 상품을 켰을 때: 근로계약서 · 증명서는 혼자, 견적 상품끼리는 여러 개
 function exclusiveOn(i){
   const sp=special(P()[i]);
   P().forEach((q,j)=>{ if(j!==i&&(sp||special(q))) q.on=false; });
-  if(sp) state.client.ceo=state.client.name||"";
+  if(sp&&P()[i].kind!=="form") state.client.ceo=state.client.name||"";
 }
 function certTypes(){ return {employ:"재직증명서",career:"경력증명서",retire:"퇴직증명서"}; }
 function certStatements(){ return {
@@ -3128,6 +3223,487 @@ function certSample(type){
 SAMPLES["cert-employ"]=()=>certSample("employ");
 SAMPLES["cert-career"]=()=>certSample("career");
 SAMPLES["cert-retire"]=()=>certSample("retire");
+
+/* ===== 기존 양식 불러오기 (자동 인식) =====
+   쓰던 양식 파일을 올리면 ① 어떤 서류인지(견적서 · 거래명세서 · 계약서 · 근로계약서 · 증명서) ② 칸과 내용 ③ 서명 · 도장 자리를 찾아
+   두 가지 방식으로 미리 보여 주고 고르게 합니다.
+   A. 우리 양식에 채우기 — 읽은 내용을 이 작성기의 양식(품목 · 조항 · 근로 조건 · 증명서 칸)에 옮김
+   B. 원본 모양 그대로   — PDF 페이지를 그림으로 깔고, 찾은 빈칸 · 서명 자리 위에 내용 · 사인 · 직인만 얹음 (상품 종류 kind:"form")
+   B의 페이지 그림은 문서마다 복사하지 않고 회사 설정(profile.forms)에 한 번만 저장합니다. 문서에는 그림 이름(key)과 칸 위치만.
+   ※ 이 파일의 함수는 앞 파일에서 먼저 불릴 수 있어 파일 맨 위 const를 쓰지 않습니다. */
+
+function fmKinds(){ return {quote:"견적서", stmt:"거래명세서 · 청구서 등", contract:"계약서", labor:"근로계약서",
+  "cert-employ":"재직증명서", "cert-career":"경력증명서", "cert-retire":"퇴직증명서"}; }
+
+/* --- 1. 어떤 서류인지 --- */
+function fmDetect(text){
+  const lines=String(text).split("\n").map(s=>s.replace(/\s+/g,"")).filter(Boolean);
+  const rules=[[/재직증명서/,"cert-employ"],[/경력증명서/,"cert-career"],[/퇴직증명서/,"cert-retire"],
+    [/근로계약서|고용계약서/,"labor"],
+    [/명세(서|표)|청구서|계산서|영수증|내역서|발주서|주문서|인수증|납품서/,"stmt"],
+    [/견적서/,"quote"],
+    [/계약서|약정서|합의서|협약서/,"contract"]];
+  const hit=s=>{ const r=rules.find(([re])=>re.test(s)); return r&&r[1]; };
+  return hit(lines.slice(0,10).join("\n"))||hit(lines.join("\n"))||(/제\d+조/.test(lines.join(""))?"contract":"quote");
+}
+// 문서 제목: 맨 위쪽에서 '…서 / …표 / …증'으로 끝나는 짧은 줄
+function fmTitle(text,kind){
+  for(const raw of String(text).split("\n").slice(0,14)){
+    const n=raw.replace(/\s+/g,"").replace(/^[\[【(]+|[\]】)]+$/g,"");
+    if(n.length>=3&&n.length<=22&&/(서|표|증)(\(.{1,14}\))?$/.test(n)&&!/[:：]/.test(n))
+      return /^([가-힣]\s+)+[가-힣]$/.test(raw.trim())?n:raw.trim().replace(/\s{2,}|\t/g," ");   // "재 직 증 명 서" → 붙여 씀, "홈페이지 제작 견적서"는 그대로
+  }
+  return {quote:"견적서",stmt:"거래명세서",contract:"계약서",labor:"근로계약서"}[kind]||fmKinds()[kind]||"양식";
+}
+
+/* --- 2. 증명서 칸 읽기 ("성명 : 홍길동", 표 칸 "성명⇥홍길동") --- */
+function parseCert(text){
+  const L=[["name",/^(성명|이름|성함)$/],["birth",/^(생년월일)$/],["addr",/^(주소|현주소|주소지)$/],
+    ["phone",/^(연락처|전화번호|휴대폰|휴대전화)$/],["dept",/^(부서|소속|근무부서|소속부서)$/],["pos",/^(직위|직급|직책)$/],
+    ["start",/^(입사일|입사일자|입사년월일)$/],["end",/^(퇴사일|퇴직일|퇴사일자|퇴직일자)$/],["period",/^(재직기간|근무기간|경력기간)$/],
+    ["job",/^(담당업무|업무내용|담당직무|직무|주요업무)$/],["reason",/^(퇴직사유|퇴사사유)$/],["purpose",/^(용도|제출용도|제출처|사용용도)$/],
+    ["no",/^(발급번호|문서번호|증명서번호)$/]];
+  const lab=s=>{ const n=String(s).replace(/[\s:：·]/g,""); const r=L.find(([,re])=>re.test(n)); return r&&r[0]; };
+  const v={};
+  const put=(k,x)=>{ x=String(x||"").trim(); if(x&&!v[k]&&!lab(x)) v[k]=x; };
+  String(text).replace(/\r/g,"").split("\n").forEach(line=>{
+    const t=line.split(/\t|\s{2,}|[:：]/).map(s=>s.trim()).filter(Boolean);
+    for(let i=0;i<t.length;i++){
+      const k=lab(t[i]);
+      if(k){ if(t[i+1]&&!lab(t[i+1])){ put(k,t[i+1]); i++; } }
+      else { const m=t[i].match(/^(\S+)\s+(.+)$/); if(m&&lab(m[1])) put(lab(m[1]),m[2]); }
+    }
+  });
+  const no=String(text).match(/제\s*([0-9][0-9\-]*)\s*호/); if(no&&!v.no) v.no=no[1];
+  if(v.period){ const [a,b]=v.period.split(/~|∼|부터/); if(a&&!v.start) v.start=a.trim(); if(b&&!/현재|재직/.test(b)&&!v.end) v.end=b.replace(/까지/,"").trim(); }
+  const cert={}; ["no","birth","dept","pos","start","end","job","reason","purpose"].forEach(k=>{ if(v[k]) cert[k]=v[k]; });
+  const client={}; ["name","addr","phone"].forEach(k=>{ if(v[k]) client[k]=v[k]; });
+  return {cert,client};
+}
+
+/* --- 3. A 방식: 우리 양식으로 옮긴 상품 만들기 --- */
+function fmBuildA(text,kind){
+  const title=fmTitle(text,kind), client={}; let p;
+  if(kind.startsWith("cert-")){
+    p=Object.assign(GENERIC_PRODUCT(),certSample(kind.slice(5)));
+    const r=parseCert(text); Object.assign(p.cert,r.cert); Object.assign(client,r.client);
+    if(/증명서$/.test(title)){ p.name=title; p.contractTitle=title; }
+  }else if(kind==="labor"){
+    const n=String(text).replace(/\s+/g,"");
+    const type=/단시간|아르바이트|시간제/.test(n)?"part":/기간의정함이있|기간제|계약종료일|근로계약기간/.test(n)?"fixed":"regular";
+    p=Object.assign(GENERIC_PRODUCT(),laborSample(type));
+    const r=parseLabor(text);
+    if(r.terms.length){ p.terms=r.terms; if(r.intro&&r.intro.length<400) p.intro=r.intro; }
+    if(r.title) p.contractTitle=r.title;
+    p.labor=Object.assign(laborDefaults(r.type||type),r.fields||{},r.type?{type:r.type}:{});
+    ["name","phone","addr"].forEach(k=>{ if(r.client&&r.client[k]) client[k]=r.client[k]; });
+  }else{
+    p=GENERIC_PRODUCT(); p.name=title;
+    // 견적서 뒤에 계약서가 붙은 파일: 두 번째 제목줄(…계약서 · 약관) 또는 '제1조' 앞까지만 견적 부분
+    const lines=String(text).replace(/\r/g,"").split("\n"), nn=l=>l.replace(/\s+/g,"");
+    const j1=lines.findIndex(l=>/^\s*제\s*1\s*조/.test(l));
+    let cut=lines.findIndex((l,i)=>i>2&&nn(l).length<=30&&/(계약서|약관|약정서)$/.test(nn(l)));
+    if(cut<0||(j1>=0&&j1<cut)) cut=j1;
+    const qText=kind==="contract"||cut<0?text:lines.slice(0,cut).join("\n");
+    const q=qiParse(qText), tr=parseTerms(String(text).replace(/\t+/g," "));
+    const junk=/견적일|연락처|등록번호|업체명|대표자|납품일|공급가액|총\s*액|합\s*계|계약금|잔금|업태|업종|상호|전화|이메일/;
+    const items=q.items.filter(x=>x.on!==false&&(x.desc||x.cat)&&!junk.test(`${x.cat} ${x.desc}`))
+      .map(x=>ITEM(x.cat,x.desc,x.sub||"",x.qty||"1식",x.price===""?"":Number(x.price),x.mode));
+    // 금액 없는 빈 양식: 품목 표 머리(구성 · 품목 … 수량) 아래에서 "이름 ⇥ 수량" 줄만 품목으로
+    if(!items.length){
+      const ql=qText.split("\n"), h0=ql.findIndex(l=>/(구성|품목|품명|항목|내역)/.test(l)&&/수량/.test(l));
+      if(h0>=0) for(const l of ql.slice(h0+1)){
+        if(/공급가액|합\s*계|총\s*액|계약금|안내\s*사항|부가세|VAT/.test(l)) break;
+        const c=l.split("\t").map(s=>s.trim()).filter(Boolean); if(c.length<2) continue;
+        const qn=c[c.length-1]; if(!/^(\d+\s*(회|식|개|건|월|부|장|명|시간|일|EA|ea|set|SET)?|월|식|건)$/.test(qn)) continue;
+        items.push(ITEM(c.length>2?c[0]:"",c.length>2?c.slice(1,-1).join(" "):c[0],"",/^\d+$/.test(qn)?qn+"개":qn,"","normal"));
+      }
+    }
+    if(items.length) p.items=items;
+    else p.items=[ITEM(kind==="contract"?"용역":title.replace(/(견적|거래명세|명세)?(서|표)$/,"")||"품목","","","1식","","normal")];
+    // 안내사항: '안내사항 · 유의사항' 아래 "- …" 줄들
+    const qa=qText.split("\n").map(s=>s.trim()).filter(Boolean), hi=qa.findIndex(l=>/안내\s*사항|유의\s*사항|작업\s*안내|참고\s*사항/.test(l));
+    if(hi>=0){ const bul=/^([-•·*※▶▪◦]|\d+[.)]|[①-⑳])\s*/, rest=qa.slice(hi+1), fi=rest.findIndex(l=>bul.test(l));
+      if(fi>=0){ const ns=[]; for(const l of rest.slice(fi)){ if(!bul.test(l)) break; ns.push(l.replace(bul,"").trim()); }
+        if(ns.length){ p.notices=ns; p.noticeIntro=rest.slice(0,fi).join("\n").slice(0,400); } } }
+    const co=s=>profile.name&&profile.name.length>=2?s.split(profile.name).join("{수행자}"):s;
+    if(tr.terms.length){
+      p.terms=tr.terms.map(t=>({title:t.title,body:co(t.body)}));
+      // 계약서 머리말: 계약서 제목줄 다음부터 제1조 앞까지 ("의뢰인 ___(이하 '의뢰자'라 한다)과 …")
+      const a=cut>=0&&cut<j1?cut+1:Math.max(0,j1-4), iv=lines.slice(a,j1).map(s=>s.replace(/\t+/g," ").trim()).filter(Boolean);
+      const lead=co(iv.join("\n")).replace(/^(의뢰인|의뢰자|갑|발주자|위탁자|도급인)\s*\(이하/,"$1 {대표자}(이하");
+      if(lead&&lead.length<500&&/다\.?$/.test(lead)) p.intro=lead;
+      if(cut>=0&&cut<j1&&kind!=="contract") p.contractTitle=nn(lines[cut]).length<=30?lines[cut].trim().replace(/\s{2,}/g," "):p.contractTitle;
+    }
+    if(kind==="contract"){ p.contractTitle=title; p.quoteTitle=`${title.replace(/계약서$/,"")} 견적서`.trim(); p.docs=q.items.length?"both":"contract"; }
+    else{
+      p.quoteTitle=title; p.docs=tr.terms.length&&kind==="quote"?"both":"quote";
+      if(kind==="stmt"&&/인수자|인수인|수령인|수령자|\(\s*서명\s*\)/.test(String(text).replace(/\s+/g,""))) p.recvSign=true;
+      if(p.docs==="both"&&!(cut>=0&&cut<j1)) p.contractTitle=`${title.replace(/견적서$/,"")} 계약서`.trim();
+    }
+    // 의뢰자 정보: 우리 회사 정보 · 문장 조각은 빼고
+    const c=q.client||{}, mine=[profile.name,profile.ceo,profile.phone,profile.email].filter(Boolean).map(nn);
+    ["name","ceo","phone","email"].forEach(k=>{ const v=String(c[k]||"").trim();
+      if(v&&v.length<=40&&!/이하|한다|귀하|라\s*함|^\(|^(등록번호|사업자등록번호|대표자|상호명?|연락처|견적일|업태|업종|주소|이메일|업체명)$/.test(v)&&!mine.includes(nn(v))) client[k]=v; });
+  }
+  p.on=true;
+  return {p,client,title};
+}
+// 지금 문서는 그대로 두고 미리보기 화면만 잠깐 빌려서 그려 봄
+function fmPreviewA(c){
+  const keep=state; let html="";
+  try{
+    state=Object.assign(clone(keep),{prods:[clone(c.p)],esign:null});
+    Object.assign(state.client,c.client); if(special(c.p)) state.client.ceo=state.client.name||"";
+    renderPreview(); html=$("#pages").innerHTML;
+  }finally{ state=keep; renderPreview(); }
+  return html;
+}
+
+/* --- 4. B 방식: PDF 페이지 그림 + 빈칸 · 서명 자리 찾기 --- */
+async function fmPdfLib(){
+  if(window.pdfjsLib) return;
+  await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+// 캔버스 → JPEG (한 장 350KB 넘으면 화질 · 크기를 줄임: 이 브라우저 저장 공간이 작아서)
+function fmJpeg(cv){
+  let url=cv.toDataURL("image/jpeg",.72);
+  for(let i=0;i<3&&url.length>350000;i++){
+    const t=document.createElement("canvas"); t.width=Math.round(cv.width*.82); t.height=Math.round(cv.height*.82);
+    const x=t.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,t.width,t.height); x.drawImage(cv,0,0,t.width,t.height);
+    cv=t; url=cv.toDataURL("image/jpeg",.6);
+  }
+  return url;
+}
+async function fmBuildB(f,kind){
+  const isImg=/^image\//.test(f.type)||/\.(png|jpe?g|webp)$/i.test(f.name);
+  if(isImg){
+    const img=new Image(), u=URL.createObjectURL(f);
+    await new Promise((res,rej)=>{ img.onload=res; img.onerror=()=>rej(new Error("그림을 열지 못했습니다.")); img.src=u; });
+    const sc=Math.min(1,1100/img.naturalWidth), cv=document.createElement("canvas");
+    cv.width=Math.round(img.naturalWidth*sc); cv.height=Math.round(img.naturalHeight*sc);
+    const x=cv.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,cv.width,cv.height); x.drawImage(img,0,0,cv.width,cv.height); URL.revokeObjectURL(u);
+    return {pages:[fmJpeg(cv)], r:[cv.height/cv.width], marks:[], scan:true};
+  }
+  if(!/\.pdf$/i.test(f.name)) return {err:"원본 모양 그대로 쓰기는 PDF나 사진(스캔 이미지) 파일에서만 됩니다.<br>한글 · 워드 · 엑셀에서 <b>[PDF로 저장]</b>한 뒤 다시 올려 주세요."};
+  await fmPdfLib();
+  const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise, N=Math.min(pdf.numPages,8);
+  const pages=[], r=[], marks=[]; let txt=0;
+  for(let i=1;i<=N;i++){
+    const page=await pdf.getPage(i), vp=page.getViewport({scale:1}), sc=Math.min(2.2,1000/vp.width), v2=page.getViewport({scale:sc});
+    const cv=document.createElement("canvas"); cv.width=Math.round(v2.width); cv.height=Math.round(v2.height);
+    const x=cv.getContext("2d"); x.fillStyle="#fff"; x.fillRect(0,0,cv.width,cv.height);
+    await page.render({canvasContext:x,viewport:v2}).promise;
+    pages.push(fmJpeg(cv)); r.push(vp.height/vp.width);
+    const tc=await page.getTextContent();
+    const items=tc.items.filter(it=>it.str&&it.str.trim()).map(it=>{
+      const t=pdfjsLib.Util.transform(vp.transform,it.transform), h=Math.hypot(t[2],t[3])||10;
+      return {s:it.str, x:t[4], y:t[5]-h*.86, w:it.width||h*it.str.length*.9, h};
+    });
+    txt+=items.length;
+    marks.push(...fmFind(items,vp.width,vp.height,i-1,kind));
+  }
+  return {pages,r,marks:marks.slice(0,80),more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
+}
+// 글자 위치로 빈칸 · 서명 자리 찾기 (좌표는 페이지 너비 · 높이에 대한 비율로 저장)
+function fmFind(items,W,H,pg,kind){
+  const out=[], nm=s=>String(s).replace(/[\s:：()（）\[\]「」<>]/g,"");
+  const labor=kind==="labor", cert=String(kind).startsWith("cert-");
+  // 어느 쪽 사람인지: 가까운 곳의 '갑 · 을 · 근로자 · 공급자 …' 글자로 판단
+  const CO=/^(사업주|사용자|공급자|공급하는자|발급자|발급처|발급기관|수급인|수급자|판매자|매도인|임대인|수행사|수행자|수탁자|대표이사)/;
+  const CL=/^(근로자|공급받는자|공급받는|인수자|인수인|수령인|수령자|의뢰인|의뢰자|고객|구매자|매수인|임차인|신청인|발주자|발주처|위임인|위탁자|도급인|직원)/;
+  const partyOfStr=s=>{ const n=nm(s); if(!n) return "";
+    if(profile.name&&profile.name.length>=2&&n.includes(nm(profile.name))) return "company";
+    if(n==="갑"||n==="甲") return labor?"company":"client";
+    if(n==="을"||n==="乙") return labor?"client":"company";
+    return CO.test(n)?"company":CL.test(n)?"client":""; };
+  const keys=items.map(it=>({it,p:partyOfStr(it.s)})).filter(k=>k.p);
+  const partyAt=(cx,cy,self)=>{ const own=self&&partyOfStr(self.s); if(own) return own;
+    let best=null, bd=1e9;
+    keys.forEach(k=>{ const kx=k.it.x+k.it.w/2, ky=k.it.y+k.it.h/2; if(ky>cy+H*.05) return;
+      const d=Math.hypot((kx-cx)*.45,(ky-cy)*(ky>cy+2?2.5:1)); if(d<bd){ bd=d; best=k.p; } });   // 아래쪽 글자는 덜 믿음
+    return bd<H*.22?best:""; };
+  const overlaps=(x,y,w,h)=>out.some(m=>m.pg===pg&&Math.abs(m.cx-x)<Math.max(w,m.cw)/2+4&&Math.abs(m.cy-y)<Math.max(h,m.ch)/2);
+  const add=m=>{ if(overlaps(m.cx,m.cy,m.cw,m.ch)) return; out.push(m); };
+  const sign=(cx,cy,party)=>{ const t=cert?"company":party||"client";
+    const w=t==="company"?22/210:17/210;
+    add({id:newId(),pg,t,x:cx/W,y:cy/H,w,cx,cy,cw:w*W,ch:w*W*.7}); };
+  // 같은 줄끼리 묶기
+  const rows=[];
+  items.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
+  rows.forEach(r=>r.its.sort((a,b)=>a.x-b.x));
+  const xAt=(it,i)=>it.x+it.w*i/Math.max(1,it.s.length);
+  // ① "(인)" "(서명)" "(서명 또는 인)" 자리
+  items.forEach(it=>{
+    const re=/[(（]\s*(인|印|서\s*명|날\s*인|서명\s*또는\s*(날)?인|사\s*인)\s*[)）]/g; let m;
+    while((m=re.exec(it.s))){ const cx=(xAt(it,m.index)+xAt(it,m.index+m[0].length))/2, cy=it.y+it.h/2;
+      const left=it.s.slice(0,m.index); sign(cx,cy,partyOfStr(left)||partyAt(cx,cy,null)); }
+  });
+  // ② 이름표 오른쪽이 비어 있는 칸 ("성명 :      ", 표의 '주소' 칸 옆 빈칸)
+  const FL=[[/^(성명|이름|성함|근로자명|직원명|성명또는명칭)$/,"name"],[/^(대표자|대표자명|대표|대표자성명|대표이사)$/,"ceo"],
+    [/^(상호|상호명|업체명|회사명|사업체명|상호법인명|법인명|거래처|거래처명|고객명)$/,"co"],[/^(주소|사업장주소|소재지|사업장소재지|현주소|주소지)$/,"addr"],
+    [/^(연락처|전화|전화번호|휴대폰|휴대전화|핸드폰|tel|연락처휴대폰)$/i,"phone"],[/^(이메일|e-?mail|메일)$/i,"email"],
+    [/^(사업자등록번호|사업자번호|등록번호)$/,"bizno"],[/^(작성일|작성일자|발급일|발급일자|계약일|계약일자|일자|날짜|거래일|거래일자|견적일|견적일자|발행일)$/,"date"],
+    [/^(서명|날인|서명또는날인|서명인|사인|서명란)$/,"sign"],
+    [/^(생년월일|주민등록번호|부서|소속|직위|직급|직책|재직기간|근무기간|입사일|입사일자|퇴사일|퇴직일|담당업무|업무내용|용도|제출처|퇴직사유|업태|종목|품명|비고|계좌번호|입금계좌)$/,"etc"]];
+  const labOf=s=>{ const t=String(s).replace(/^\s*[(（][^)）]{1,6}[)）]\s*/,"").split(/[:：]/); if(t.length>2||(t[1]&&t[1].trim())) return null; const n=nm(t[0]); const r=FL.find(([re])=>re.test(n)); return r&&r[1]; };
+  const isSign=s=>/[(（]\s*(인|印|서\s*명|날\s*인|서명\s*또는|사\s*인)/.test(s);
+  rows.forEach(r=>r.its.forEach((it,j)=>{
+    const k=labOf(it.s); if(!k||isSign(it.s)) return;
+    const nx=r.its[j+1], x0=it.x+it.w+Math.max(4,it.h*.6), end=nx?nx.x:W-W*.05, gap=end-x0;
+    if(nx&&!labOf(nx.s)&&!isSign(nx.s)&&!/^[_\s]+$/.test(nx.s)) return;          // 이미 내용이 적혀 있음
+    if(gap<Math.max(36,it.h*3)) return;
+    const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3), cy=it.y+it.h/2, party=partyAt(it.x,cy,it);
+    if(k==="sign"){ sign(x0+Math.min(w,80)/2,cy,party); return; }
+    const pt=party||(cert&&/^(co|bizno|ceo)$/.test(k)?"company":"client");
+    const map={name:pt==="company"?"co.ceo":"client.name", ceo:pt==="company"?"co.ceo":"client.ceo", co:pt==="company"?"co.name":"client.name",
+      addr:pt==="company"?"co.address":"client.addr", phone:pt==="company"?"co.phone":"client.phone", email:pt==="company"?"co.email":"client.email",
+      bizno:pt==="company"?"co.bizno":"", date:"date"};
+    add({id:newId(),pg,t:"text",b:map[k]||"",v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,cx:x0+w/2,cy,cw:w,ch:it.h});
+  }));
+  // ③ "____" 밑줄 빈칸
+  rows.forEach(r=>r.its.forEach((it,j)=>{
+    const re=/_{4,}/g; let m;
+    while((m=re.exec(it.s))){
+      const x0=xAt(it,m.index), x1=xAt(it,m.index+m[0].length), cy=it.y+it.h/2, prev=r.its[j-1];
+      const k=labOf(it.s.slice(0,m.index).split(/_{4,}/).pop())||(m.index===0&&prev&&labOf(prev.s));
+      if(k==="sign"){ sign((x0+x1)/2,cy,partyAt(x0,cy,null)); continue; }
+      // "____(이하 "사업주"라 함)" → 그 사람 이름 칸
+      const ih=it.s.slice(m.index+m[0].length).match(/^\s*[(（]\s*이하\s*["“'‘]?\s*([가-힣]{1,6})/), who=ih&&partyOfStr(ih[1]);
+      const b=k==="date"?"date":who==="company"?"co.name":who==="client"?"client.name":"";
+      add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:(x1-x0)/W,f:it.h/W,o:0,cx:(x0+x1)/2,cy,cw:x1-x0,ch:it.h});
+    }
+  }));
+  // ④ "    년    월    일" 날짜 빈칸 → 작성일로 덮어 씀 (흰 바탕)
+  rows.forEach(r=>{
+    const s=r.its.map(i=>i.s).join(" ");
+    // "20  년  월  일" · "2026년  월  일" (연도만 적힌 것도 통째로 덮음)
+    if(!/(^|[^\d])(20\s*|\d{4}\s*)?년\s+월\s+일/.test(s)||/년\s*\d{1,2}\s*월/.test(s)) return;
+    const a=r.its.find(i=>/년\s*(월|$)/.test(i.s)); if(!a) return;
+    const ai=r.its.indexOf(a), b=r.its.slice(ai).find(i=>/일/.test(i.s.slice(i===a?i.s.indexOf("년"):0)))||a;
+    const ya=a.s.indexOf("년"), st=a.s.slice(0,ya).match(/(\d{4}|20)\s*$/);
+    const x0=st?xAt(a,ya-st[0].length):xAt(a,ya)-a.h*2.8, x1=xAt(b,b.s.lastIndexOf("일")+1);
+    if(x1-x0<a.h*3) return;
+    out.forEach((m,i)=>{ if(m.pg===pg&&m.t==="text"&&m.b==="date"&&Math.abs(m.cy-(a.y+a.h/2))<a.h) out.splice(i,1); });
+    add({id:newId(),pg,t:"text",b:"date",v:"",x:Math.max(0,x0-2)/W,y:(a.y-a.h*.1)/H,w:(x1-x0+4)/W,f:a.h/W,o:1,cx:(x0+x1)/2,cy:a.y+a.h/2,cw:x1-x0,ch:a.h});
+  });
+  return out.map(m=>{ const o=Object.assign({},m); delete o.cx; delete o.cy; delete o.cw; delete o.ch; return o; });
+}
+
+/* --- 5. 원본 모양 문서 그리기 (미리보기 · 인쇄 · 전자서명 모두 같은 HTML) ---
+   전자서명 PDF는 html2canvas로 찍기 때문에 페이지 안에서는 mm 단위만 씀 (cqw · aspect-ratio · object-fit 안 씀) */
+function fmImg(key,i){ const f=(profile.forms||{})[key]; return f&&f[i]||""; }
+function fmVal(m){
+  if(m.v) return m.v;
+  if(m.b==="date"){ return certYmd(certDate(state.quoteDate)||new Date()); }
+  if(!m.b) return "";
+  const [o,k]=m.b.split("."); return String(((o==="co"?profile:state.client)||{})[k]||"");
+}
+// mode: true = 편집 카드 (칸 번호 · 끌기), "pv" = 고르는 창 미리보기 (찾은 칸 표시), false = 실제 문서
+function fmBox(p,i,mode){
+  const edit=mode===true, pv=mode==="pv", show=edit||pv;
+  const F=p.form, r=F.r[i]||1.4142, bw=Math.min(210,297/r), bh=bw*r, img=fmImg(F.key,i);
+  const u=v=>edit?`${(v*100).toFixed(3)}cqw`:`${(v*bw).toFixed(2)}mm`;   // 너비 비율 → 길이
+  const cs=state.clientSign&&!esignMode&&!edit?`<img src="${state.clientSign}" alt="">`:"";
+  const coImg=profile.seal||profile.sign;
+  const marks=F.marks.map((m,n)=>{ if(m.pg!==i) return "";
+    const pos=`left:${(m.x*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`, no=edit?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":"";
+    if(m.t==="text"){
+      const val=fmVal(m), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
+      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}"${dm} style="${pos}${m.o||show?`min-width:${u(m.w)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
+    }
+    const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
+    if(m.t==="client") return `<span class="fm-s${sel}"${dm}${show?"":' data-client-seal data-mark=" "'} style="${pos}${ctr}width:${w};height:${h}">${no}${show&&!cs?"상대방<br>서명":cs}</span>`;
+    return `<span class="fm-s co${sel}"${dm} style="${pos}${ctr}width:${w};height:${h}">${no}${coImg?`<img src="${coImg}" alt="">`:show?"회사<br>직인":""}</span>`;
+  }).join("");
+  const bg=img?`<img class="fm-bg" src="${img}" alt="">`:`<div class="fm-miss">원본 양식 그림이 이 브라우저에 없습니다.<br>구글 시트에 연결된 브라우저에서 열거나 양식을 다시 불러와 주세요.</div>`;
+  return edit?`<div class="fm-box ed">${bg}${marks}</div>`:`<div class="fm-box${pv?" pv":""}" style="width:${bw.toFixed(2)}mm;height:${bh.toFixed(2)}mm">${bg}${marks}</div>`;
+}
+function fmRender(p){
+  (p.form&&p.form.r||[]).forEach((_,i)=>{
+    const pg=document.createElement("div"); pg.className="page fm-page"; pg.dataset.kind="contract";
+    pg.innerHTML=fmBox(p,i,false); $("#pages").appendChild(pg);
+  });
+}
+
+/* --- 6. 원본 모양 문서 편집 카드 --- */
+var fmSel=null, fmAddT=null, fmDrag=null;
+function fmBinds(){ return [["","직접 입력"],["client.name","상대방 업체명 · 성명"],["client.ceo","상대방 대표자"],["client.phone","상대방 연락처"],["client.addr","상대방 주소"],["client.email","상대방 이메일"],
+  ["date","작성일"],["co.name","우리 상호"],["co.ceo","우리 대표자"],["co.bizno","우리 사업자등록번호"],["co.address","우리 주소"],["co.phone","우리 연락처"],["co.email","우리 이메일"]]; }
+function fmBindName(b){ const r=fmBinds().find(x=>x[0]===(b||"")); return b&&r?r[1]:""; }
+function formCardHtml(p,pi){
+  const k=`p${p.pid}`, F=p.form, B=fmBinds(), TY={text:"글자 칸",client:"상대방 서명",company:"회사 직인"};
+  const rows=F.marks.map((m,i)=>{ const b=`prods.${pi}.form.marks.${i}`;
+    const typeSel=`<select data-p="${b}.t" data-struct aria-label="칸 종류">${Object.entries(TY).map(([v,t])=>`<option value="${v}"${m.t===v?" selected":""}>${t}</option>`).join("")}</select>`;
+    const size=m.t==="text"?`<label class="fm-sz">글자<input type="number" min="5" max="30" step=".5" data-fmsz="${i}" data-pi="${pi}" value="${Math.round(m.f*595*2)/2}">pt</label>`
+      :`<label class="fm-sz">크기<input type="number" min="8" max="50" step="1" data-fmsz="${i}" data-pi="${pi}" value="${Math.round(m.w*210)}">mm</label>`;
+    const body=m.t==="text"?`<select data-p="${b}.b" data-struct aria-label="채울 내용">${B.map(([v,t])=>`<option value="${v}"${(m.b||"")===v?" selected":""}>${t}</option>`).join("")}</select>
+        <input data-p="${b}.v" placeholder="${esc(m.b?(fmVal(Object.assign({},m,{v:""}))||"(비어 있음)")+" — 다르게 쓰려면 입력":"넣을 내용")}">
+        <label class="chk" title="원본 글자 위를 흰 바탕으로 덮습니다"><input type="checkbox" data-p="${b}.o" data-bool data-struct ${m.o?"checked":""}>흰 바탕</label>`
+      :`<span class="hint" style="margin:0">${m.t==="client"?"전자서명 · 고객 사인이 들어갑니다":profile.seal?"회사 직인이 찍힙니다":profile.sign?"대표 사인이 들어갑니다 (직인 없음)":"회사 설정에 직인이나 사인을 올려 주세요"}</span>`;
+    return `<div class="fm-row${fmSel===m.id?" sel":""}" data-mrow="${m.id}"><span class="fm-no">${i+1}</span><span class="fm-pg">${F.r.length>1?`${m.pg+1}쪽`:""}</span>${typeSel}${body}${size}
+      <button class="btn" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 칸 지우기" aria-label="이 칸 지우기">✕</button></div>`; }).join("");
+  return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
+    <summary>${esc(p.name||"(이름 없는 양식)")} — 원본 양식</summary>
+    <div class="in">
+      <div class="fm-tools">
+        <span>칸 추가:</span>
+        ${Object.entries(TY).map(([v,t])=>`<button class="btn${fmAddT===v?" go":""}" type="button" data-fmadd="${v}" data-pi="${pi}">+ ${t}</button>`).join("")}
+        <span class="hint" style="margin:0">${fmAddT?`<b>양식 그림에서 넣을 곳을 누르세요</b>`:"칸은 끌어서 옮길 수 있습니다"}</span>
+      </div>
+      <div class="fm-thumbs">${F.r.map((_,i)=>`<div class="fm-thumb${fmAddT?" adding":""}" data-fpi="${pi}" data-fpg="${i}">${fmBox(p,i,true)}${F.r.length>1?`<div class="fm-tn">${i+1}쪽</div>`:""}</div>`).join("")}</div>
+      <div class="sub" style="margin-top:10px">칸 ${F.marks.length}개 <span class="hint" style="margin:0;font-weight:400">— 상대방 정보는 위 의뢰자 정보, 날짜는 작성일 칸의 값이 자동으로 들어갑니다</span></div>
+      <div class="fm-rows">${rows||`<p class="hint">찾은 칸이 없습니다. 위 [+ 글자 칸] [+ 상대방 서명] [+ 회사 직인]을 누르고 양식 그림에서 자리를 눌러 넣으세요.</p>`}</div>
+      <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>이름 · 제목</summary>
+        <div class="grid2">
+          <label class="f">상품 이름<input data-p="prods.${pi}.name" data-title></label>
+          <label class="f">문서 제목 (목록 · 메일에 쓰임)<input data-p="prods.${pi}.contractTitle"></label>
+        </div>
+      </details>
+      <div class="pbtns">
+        <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 칸 배치가 기본으로 들어갑니다 (팀 공유)">이 칸 배치를 기본값으로 저장</button>
+        <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
+        <button class="btn" type="button" data-pact="del" data-pi="${pi}">상품 종류 삭제</button>
+      </div>
+    </div>
+  </details>`;
+}
+function fmNewMark(t,pg,x,y){
+  if(t==="text") return {id:newId(),pg,t,b:"",v:"",x,y:Math.max(0,y-.008),w:.2,f:.018,o:0};
+  return {id:newId(),pg,t,x,y,w:t==="company"?22/210:17/210};
+}
+function fmSelect(id){
+  fmSel=id;
+  $$("#prodCards [data-mid]").forEach(el=>el.classList.toggle("sel",el.dataset.mid===id));
+  $$("#prodCards [data-mrow]").forEach(el=>el.classList.toggle("sel",el.dataset.mrow===id));
+}
+$("#editor").addEventListener("click",e=>{
+  const a=e.target.closest("[data-fmadd]");
+  if(a){ fmAddT=fmAddT===a.dataset.fmadd?null:a.dataset.fmadd; renderProds(); return; }
+  const d=e.target.closest("[data-fmdel]");
+  if(d){ const p=P()[+d.dataset.pi]; p.form.marks.splice(+d.dataset.fmdel,1); renderProds(); esMarkStale(); save(); schedule(); return; }
+  const r=e.target.closest("[data-mrow]");
+  if(r&&!e.target.closest("input,select,button,label")) fmSelect(r.dataset.mrow);
+  if(e.target.closest('[data-pact="del"]')) setTimeout(fmPrune,0);
+});
+$("#editor").addEventListener("input",e=>{
+  const el=e.target.closest("[data-fmsz]"); if(!el) return;
+  const p=P()[+el.dataset.pi], m=p&&p.form.marks[+el.dataset.fmsz], v=Number(el.value); if(!m||!v) return;
+  if(m.t==="text") m.f=v/595; else m.w=v/210;
+  const th=$$("#prodCards .fm-thumb")[m.pg]; if(th) th.innerHTML=fmBox(p,m.pg,true)+(p.form.r.length>1?`<div class="fm-tn">${m.pg+1}쪽</div>`:"");
+  esMarkStale(); save(); schedule();
+});
+// 양식 그림 위: 칸 추가 · 끌어서 옮기기
+$("#editor").addEventListener("pointerdown",e=>{
+  const box=e.target.closest(".fm-thumb .fm-box"); if(!box) return;
+  const th=box.closest(".fm-thumb"), p=P()[+th.dataset.fpi], pg=+th.dataset.fpg, R=box.getBoundingClientRect();
+  const fx=(e.clientX-R.left)/R.width, fy=(e.clientY-R.top)/R.height;
+  if(fmAddT){ const m=fmNewMark(fmAddT,pg,fx,fy); p.form.marks.push(m); fmAddT=null; fmSel=m.id; e.preventDefault();
+    renderProds(); esMarkStale(); save(); schedule();
+    const row=$(`#prodCards [data-mrow="${m.id}"]`); if(row){ row.scrollIntoView({block:"nearest"}); const i=row.querySelector('input[data-p$=".v"]'); if(i) i.focus(); }
+    return; }
+  const mk=e.target.closest("[data-mid]"); if(!mk) return;
+  const m=p.form.marks.find(x=>x.id===mk.dataset.mid); if(!m) return;
+  e.preventDefault(); fmSelect(m.id);
+  fmDrag={m,el:mk,R,sx:e.clientX,sy:e.clientY,x:m.x,y:m.y,moved:false};
+  try{ mk.setPointerCapture(e.pointerId); }catch(_){}
+});
+addEventListener("pointermove",e=>{
+  if(!fmDrag) return; const D=fmDrag, dx=(e.clientX-D.sx)/D.R.width, dy=(e.clientY-D.sy)/D.R.height;
+  if(!D.moved&&Math.hypot(e.clientX-D.sx,e.clientY-D.sy)<3) return;
+  D.moved=true; D.m.x=Math.min(1,Math.max(0,D.x+dx)); D.m.y=Math.min(1,Math.max(0,D.y+dy));
+  D.el.style.left=(D.m.x*100)+"%"; D.el.style.top=(D.m.y*100)+"%";
+});
+addEventListener("pointerup",()=>{
+  if(!fmDrag) return; const D=fmDrag; fmDrag=null;
+  if(D.moved){ esMarkStale(); save(); schedule(); }
+});
+// 어디에도 안 쓰이는 원본 양식 그림 정리 (기본 상품 · 지금 문서 · 저장된 문서 모두 확인)
+function fmPrune(){
+  if(!profile.forms) return;
+  const used=new Set(), add=ps=>(ps||[]).forEach(p=>{ if(p&&p.kind==="form"&&p.form) used.add(p.form.key); });
+  add(profile.templates); add(state.prods); loadList().forEach(x=>add(x.data&&x.data.prods));
+  let ch=false; Object.keys(profile.forms).forEach(k=>{ if(!used.has(k)){ delete profile.forms[k]; ch=true; } });
+  if(ch) saveProfile();
+}
+
+/* --- 7. 고르는 창 --- */
+var fmCur=null;   // {file, text, kind, A:{p,client,title}, B:{pages,r,marks}|{err}}
+function fmZoom(el){ const w=el.clientWidth-16; el.querySelectorAll(".fm-z").forEach(z=>{ z.style.zoom=Math.min(.6,Math.max(.2,w/794)); }); }
+function fmShowA(){
+  const c=fmCur, el=$("#fmPrevA");
+  if(!c.text.trim()){ $("#fmA").classList.add("off"); el.innerHTML=`<div class="fm-msg">파일에서 글자를 읽지 못했습니다 (스캔 이미지 · 사진).<br>우리 양식에 채우기는 글자가 들어 있는 PDF · 한글 · 워드 · 엑셀 파일에서 됩니다.</div>`; return; }
+  $("#fmA").classList.remove("off");
+  c.A=fmBuildA(c.text,c.kind);
+  const P0=c.A.p, info=P0.kind==="labor"?`근로 조항 ${P0.terms.length}개`:P0.kind==="cert"?`채운 칸 ${Object.values(P0.cert).filter(Boolean).length-1+Object.keys(c.A.client).length}개`
+    :`품목 ${P0.items.filter(x=>x.desc||x.price!=="").length}줄 · 조항 ${docsOf(P0)==="quote"?0:P0.terms.length}개${docsOf(P0)==="quote"?" · 계약서 없음":""}`;
+  $("#fmInfoA").textContent=`'${c.A.title}' — ${info}`;
+  el.innerHTML=`<div class="fm-z">${fmPreviewA(c.A)}</div>`; fmZoom(el);
+}
+function fmShowB(){
+  const c=fmCur, el=$("#fmPrevB"), B=c.B;
+  if(!B||B.err){ $("#fmB").classList.add("off"); $("#fmInfoB").textContent=""; el.innerHTML=`<div class="fm-msg">${B?B.err:"읽는 중…"}</div>`; return; }
+  $("#fmB").classList.remove("off");
+  const n=t=>B.marks.filter(m=>m.t===t).length;
+  $("#fmInfoB").textContent=B.scan?"글자가 없는 그림이라 칸은 직접 넣어야 합니다":`서명 자리 ${n("client")}곳 · 직인 자리 ${n("company")}곳 · 글자 칸 ${n("text")}곳 찾음`;
+  const p={form:{key:"_prev",r:B.r,marks:B.marks}};
+  profile.forms=profile.forms||{}; profile.forms._prev=B.pages;
+  try{ el.innerHTML=`<div class="fm-z">${B.r.map((_,i)=>`<div class="page fm-page">${fmBox(p,i,"pv")}</div>`).join("")}</div>`; }
+  finally{ delete profile.forms._prev; }
+  if(B.more) el.insertAdjacentHTML("afterbegin",`<div class="fm-msg warn">${B.more}쪽 중 앞 ${B.r.length}쪽만 넣습니다.</div>`);
+  fmZoom(el);
+}
+function openFormImport(){
+  fmCur=null; $("#fmOpts").hidden=true; $("#fmFileR").textContent=""; $("#fmModal").hidden=false;
+}
+$("#bFormImp").onclick=openFormImport;
+$("#fmCancel").onclick=()=>{ $("#fmModal").hidden=true; };
+addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#fmModal").hidden) $("#fmModal").hidden=true; });
+$("#fmFileBtn").onclick=()=>$("#fmFile").click();
+$("#fmKind").onchange=e=>{ if(!fmCur) return; fmCur.kind=e.target.value; fmShowA(); };
+$("#fmFile").onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  $("#fmFileR").textContent="읽는 중…"; $("#fmOpts").hidden=true;
+  let text="";
+  const img=/^image\//.test(f.type)||/\.(png|jpe?g|webp)$/i.test(f.name);
+  if(!img){ try{ text=await fileText(f)||""; }catch(err){ $("#fmFileR").textContent="✕ "+err.message; return; } }
+  const kind=text.trim()?fmDetect(text):"quote";
+  fmCur={file:f,text,kind,B:null};
+  $("#fmKind").innerHTML=Object.entries(fmKinds()).map(([v,t])=>`<option value="${v}"${v===kind?" selected":""}>${t}</option>`).join("");
+  $("#fmFileR").textContent=`${f.name}${text.trim()?` — '${fmKinds()[kind]}'(으)로 인식했습니다`:""}`;
+  $("#fmOpts").hidden=false; fmShowA(); fmShowB();
+  try{ fmCur.B=await fmBuildB(f,kind); }catch(err){ fmCur.B={err:"원본 그림을 만들지 못했습니다: "+esc(err.message)}; }
+  if(fmCur&&fmCur.file===f) fmShowB();
+};
+addEventListener("resize",()=>{ if($("#fmModal").hidden) return; fmZoom($("#fmPrevA")); fmZoom($("#fmPrevB")); });
+function fmAddProduct(p,client){
+  P().forEach(q=>{ q.on=false; });
+  p.on=true; P().push(p); profile.templates.push(Object.assign(clone(p),{on:false})); saveProfile();
+  Object.entries(client||{}).forEach(([k,v])=>{ if(v) state.client[k]=v; });
+  if(p.kind==="labor"||p.kind==="cert") state.client.ceo=state.client.name||"";
+  $("#fmModal").hidden=true;
+  renderEditor(); esMarkStale(); save(); schedule();
+  const card=$(`#prodCards [data-k="p${p.pid}"]`); if(card) card.scrollIntoView({block:"start",behavior:"smooth"});
+}
+$("#fmOkA").onclick=()=>{
+  const c=fmCur; if(!c||!c.A) return alert("먼저 양식 파일을 올려 주세요.");
+  const p=clone(c.A.p); p.pid=newId(); openSet.add(`p${p.pid}-tm`);
+  fmAddProduct(p,c.A.client);
+  $("#saved").textContent=`'${p.name}' 양식을 우리 양식으로 옮겼습니다 — 내용을 확인하고 고쳐 쓰세요`;
+};
+$("#fmOkB").onclick=()=>{
+  const c=fmCur, B=c&&c.B; if(!B||B.err) return alert(B&&B.err?"이 파일은 원본 모양 그대로 쓸 수 없습니다. PDF로 올려 주세요.":"아직 원본 그림을 만드는 중입니다. 잠시 후 다시 눌러 주세요.");
+  const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
+  const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
+  const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
+    form:{key,r:B.r.slice(),marks:clone(B.marks)}});
+  if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
+    return alert("양식 그림이 커서 이 브라우저에 저장할 공간이 부족합니다.\n쪽수가 적은 PDF로 나눠 올리거나, 문서 목록에서 오래된 문서를 지운 뒤 다시 해 주세요."); }
+  fmSel=null; fmAddT=null;
+  fmAddProduct(p,{});
+  $("#saved").textContent=`'${p.name}' 원본 양식을 넣었습니다 — 칸 위치 · 내용을 확인하세요`;
+};
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다. */
