@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>전자계약 서버 설치 안내</title>
+<title>계약·서류 작성기 설치 안내</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap">
 <style>
@@ -38,7 +38,18 @@ a{color:var(--green)}
 .sig em{font-size:12px;opacity:.78}
 
 /* 전체 흐름 */
-.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:22px 0 8px;padding:0;list-style:none}
+/* 구글 시트 연결 필수 이유 */
+.must{margin:22px 0 0;background:var(--card);border:2px solid var(--mark);border-radius:14px;padding:18px 20px}
+.must h2{margin:0 0 4px;font-size:20px;color:var(--mark);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.must h2 .req{font-size:12px;background:var(--mark);color:#fff;border-radius:999px;padding:2px 10px}
+.must>p{margin:0 0 10px;color:var(--sub)}
+.why{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.why li{background:#fdf6f4;border:1px solid #f1d6d1;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.55}
+.why li b{display:block;color:#7a1f14;margin-bottom:2px}
+@media (max-width:700px){.why{grid-template-columns:1fr}}
+.flow .req{display:inline-block;font-size:10.5px;background:var(--mark);color:#fff;border-radius:999px;padding:0 6px;margin-left:4px;vertical-align:1px}
+.step>.n.app{background:#f0c000;color:#1d1d1d;font-size:14px}
+.flow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin:22px 0 8px;padding:0;list-style:none}
 .flow li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 10px 9px;font-size:13px;line-height:1.45}
 .flow li b{display:block;color:var(--green);font-size:12px;margin-bottom:2px}
 .flow a{text-decoration:none;color:inherit;display:block}
@@ -146,28 +157,61 @@ h3.sec{margin:46px 0 6px;font-size:19px;color:var(--green)}
 <div class="wrap">
 
 <header class="cover">
-  <div class="eyebrow">계약·서류 작성기 · 전자계약 서버</div>
-  <h1>우리 회사 전용 서버를<br>구글 계정으로 만드는 방법</h1>
-  <p>문서 목록을 팀이 함께 보고, 고객에게 카카오톡으로 전자서명을 받으려면 서버가 하나 필요합니다. 서버는 <b>내 구글 계정 안</b>에 만들어지고, 견적서 · 서명 · 계약서 PDF도 모두 내 구글 드라이브에 저장됩니다.</p>
-  <div class="facts"><span>약 10분</span><span>비용 0원</span><span>구글 계정(지메일) 1개</span><span>PC 크롬 브라우저 권장</span><span>처음 한 번만</span></div>
+  <div class="eyebrow">계약·서류 작성기 · 설치 안내</div>
+  <h1>앱 설치부터<br>구글 시트 연결까지</h1>
+  <p>견적서 · 계약서 · 근로계약서 · 증명서를 만들고 카카오톡으로 전자서명을 받는 작성기입니다. <b>① 앱으로 설치</b>하고 <b>② 내 구글 시트(서버)를 연결</b>하면 준비가 끝납니다. 구글 시트 연결은 <b>필수</b>입니다 — 이유는 바로 아래에 있습니다.</p>
+  <div class="facts"><span>약 15분</span><span>비용 0원</span><span>구글 계정(지메일) 1개</span><span>PC 크롬 브라우저 권장</span><span>처음 한 번만</span></div>
   <div class="open-app">
-    <div class="t"><b>작성기는 여기서 엽니다</b>서버 없이도 바로 쓸 수 있어요. 팀이 같이 쓰거나 카카오톡 전자서명을 받으려면 아래 순서대로 서버를 연결하세요.<br>
-      작성기 위쪽 <b>[⬇ 앱으로 설치]</b>를 누르면 바탕화면 · 작업표시줄에 프로그램처럼 깔립니다. (휴대폰: 크롬 메뉴 또는 사파리 공유 → <b>홈 화면에 추가</b>) 업데이트는 자동입니다.</div>
+    <div class="t"><b>설치 링크</b>이 버튼으로 작성기를 열고, 위쪽 <b>[⬇ 앱으로 설치]</b>를 누르세요. 업데이트는 자동입니다.</div>
     <a class="btn big" href="https://garnet00700-ux.github.io/weavery/app/" target="_blank" rel="noopener">계약·서류 작성기 열기 →</a>
   </div>
   <div class="sig"><i class="bar"></i><b>weavery lab</b><em>weaving your brand and the mood of your space</em></div>
 </header>
 
+<section class="must" aria-labelledby="whyH">
+  <h2 id="whyH">구글 시트(서버) 연결은 필수입니다 <span class="req">필수</span></h2>
+  <p>작성기는 연결 없이도 열리지만, 연결 전에는 모든 문서가 <b>지금 이 컴퓨터의 브라우저 안에만</b> 저장됩니다. 업무 서류를 다루려면 반드시 연결해 주세요.</p>
+  <ul class="why">
+    <li><b>① 문서가 사라질 수 있습니다</b>쿠키 · 인터넷 기록 삭제, 브라우저 초기화, 앱 삭제, 컴퓨터 교체 · 고장 때 견적서 · 계약서 · 고객 정보가 모두 지워지고 되살릴 방법이 없습니다. 연결하면 내 구글 시트에 자동 백업됩니다.</li>
+    <li><b>② 전자서명은 서버가 있어야 됩니다</b>카카오톡 서명 요청, 서명 완료 후 최종 계약서 PDF 메일 발송, 서명 기록(누가 · 언제 서명했는지) 보관은 모두 서버가 처리합니다.</li>
+    <li><b>③ 근로계약서는 3년 보관 의무가 있습니다</b>근로기준법 제42조에 따라 근로계약 서류는 3년간 보존해야 합니다. 서명이 끝난 최종 PDF가 내 구글 드라이브 보관함에 자동으로 쌓입니다.</li>
+    <li><b>④ 어느 기기에서나, 팀이 함께</b>PC · 노트북 · 휴대폰 어디서 열어도 같은 문서 목록이 보이고, 팀원도 초대 링크 하나로 같은 목록을 씁니다.</li>
+    <li><b>⑤ 내 구글 계정에만 저장됩니다</b>서버는 내 구글 계정 안에 만들어집니다. 작성기를 만든 곳을 포함해 다른 누구도 우리 회사 문서를 볼 수 없습니다.</li>
+    <li><b>⑥ 비용 0원, 처음 한 번만</b>구글의 무료 기능(시트 · Apps Script · 드라이브)만 씁니다. 대표 계정 한 명이 아래 1~4단계를 한 번만 하면 됩니다.</li>
+  </ul>
+</section>
+
 <ol class="flow" aria-label="전체 순서">
-  <li><a href="#s1"><b>1</b>서버 시트 사본 만들기</a></li>
-  <li><a href="#s2"><b>2</b>처음 설정 · 권한 허용</a></li>
-  <li><a href="#s3"><b>3</b>웹 앱으로 배포</a></li>
-  <li><a href="#s4"><b>4</b>주소 저장 · 연결 코드</a></li>
-  <li><a href="#s5"><b>5</b>작성기에 연결</a></li>
+  <li><a href="#s0"><b>준비</b>앱으로 설치</a></li>
+  <li><a href="#s1"><b>1<span class="req">필수</span></b>서버 시트 사본 만들기</a></li>
+  <li><a href="#s2"><b>2<span class="req">필수</span></b>처음 설정 · 권한 허용</a></li>
+  <li><a href="#s3"><b>3<span class="req">필수</span></b>웹 앱으로 배포</a></li>
+  <li><a href="#s4"><b>4<span class="req">필수</span></b>주소 저장 · 연결 코드</a></li>
+  <li><a href="#s5"><b>5<span class="req">필수</span></b>작성기에 연결</a></li>
   <li><a href="#s6"><b>6</b>회사 정보 · 팀 초대</a></li>
 </ol>
 <p class="cap" style="margin-top:4px">설치 후: <a href="#s7">기존 견적서 · 계약서 불러오기</a></p>
 <p class="cap">팀에서 <b>한 사람(대표 계정)</b>만 1~4단계를 하면 됩니다. 팀원은 5단계의 초대 링크만 받으면 바로 연결됩니다.</p>
+
+<!-- 준비: 앱 설치 -->
+<section class="step" id="s0">
+  <div class="n app">앱</div>
+  <div class="body">
+    <h2>작성기를 앱으로 설치하기</h2>
+    <p class="lead">설치하면 바탕화면 · 작업표시줄 · 휴대폰 홈 화면에 아이콘이 생기고, 주소창 없이 프로그램처럼 열립니다. 새 기능이 올라오면 다음에 열 때 <b>자동으로 업데이트</b>됩니다.</p>
+    <div class="open-app" style="margin-top:0">
+      <div class="t"><b>1. 먼저 작성기를 엽니다</b>크롬 또는 엣지에서 여는 것을 권장합니다.</div>
+      <a class="btn big" href="https://garnet00700-ux.github.io/weavery/app/" target="_blank" rel="noopener">계약·서류 작성기 열기 →</a>
+    </div>
+    <div class="sub"><i>2</i>기기별 설치 방법</div>
+    <ul class="do">
+      <li><b>PC (크롬 · 엣지):</b> 작성기 위쪽 <b>[⬇ 앱으로 설치]</b> → <b>[설치]</b>. 버튼이 안 보이면 주소창 오른쪽 설치 아이콘(⊕) 또는 메뉴(⋮) → <b>[앱 설치]</b>.</li>
+      <li><b>안드로이드 (크롬):</b> 메뉴(⋮) → <b>[홈 화면에 추가]</b> 또는 <b>[앱 설치]</b>.</li>
+      <li><b>아이폰 · 아이패드 (사파리):</b> 아래쪽 <b>[공유]</b> 버튼 → <b>[홈 화면에 추가]</b>.</li>
+    </ul>
+    <div class="warn"><b>앱 설치만으로는 문서가 안전하게 보관되지 않습니다.</b> 설치 후 바로 아래 1~6단계로 구글 시트를 연결해 주세요.</div>
+  </div>
+</section>
 
 <!-- 1 -->
 <section class="step" id="s1">
