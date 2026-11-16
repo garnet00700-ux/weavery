@@ -315,6 +315,10 @@ textarea{resize:vertical;line-height:1.5}
 .fm-box.pv .fm-t.ph{color:#2f7d32;font-weight:700}
 .fm-box.pv .fm-s{color:#2f7d32;font-size:9pt;text-align:center;line-height:1.2;font-weight:700}
 .fm-box.pv .fm-s.co{outline-color:#b3261e;color:#b3261e;background:rgba(253,236,234,.55)}
+.fm-guide{grid-column:1/-1;background:#fff8e6;border:1px solid #f0d58a;border-radius:10px;padding:10px 14px;font-size:12.5px;line-height:1.65;color:#5a4200}
+.fm-guide>b{font-size:13.5px;color:#5a4200}
+.fm-guide ul{margin:4px 0 6px;padding-left:18px}
+.fm-guide p{margin:0}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -565,6 +569,14 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
         <span class="hint" id="fmFileR" style="margin:0;align-self:center"></span>
       </div>
       <div class="fm-opts" id="fmOpts" hidden>
+        <div class="fm-guide">
+          <b>어느 쪽을 고를까요?</b>
+          <ul>
+            <li>원본과 <b>글자 · 모양까지 똑같아야</b> 하면 → <b>B. 원본 모양 그대로</b> (보이는 내용이 하나도 빠지지 않습니다. 앞 8쪽까지)</li>
+            <li>내용을 <b>고쳐 쓰고 금액 계산</b>까지 하려면 → <b>A. 우리 양식에 채우기</b></li>
+          </ul>
+          <p>A를 고를 때는 미리보기에서 <b>품목 · 조항 수가 원본과 맞는지</b> 꼭 확인하세요. 조항은 "제1조, 제2조…"처럼 번호가 있어야 나눠 읽고, 번호 없는 특약 문단 · 계좌번호 · 원본 서명란 · 로고는 우리 양식 것으로 바뀝니다.</p>
+        </div>
         <section class="fm-opt" id="fmA">
           <div class="fm-oh"><b>A. 우리 양식에 채우기</b><label>서류 종류 <select id="fmKind"></select></label></div>
           <p class="hint">읽은 내용을 이 작성기의 깔끔한 양식으로 옮깁니다. 칸을 고치기 쉽고 금액 계산 · 전자서명 · 직인이 자동으로 들어갑니다.</p>
