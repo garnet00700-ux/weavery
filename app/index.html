@@ -338,6 +338,8 @@ textarea{resize:vertical;line-height:1.5}
 .cert-issue.done .ci-st{color:#2c5a8c}
 .cert-issue.done .ci-btn{background:#eef4fb;color:#2c5a8c;border-color:#b9cde3;cursor:default;filter:none}
 .lst.unissued{color:#9a5b00;border-color:#e8c98f;background:#fff6e5;cursor:default;text-align:center;line-height:1.25}
+/* 임시저장 알림 배너: 제목과 내용 사이 여백 */
+#draftBar #dbText{margin-left:14px}
 /* 주소 검색 */
 .addr-row{display:flex;gap:6px;align-items:stretch}
 .addr-row input{flex:1;min-width:0}
@@ -2860,7 +2862,7 @@ function draftBar(){
   if(!ds.length||draftBarClosed){ bar.hidden=true; return; }
   const left=Math.min(...ds.map(draftLeft));
   $("#dbTitle").textContent=`임시저장 중인 서류 ${ds.length}건`;
-  $("#dbText").innerHTML=`아직 발급하지 않은 증명서입니다.<br>${left<=1?"<b>오늘 · 내일 중</b> 자동으로 지워지는 서류가 있습니다.":`가장 빠른 것은 <b>${left}일 뒤</b> 자동으로 지워집니다.`}<br>필요하면 열어서 [발급하기]를 눌러 주세요.`;
+  $("#dbText").innerHTML=`아직 발급하지 않은 증명서입니다. ${left<=1?"<b>오늘 · 내일 중</b> 자동으로 지워지는 서류가 있습니다.":`가장 빠른 것은 <b>${left}일 뒤</b> 자동으로 지워집니다.`}<br>필요하면 열어서 [발급하기]를 눌러 주세요.`;
   bar.hidden=false;
 }
 $("#dbClose").onclick=()=>{ draftBarClosed=true; $("#draftBar").hidden=true; };
