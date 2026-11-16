@@ -77,7 +77,7 @@ body{background:#efede8;color:#222;font-family:"Noto Sans KR","맑은 고딕","M
     <label class="sg-f">이메일 (최종 계약서 수신)<input id="fEmail" type="email" autocomplete="email" inputmode="email" placeholder="example@email.com"></label>
     <label class="sg-agree"><input type="checkbox" id="fAgree"><span>위 계약서 전체 내용을 확인하였으며, 이 전자서명이 <b>자필 서명과 동일한 효력</b>을 가지는 것에 동의합니다.</span></label>
     <div class="pad-box"><canvas id="pad"></canvas><div class="ph" id="padPh">여기에 손가락(마우스)으로 서명해 주세요</div></div>
-    <div class="pad-tools"><span>서명은 계약서의 의뢰자 (인) 자리에 들어갑니다.</span><button class="btn" type="button" id="padClear">다시 쓰기</button></div>
+    <div class="pad-tools"><span id="padHint">서명은 계약서의 의뢰자 (인) 자리에 들어갑니다.</span><button class="btn" type="button" id="padClear">다시 쓰기</button></div>
     <button class="btn big" type="button" id="bSubmit" disabled>서명 완료하기</button>
     <div class="sg-err" id="err"></div>
   </div>
@@ -100,6 +100,7 @@ body{background:#efede8;color:#222;font-family:"Noto Sans KR","맑은 고딕","M
 <script>
 const API=(()=>{ const q=new URLSearchParams(location.search), a=q.get("a")||""; if(location.hostname==="localhost"&&q.get("api")) return q.get("api"); return /^[A-Za-z0-9_-]{20,}$/.test(a)?"https://script.google.com/macros/s/"+a+"/exec":""; })();
 const SUP=()=>(DOC&&DOC.supplier&&DOC.supplier.name)||"보낸 회사";
+const LAB=()=>/data-party="labor"/.test((DOC&&DOC.html)||""), PA=()=>LAB()?"근로자":"의뢰자", PB=()=>LAB()?"사업주":"수행자";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const id=new URLSearchParams(location.search).get("id")||"";
@@ -132,6 +133,7 @@ async function load(){
   }catch(e){ busy(); message(`<h2>계약서를 열 수 없습니다</h2><p>${esc(e.message)}</p>`); return; }
   busy();
   $("#docCss").textContent=DOC.css;
+  if(LAB()) $("#padHint").textContent="서명은 근로계약서의 근로자 (서명) 자리에 들어갑니다.";
   const col=(DOC.brand&&DOC.brand.color)||""; if(/^#[0-9a-fA-F]{6}$/.test(col)) document.documentElement.style.setProperty("--green",col);
   $("#topBrand").textContent=SUP(); document.querySelectorAll(".supn").forEach(e=>e.textContent=SUP()); document.title=`${SUP()} · 계약서 확인 및 서명`;
   $("#doc").innerHTML=fixAssets(DOC.html);
@@ -238,7 +240,7 @@ function renderSignedView(){
 
 /* 계약서에 의뢰자 서명 · 계약일(서버 기준) 넣기 */
 function applySignature(root,forPdf){
-  root.querySelectorAll("[data-client-seal]").forEach(s=>{ s.innerHTML=`<img src="${DOC.signature}" alt="">(인)`; });
+  root.querySelectorAll("[data-client-seal]").forEach(s=>{ s.innerHTML=`<img src="${DOC.signature}" alt="">${s.dataset.mark||"(인)"}`; });
   const m=String(DOC.signedAt||"").match(/(\d{4})-(\d{2})-(\d{2})/);
   if(m) root.querySelectorAll("[data-cdate]").forEach(d=>{
     if(d.dataset.blank==="1") d.innerHTML=`${m[1]} 년 &nbsp; ${+m[2]} 월 &nbsp; ${+m[3]} 일`;
@@ -263,16 +265,16 @@ function auditPage(first,N){
       ${tr("서명 요청 일시",esc(DOC.requestedAt)+" · 서버 기준")}
       ${tr("계약서 열람 일시",esc(DOC.viewedAt||"-")+" · 서버 기준")}
       ${tr("<b>계약 체결(서명 완료) 일시</b>",`<b>${esc(DOC.signedAt)}</b> · 서버 기준`)}
-      ${tr("의뢰자",esc(DOC.client.name||""))}
+      ${tr(PA(),esc(DOC.client.name||""))}
       ${tr("서명자",`${esc(s.name)}${s.phone?" · "+esc(s.phone):""}<br>${esc(s.email)}`)}
       ${tr("서명 기기",`<span style="font-size:7.5pt;color:#545454">${esc((s.ua||"").slice(0,180))}</span>`)}
-      ${tr("의뢰자 서명",`<img src="${DOC.signature}" alt="" style="height:16mm;vertical-align:middle">`)}
-      ${tr("수행자",`${esc(SUP())}${DOC.supplier&&DOC.supplier.ceo?" · 대표 "+esc(DOC.supplier.ceo):""} (서명 요청 시 서명 날인)`)}
+      ${tr(PA()+" 서명",`<img src="${DOC.signature}" alt="" style="height:16mm;vertical-align:middle">`)}
+      ${tr(PB(),`${esc(SUP())}${DOC.supplier&&DOC.supplier.ceo?" · 대표 "+esc(DOC.supplier.ceo):""} (서명 요청 시 서명 날인)`)}
     </table>
     <p style="margin:6mm 2mm 0;font-size:9pt;line-height:1.7;color:#333">
-      의뢰자는 위 일시에 계약서 전체 내용을 확인하고 「위 계약서 전체 내용을 확인하였으며, 이 전자서명이 자필 서명과 동일한 효력을 가지는 것에 동의합니다」에 동의한 뒤 전자서명하였습니다.<br>
+      ${PA()}는 위 일시에 계약서 전체 내용을 확인하고 「위 계약서 전체 내용을 확인하였으며, 이 전자서명이 자필 서명과 동일한 효력을 가지는 것에 동의합니다」에 동의한 뒤 전자서명하였습니다.<br>
       모든 일시는 서버(Google) 기준 한국 표준시(KST)입니다. 문서 고유번호는 서명 요청 시점의 계약서 원본으로 계산되며, 내용이 한 글자라도 바뀌면 번호가 달라집니다.<br>
-      본 계약서는 양측 서명 완료 즉시 의뢰자와 ${esc(SUP())}에 동일한 파일로 발송되었습니다.
+      본 계약서는 양측 서명 완료 즉시 ${PA()}와 ${esc(SUP())}에 동일한 파일로 발송되었습니다.
     </p></div>${stamp(N,N)}</div>`;
 }
 

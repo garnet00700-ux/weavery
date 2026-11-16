@@ -651,19 +651,26 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <button class="btn" type="button" data-sample="home" title="홈페이지 제작 견적 품목 · 안내사항 · 계약서 조항 예시">홈페이지 제작</button>
           <button class="btn" type="button" data-sample="blog" title="홈페이지형 블로그 제작 견적 품목 · 안내사항 · 특약 조항 예시">홈페이지형 블로그 제작</button>
         </div>
-        <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.</p>
+        <div class="sample-row">근로계약서 예시
+          <button class="btn" type="button" data-sample="lab-regular" title="고용노동부 표준근로계약서 (기간의 정함이 없는 경우)">정규직</button>
+          <button class="btn" type="button" data-sample="lab-fixed" title="고용노동부 표준근로계약서 (기간의 정함이 있는 경우)">기간제</button>
+          <button class="btn" type="button" data-sample="lab-part" title="고용노동부 표준근로계약서 (단시간근로자)">아르바이트 (단시간)</button>
+        </div>
+        <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
+          근로계약서는 견적서 없이 계약서만 만들어지며, 한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
       </div>
     </details>
 
     <details class="card" open>
-      <summary>의뢰자 정보</summary>
+      <summary><span data-ll="근로자 정보">의뢰자 정보</span></summary>
       <div class="in">
         <div class="grid2">
-          <label class="f">업체명<input data-p="client.name"></label>
-          <label class="f">대표자<input data-p="client.ceo"></label>
+          <label class="f"><span data-ll="성명">업체명</span><input data-p="client.name"></label>
+          <label class="f" data-only="quote">대표자<input data-p="client.ceo"></label>
           <label class="f">연락처<input data-p="client.phone"></label>
           <label class="f">이메일 <span style="font-weight:400">(최종 계약서 받을 주소)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
-          <label class="f">견적일<input type="date" data-p="quoteDate"></label>
+          <label class="f" data-only="labor">주소<input data-p="client.addr"></label>
+          <label class="f"><span data-ll="작성일">견적일</span><input type="date" data-p="quoteDate"></label>
         </div>
         <div class="grid2" id="deliverBox" style="margin-top:10px"></div>
       </div>
@@ -671,7 +678,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 
     <div id="prodCards"></div>
 
-    <details class="card" open>
+    <details class="card" open data-only="quote">
       <summary>대금 조건</summary>
       <div class="in">
         <div class="grid2">
@@ -688,7 +695,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
     </details>
 
     <details class="card" open>
-      <summary>계약일 · 의뢰자 서명</summary>
+      <summary>계약일 · <span data-ll="근로자">의뢰자</span> 서명</summary>
       <div class="in">
         <div class="grid3">
           <label class="f">년<input data-p="date.y"></label>
@@ -696,7 +703,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <label class="f">일<input data-p="date.d"></label>
         </div>
         <p class="hint">빈칸이면 계약서에 공란으로 인쇄됩니다. <button class="btn" id="bToday" type="button" style="padding:3px 8px">오늘 날짜</button></p>
-        <div class="sub">의뢰자(고객) 사인</div>
+        <div class="sub"><span data-ll="근로자">의뢰자(고객)</span> 사인</div>
         <div class="signbox">
           <div class="signprev" id="cSignPrev"></div>
           <div class="btncol">
@@ -810,11 +817,11 @@ function normProduct(x){
   return o;
 }
 function newDocFrom(prof){
-  return {v:1, docId:newId(), status:"대기", esign:null,
+  return fixMode({v:1, docId:newId(), status:"대기", esign:null,
     client:{name:"",ceo:"",phone:"",email:""}, quoteDate:todayISO(),
     date:{y:String(new Date().getFullYear()),m:"",d:""}, clientSign:"",
     prods:clone(prof.templates).map(p=>Object.assign(p,{deliver:"",extra:p.extra||""})),
-    depositRate:Number(prof.depositRate)||30, vatMode:"separate", showWords:false};
+    depositRate:Number(prof.depositRate)||30, vatMode:"separate", showWords:false});
 }
 function normDoc(d){
   if(!d||typeof d!=="object"||!Array.isArray(d.prods)) return newDocFrom(profile);
@@ -825,7 +832,7 @@ function normDoc(d){
   if(o.status!=="완료") o.status="대기";
   if(!o.esign||typeof o.esign!=="object"||!o.esign.id) o.esign=null;
   if(!o.docId) o.docId=newId();
-  return o;
+  return fixMode(o);
 }
 let cfg=Object.assign({url:"",key:"",user:""},lsGet(K.cfg,{}));
 let profile=normProfile(lsGet(K.prof,null));
@@ -856,7 +863,10 @@ const docTotal=()=>onProds().reduce((s,p)=>s+totals(p).total,0);
 function fill(text,p,underline){
   const t=p?totals(p):{supply:0,total:0,rate:Number(state.depositRate)||0};
   const u=v=>underline?"\u0001"+v+"\u0002":v;
+  if(p&&p.kind==="labor") text=laborFill(String(text||""),p,u);
   return String(text||"")
+    .replace(/\{근로자\}/g,u(state.client.name||""))
+    .replace(/\{사업주\}/g,profile.name||"")
     .replace(/\{대표자\}/g,u(state.client.ceo||""))
     .replace(/\{의뢰인\}/g,u(state.client.name||""))
     .replace(/\{수행자\}/g,profile.name||"")
@@ -1064,7 +1074,7 @@ function termsHtml(pi){
   return P()[pi].terms.map((t,i)=>`
     <div class="term">
       <div class="th">
-        <span class="no">제${i+1}조</span>
+        <span class="no">${P()[pi].kind==="labor"?`${i+1}.`:`제${i+1}조`}</span>
         <input data-p="${list}.${i}.title" value="${esc(t.title)}">
         <button class="ib" type="button" data-list="${list}" data-act="up" data-i="${i}" title="위로">↑</button>
         <button class="ib" type="button" data-list="${list}" data-act="down" data-i="${i}" title="아래로">↓</button>
@@ -1074,6 +1084,7 @@ function termsHtml(pi){
     </div>`).join("");
 }
 function prodCardHtml(p,pi){
+  if(p.kind==="labor") return laborCardHtml(p,pi);
   const k=`p${p.pid}`;
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
     <summary>${esc(p.name||"(이름 없는 상품)")} — 견적 · 계약</summary>
@@ -1119,11 +1130,11 @@ function prodCardHtml(p,pi){
 }
 function renderProds(){
   $("#prodPick").innerHTML=P().map((p,i)=>`<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}>${esc(p.name||"(이름 없음)")}</label>`).join("");
-  $("#deliverBox").innerHTML=P().map((p,i)=>p.on?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
+  $("#deliverBox").innerHTML=P().map((p,i)=>p.on&&p.kind!=="labor"?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
   $("#prodCards").innerHTML=P().map(prodCardHtml).join("");
   // 텍스트 칸 값 넣기 (value 속성 대신 직접 넣어야 줄바꿈 등 정확)
   $$("#prodCards [data-p]").forEach(el=>{ if(el.tagName==="SELECT"||el.type==="checkbox") return; const v=getAt(state,el.dataset.p); if(el.value!==String(v??"")) el.value=v??""; });
-  updateSums();
+  updateSums(); applyMode();
 }
 function updateSums(){ $$("[data-sum]").forEach(s=>{ const p=P()[+s.dataset.sum]; if(p) s.textContent="₩ "+won(totals(p).total); }); }
 function renderImages(){
@@ -1137,6 +1148,9 @@ $("#editor").addEventListener("input",e=>{
   if(el.hasAttribute("data-bool")) v=el.checked;
   else if(el.hasAttribute("data-num")) v= v==="" ? (el.hasAttribute("data-null")?null:"") : Number(v);
   setAt(state,el.dataset.p,v);
+  const on=el.dataset.p.match(/^prods\.(\d+)\.on$/);
+  if(on&&v){ const lab=P()[+on[1]].kind==="labor"; P().forEach((q,i)=>{ if(i!==+on[1]&&(q.kind==="labor"||lab)) q.on=false; }); if(lab) state.client.ceo=state.client.name||""; }
+  if(el.dataset.p==="client.name"&&isLabor()) state.client.ceo=v;
   const m=el.dataset.p.match(/^(prods\.\d+\.items\.\d+)\.(\w+)$/);
   if(m&&m[2]==="disc"&&!v){ const it=getAt(state,m[1]); it.amount=null; it.note=""; }
   if(m&&/^(cat|desc|qty)$/.test(m[2])){ const h=document.querySelector(`[data-h="${m[1]}"]`); if(h) h.innerHTML=itemHead(getAt(state,m[1])); }
@@ -1718,7 +1732,7 @@ function esSummary(){
   return {title:esTitle(),client:clone(state.client),
     supplier:{name:s.name,ceo:s.ceo,phone:s.phone,bizno:s.bizno,email:s.email,web:s.web,address:s.address},
     brand:{color:s.color,slogan:s.slogan,prefix:s.prefix},
-    mail:clone(s.mail),items,monthly,grandTotal:docTotal(),vatMode:state.vatMode,account:s.account};
+    mail:isLabor()?Object.assign(clone(s.mail),laborMail()):clone(s.mail),items,monthly,grandTotal:docTotal(),vatMode:state.vatMode,account:isLabor()?"":s.account};
 }
 let esBusyMsg="";
 function esBusy(msg){ esBusyMsg=msg||""; renderEsign(); }
@@ -1728,7 +1742,7 @@ async function esCreate(){
   if(!deployId()) return alert("서버 주소 형식이 올바르지 않습니다. 연결 코드로 다시 연결해 주세요.");
   if(!profile.name.trim()) { openSettings("co"); return alert("[회사 설정 → 회사 정보]에 상호명을 먼저 입력해 주세요."); }
   if(!onProds().length) return alert("상품을 하나 이상 선택하세요.");
-  if(!state.client.name.trim()&&!state.client.ceo.trim()) return alert("의뢰자 업체명이나 대표자를 입력하세요.");
+  if(!state.client.name.trim()&&!state.client.ceo.trim()) return alert(isLabor()?"근로자 성명을 입력하세요.":"의뢰자 업체명이나 대표자를 입력하세요.");
   const em=(state.client.email||"").trim();
   if(em&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return alert("의뢰자 이메일 주소를 확인해 주세요.");
   const old=state.esign;
@@ -1926,6 +1940,7 @@ function termBody(text,p){
   }).join("");
 }
 function contractBlocks(p){
+  if(p.kind==="labor") return laborContractBlocks(p);
   const c=state.client,s=profile,out=[];
   const ttl=p.contractTitle||"계약서";
   out.push(`<div class="cttl${ttl.length>18?" sm":""}">${esc(ttl)}</div>`);
@@ -1966,7 +1981,7 @@ function flow(kind,blocks){
 }
 function renderPreview(){
   $("#pages").innerHTML="";
-  onProds().forEach(p=>{ flow("quote",quoteBlocks(p)); flow("contract",contractBlocks(p)); });
+  onProds().forEach(p=>{ if(p.kind!=="labor") flow("quote",quoteBlocks(p)); flow("contract",contractBlocks(p)); });
   if(!onProds().length) $("#pages").innerHTML=`<div class="lempty" style="background:#fff;border-radius:10px;padding:40px">왼쪽 [상품 선택]에서 상품을 하나 이상 고르세요.</div>`;
   const pages=$$("#pages .page"); pages.forEach((p,i)=>p.classList.toggle("last",i===pages.length-1));
   updateSums(); applyZoom();
@@ -2453,6 +2468,183 @@ $("#suCopy").onclick=async()=>{
   setTimeout(()=>{ b.textContent=t; },2500);
 };
 setTimeout(serverVerCheck,1500);
+
+/* ===== 근로계약서 =====
+   상품 종류 kind:"labor" → 견적서 없이 계약서만, 당사자는 사업주(회사) / 근로자(state.client).
+   근로 조건 칸(p.labor)이 조항 속 {근로개시일} 같은 자리에 자동으로 들어갑니다.
+   근로계약서는 다른 상품과 함께 고를 수 없습니다 (한 문서 = 견적·계약 또는 근로계약).
+   서버는 그대로 — 메일 문구는 서명 요청 때 같이 보내고, 서명 페이지는 계약서 안의 data-party="labor"로 알아봅니다.
+   ※ 이 파일의 함수는 app1.js 맨 위에서도 불리므로 파일 맨 위 const를 쓰지 않습니다 (함수 안에서만). */
+function isLabor(d){ return ((d||state).prods||[]).some(p=>p.on&&p.kind==="labor"); }
+// 한 문서에 견적 상품과 근로계약서가 같이 켜져 있으면 근로계약서를 끔
+function fixMode(d){
+  const on=(d.prods||[]).filter(p=>p.on);
+  if(on.some(p=>p.kind==="labor")&&on.some(p=>p.kind!=="labor")) d.prods.forEach(p=>{ if(p.kind==="labor") p.on=false; });
+  return d;
+}
+function laborDefaults(type){
+  const part=type==="part";
+  return {type:type||"regular", start:"", end:"", place:"", job:"",
+    days:part?"":"주 5일 (월요일 ~ 금요일)", holiday:"매주 일요일", from:"09:00", to:part?"":"18:00", rest:part?"":"12:00 ~ 13:00",
+    payType:part?"시급":"월급", pay:"", bonus:"없음", allow:"없음", payDay:"10",
+    payMethod:"근로자 명의 예금통장에 입금", ins:"고용보험, 산재보험, 국민연금, 건강보험"};
+}
+function laborFields(){
+  return [["start","근로개시일"],["end","계약종료일"],["place","근무장소"],["job","업무내용"],["days","근무일"],["holiday","주휴일"],
+    ["from","시업시각"],["to","종업시각"],["rest","휴게시간"],["payType","임금형태"],["pay","임금"],["bonus","상여금"],["allow","기타수당"],
+    ["payDay","임금지급일"],["payMethod","지급방법"],["ins","사회보험"]];
+}
+function laborFill(text,p,u){
+  const L=Object.assign(laborDefaults(),p.labor||{}), blank="_______________";   // 빈칸은 손으로 쓸 수 있게 밑줄
+  laborFields().forEach(([k,label])=>{
+    let v=L[k];
+    if(k==="pay") v=has(v)&&v!==""?won(v):"";
+    v=String(v??"").trim();
+    text=text.split(`{${label}}`).join(v?u(v):blank);
+  });
+  return text;
+}
+function laborTypes(){ return {regular:"정규직 (기간의 정함이 없음)",fixed:"기간제 (기간의 정함이 있음)",part:"단시간 (아르바이트)"}; }
+
+/* --- 편집 화면: 근로계약서 상품 칸 --- */
+function laborCardHtml(p,pi){
+  const k=`p${p.pid}`, L=p.labor=Object.assign(laborDefaults(p.labor&&p.labor.type),p.labor||{}), b=`prods.${pi}.labor`;
+  const f=(key,label,ph,extra)=>`<label class="f">${label}<input data-p="${b}.${key}"${ph?` placeholder="${esc(ph)}"`:""}${extra||""}></label>`;
+  const sel=(key,label,opts)=>`<label class="f">${label}<select class="f" data-p="${b}.${key}" data-struct>${
+    opts.map(([v,t])=>`<option value="${esc(v)}"${String(L[key])===v?" selected":""}>${esc(t)}</option>`).join("")}</select></label>`;
+  return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
+    <summary>${esc(p.name||"(이름 없는 근로계약서)")} — 근로계약</summary>
+    <div class="in">
+      <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>이름 · 문서 제목</summary>
+        <div class="grid2">
+          <label class="f">상품 이름<input data-p="prods.${pi}.name" data-title></label>
+          <label class="f">계약서 제목<input data-p="prods.${pi}.contractTitle"></label>
+        </div>
+      </details>
+      <div class="sub" style="margin-top:4px">근로 조건</div>
+      <div class="grid2">
+        ${sel("type","계약 형태",Object.entries(laborTypes()))}
+        ${f("start","근로개시일","예: 2026. 12. 1.")}
+        ${L.type!=="regular"?f("end","계약 종료일","예: 2027. 11. 30."):""}
+        ${f("place","근무 장소","예: 본사 매장")}
+        ${f("job","업무 내용","예: 매장 판매 및 고객 응대")}
+        ${f("days",L.type==="part"?"근로일":"근무일",L.type==="part"?"예: 매주 토 · 일요일":"예: 주 5일 (월요일 ~ 금요일)")}
+        ${f("holiday","주휴일","예: 매주 일요일")}
+        ${f("from","시업 시각","09:00")}
+        ${f("to","종업 시각","18:00")}
+        ${f("rest","휴게시간","12:00 ~ 13:00")}
+        ${sel("payType","임금 형태",[["월급","월급"],["시급","시급"],["일급","일급"]])}
+        ${f("pay","임금 (원)","",' type="number" min="0" data-num')}
+        ${f("bonus","상여금","예: 없음 / 연 2회 기본급의 50%")}
+        ${f("allow","기타 수당","예: 식대 월 200,000원")}
+        ${f("payDay","임금 지급일 (매월 ○일)","10")}
+        ${f("payMethod","지급 방법","근로자 명의 예금통장에 입금")}
+        ${f("ins","사회보험","고용보험, 산재보험, 국민연금, 건강보험")}
+      </div>
+      <p class="hint"><b>확인해 주세요:</b> 임금이 그해 <b>최저임금</b> 이상인지, 주 15시간 이상 일하면 <b>주휴수당</b>이 반영됐는지, 휴게시간(4시간에 30분 · 8시간에 1시간 이상)이 맞는지는 직접 확인해야 합니다.
+        예시 양식은 고용노동부 표준근로계약서를 바탕으로 했으며, 법률 자문을 대신하지 않습니다.</p>
+      <details class="prodcfg" data-k="${k}-tm" ${isOpen(k+"-tm")}><summary>계약 항목 (${p.terms.length}개)</summary>
+        <p class="hint" style="margin:0 0 8px">번호는 자동입니다. 위 근로 조건이 자동으로 채워지는 칸:
+          ${laborFields().map(([,l])=>`<code>{${l}}</code>`).join(" ")} <code>{근로자}</code> <code>{사업주}</code></p>
+        <label class="f">머리말<textarea rows="3" data-p="prods.${pi}.intro">${esc(p.intro)}</textarea></label>
+        <div class="sub">항목</div>
+        <div>${termsHtml(pi)}</div>
+        <button class="btn" type="button" data-add="prods.${pi}.terms">+ 항목 추가</button>
+        <button class="btn" type="button" data-imp="terms" data-pi="${pi}">기존 계약서에서 가져오기</button>
+      </details>
+      <div class="pbtns">
+        <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 근로계약서 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
+        <button class="btn" type="button" data-pact="reset" data-pi="${pi}">기본값으로 되돌리기</button>
+        <button class="btn" type="button" data-pact="del" data-pi="${pi}">상품 종류 삭제</button>
+      </div>
+    </div>
+  </details>`;
+}
+// 의뢰자 ↔ 근로자 화면 문구 · 칸 바꾸기
+function applyMode(){
+  const lab=isLabor();
+  $$("[data-ll]").forEach(e=>{ if(e.dataset.lq==null) e.dataset.lq=e.textContent; e.textContent=lab?e.dataset.ll:e.dataset.lq; });
+  $$("[data-only]").forEach(e=>{ e.style.display=e.dataset.only===(lab?"labor":"quote")?"":"none"; });
+}
+
+/* --- 미리보기: 근로계약서 --- */
+function laborContractBlocks(p){
+  const c=state.client,s=profile,out=[];
+  const ttl=p.contractTitle||"근로계약서";
+  out.push(`<div class="cttl${ttl.length>18?" sm":""}">${esc(ttl)}</div>`);
+  if(p.intro) out.push(`<div class="intro">${blankLine(esc(fill(p.intro,p,true))).replace(/\n/g,"<br>")}</div>`);
+  p.terms.forEach((tm,i)=>out.push(`<div class="art"><b>${i+1}. ${esc(tm.title)}</b>${blankLine(termBody(tm.body,p))}</div>`));
+  const d=esignMode?{y:"",m:"",d:""}:state.date,bl="&nbsp;&nbsp;&nbsp;";
+  const cs=state.clientSign&&!esignMode?`<img src="${state.clientSign}" alt="">`:"";
+  const ss=s.sign?`<img src="${s.sign}" alt="">`:"";
+  out.push(`<div>
+    <div class="cdate" data-cdate data-blank="${d.y&&d.m&&d.d?0:1}">${esc(d.y)||bl} 년 ${esc(d.m)||bl} 월 ${esc(d.d)||bl} 일</div>
+    <table class="t sg" data-party="labor">
+      <colgroup><col style="width:16%"><col style="width:34%"><col style="width:16%"><col style="width:34%"></colgroup>
+      <tr><th colspan="2">사업주</th><th colspan="2">근로자</th></tr>
+      <tr><td>사업체명</td><td>${esc(s.name)}</td><td>성명</td><td><div class="nm"><span>${esc(c.name)}</span><span class="seal" data-client-seal data-mark="(서명)">${cs}(서명)</span></div></td></tr>
+      <tr><td>대표자</td><td><div class="nm"><span>${esc(s.ceo)}</span><span class="seal">${ss}(서명)</span></div></td><td>연락처</td><td>${esc(c.phone)}</td></tr>
+      <tr><td>주소</td><td style="font-size:8pt">${esc(s.address)}</td><td>주소</td><td style="font-size:8pt">${esc(c.addr)}</td></tr>
+      <tr><td>전화</td><td>${esc(s.phone)}</td><td>이메일</td><td style="font-size:8pt">${esc(c.email)}</td></tr>
+    </table></div>`);
+  return out;
+}
+// 서명 완료 메일: 금액 요약 대신 근로계약 문구 (서버는 작성기가 보낸 문구를 그대로 씀)
+function laborMail(){
+  return {
+    subject:"[{상호}] {의뢰인} 님 근로계약서 서명 완료 ({문서번호})",
+    client:"{서명자}님, 안녕하세요. {상호}입니다.\n근로계약서 서명이 완료되어 양측 서명이 모두 들어간 최종 근로계약서를 보내드립니다.\n근로계약서는 근로기준법에 따라 근로자에게 드리는 서류이니 잘 보관해 주세요.",
+    owner:"{의뢰인} 님 근로계약서 서명이 완료되었습니다.\n근로자에게 같은 최종 근로계약서가 발송되었습니다. (근로자 메일: {서명자메일})",
+    summary:false
+  };
+}
+
+/* --- 예시 양식: 고용노동부 표준근로계약서 --- */
+function laborSample(type){
+  const T=(title,body)=>({title,body});
+  const intro="{사업주}(이하 \"사업주\"라 함)과(와) {근로자}(이하 \"근로자\"라 함)은 다음과 같이 근로계약을 체결한다.";
+  const pay=part=>T("임금",
+    `- ${part?"시간(일, 월)급":"{임금형태}"}: {임금}원 (${part?"{임금형태}":"세전"})\n- 상여금: {상여금}\n- 기타 급여(제수당 등): {기타수당}\n- 임금지급일: 매월 {임금지급일}일 (휴일의 경우는 전일 지급)\n- 지급방법: {지급방법}` +
+    (part?"\n- 단시간근로자와 사용자 사이에 근로하기로 정한 시간을 초과하여 근로하면 통상임금의 100분의 50 이상을 가산하여 지급함":""));
+  const common=part=>[
+    pay(part),
+    T("연차유급휴가", part?"통상근로자의 근로시간에 비례하여 연차유급휴가를 부여함":"연차유급휴가는 근로기준법에서 정하는 바에 따라 부여함"),
+    T("사회보험 적용여부","{사회보험}"),
+    T("근로계약서 교부","사업주는 근로계약을 체결함과 동시에 본 계약서를 사본하여 근로자의 교부요구와 관계없이 근로자에게 교부함 (근로기준법 제17조 이행)"),
+    T("근로계약, 취업규칙 등의 성실한 이행의무","사업주와 근로자는 각자가 근로계약, 취업규칙, 단체협약을 지키고 성실하게 이행하여야 함"),
+    T("기타","이 계약에 정함이 없는 사항은 근로기준법령에 의함")
+  ];
+  const head={
+    regular:[T("근로개시일","{근로개시일}부터")],
+    fixed:[T("근로계약기간","{근로개시일}부터 {계약종료일}까지")],
+    part:[T("근로계약기간","{근로개시일}부터 {계약종료일}까지")]
+  }[type];
+  const mid=type==="part"
+    ?[T("근로일 및 근로일별 근로시간","- 근로일: {근무일}\n- 근로시간: {시업시각}부터 {종업시각}까지 (휴게시간: {휴게시간})"),
+      T("주휴일","{주휴일}")]
+    :[T("소정근로시간","{시업시각}부터 {종업시각}까지 (휴게시간: {휴게시간})"),
+      T("근무일/휴일","{근무일} 근무, 주휴일 {주휴일}")];
+  const name={regular:"근로계약서 (정규직)",fixed:"근로계약서 (기간제)",part:"근로계약서 (단시간)"}[type];
+  const title={regular:"표준근로계약서",fixed:"표준근로계약서 (기간의 정함이 있는 경우)",part:"단시간근로자 표준근로계약서"}[type];
+  return {kind:"labor", name, quoteTitle:"", contractTitle:title, items:[], notices:[], noticeIntro:"", extra:"",
+    labor:laborDefaults(type), intro,
+    terms:[...head, T("근무장소","{근무장소}"), T("업무의 내용","{업무내용}"), ...mid, ...common(type==="part")]};
+}
+SAMPLES["lab-regular"]=()=>laborSample("regular");
+SAMPLES["lab-fixed"]=()=>laborSample("fixed");
+SAMPLES["lab-part"]=()=>laborSample("part");
+// 근로계약서 예시 줄도 같은 버튼 처리 (app1.js의 #sampleRow 처리를 그대로 씀)
+$$(".sample-row [data-sample^='lab-']").forEach(b=>b.addEventListener("click",()=>{
+  const s=SAMPLES[b.dataset.sample]();
+  if(P().some(p=>p.name===s.name)&&!confirm(`'${s.name}'이(가) 이미 있습니다. 하나 더 추가할까요?`)) return;
+  const p=Object.assign(GENERIC_PRODUCT(),s);
+  P().forEach(q=>{ q.on=false; });                       // 근로계약서는 따로
+  P().push(p); profile.templates.push(Object.assign(clone(p),{on:false})); saveProfile();
+  state.client.ceo=state.client.name||"";
+  openSet.add(`p${p.pid}-tm`);
+  renderProds(); esMarkStale(); save(); schedule();
+  $("#saved").textContent=`'${p.name}' 예시 양식을 추가했습니다 — 근로 조건을 채우고 항목을 고쳐 쓰세요`;
+}));
 
 </script>
 </body>
