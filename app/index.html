@@ -814,6 +814,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <select id="sampleSel">
             <option value="">— 골라 주세요 —</option>
             <optgroup label="견적서 · 거래명세서 · 계약서">
+              <option value="basic">기본 양식 (견적서 + 용역 계약서)</option>
               <option value="home">홈페이지 제작</option>
               <option value="blog">홈페이지형 블로그 제작</option>
               <option value="stmt">거래명세서 (인수자 서명란 포함)</option>
@@ -938,7 +939,7 @@ function korWon(n){
 // mode: normal(합계 포함) | service(서비스, 0원) | monthly(월 금액, 합계 제외) | exclude(별도, 합계 제외)
 const ITEM=(cat,desc,sub,qty,price,mode)=>({cat,desc,sub,qty,price,amount:null,note:"",mode});
 const GENERIC_PRODUCT=()=>({
-  pid:newId(), on:true, name:"기본 상품",
+  pid:newId(), on:true, name:"기본 양식",
   quoteTitle:"견적서", contractTitle:"용역 계약서",
   items:[ITEM("용역","기본 작업","","1식","","normal")],
   extra:"", deliver:"",
@@ -983,6 +984,7 @@ function normProfile(p){
   o.kakao=Object.assign(clone(KAKAO_MSG),p.kakao||{});
   if(!Array.isArray(o.templates)||!o.templates.length) o.templates=[GENERIC_PRODUCT()];
   o.templates=o.templates.map(normProduct);
+  o.templates.forEach(t=>{ if((t.name||"").trim()==="기본 상품") t.name="기본 양식"; });   // 예전 이름 정리 (상품 목록만, 저장된 문서는 그대로)
   return o;
 }
 function normProduct(x){
@@ -1424,6 +1426,7 @@ $("#bToday").onclick=()=>{state.date=todayYMD();bindSimple();save();schedule();}
    개인용 weavery LAB 작성기에 실제 쓰던 홈페이지(유지보수) · 블로그 계약서를 그대로 가져옵니다.
    SAMPLE_SRC는 build.js가 원본 파일에서 뽑아 넣습니다 (회사 이름 → {수행자}, 금액 칸 → {금액}, 로고·사업자 정보·단가 없음). */
 const SAMPLES={
+  basic:()=>{ const g=GENERIC_PRODUCT(); delete g.pid; delete g.on; return g; },   // 기본 양식 (지웠다가 다시 넣을 때)
   home:()=>({
     name:"홈페이지 제작", quoteTitle:"홈페이지 제작 견적서", contractTitle:"홈페이지 제작 및 유지보수 계약서",
     items:clone(SAMPLE_SRC.homeItems), noticeIntro:SAMPLE_SRC.noticeIntro, notices:clone(SAMPLE_SRC.homeNotices),
