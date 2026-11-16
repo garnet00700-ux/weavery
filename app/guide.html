@@ -979,6 +979,8 @@ body.all details.stuck{display:block}
 
 <script>
 (function(){
+  // 작성기(앱) 안에서 열었으면 이미 설치한 것이니 바탕화면 설치 화면은 건너뜁니다
+  try{ if(parent!==window||matchMedia("(display-mode: standalone)").matches||navigator.standalone){ var s0=document.getElementById("s0"); if(s0) s0.parentNode.removeChild(s0); } }catch(e){}
   var slides=[].slice.call(document.querySelectorAll(".slide")), cur=0;
   var toc=document.getElementById("tocList"), chaps=[], byChap={};
   // 목차: 같은 data-chap 묶음의 첫 슬라이드로 이동
@@ -1102,7 +1104,7 @@ body.all details.stuck{display:block}
     addEventListener("appinstalled",function(){ ev=null; doneUI(); });
     btns.forEach(function(x){ x.addEventListener("click",function(){
       if(ev){ ev.prompt(); ev.userChoice.then(function(r){ ev=null; if(r&&r.outcome==="accepted") doneUI(); }); return; }
-      var t=document.getElementById("s0");
+      var t=document.getElementById("s0"); if(!t) return;
       if(x.closest("#s0")){ var d=t.querySelector("details.stuck"); if(d){ d.open=true; d.scrollIntoView({behavior:"smooth",block:"center"}); } return; }
       go(slides.indexOf(t));
     }); });
