@@ -258,6 +258,7 @@ textarea{resize:vertical;line-height:1.5}
 /* 상품 선택 — 예시 양식 버튼 */
 .sample-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px;font-size:12px;color:var(--ui-sub)}
 .sample-row .btn{padding:5px 10px;font-size:12px}
+.sample-row select{flex:1;min-width:180px;padding:7px 8px;border:1px solid var(--ui-border);border-radius:7px;font:inherit;font-size:13px;background:#fff;color:var(--ui-text)}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -418,7 +419,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 <div class="modal" id="impModal" hidden>
   <div class="mbox padbox" role="dialog" aria-label="기존 양식에서 가져오기">
     <div class="mhead"><b id="impTitle">기존 계약서에서 조항 가져오기</b></div>
-    <p class="hint" style="margin:0 0 8px">기존 계약서·견적서 파일(PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br>
+    <p class="hint" id="impHint" style="margin:0 0 8px">기존 계약서·견적서 파일(PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br>
       <b>조항</b>은 "제1조 (목적)"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.</p>
     <div class="padbtns" style="margin:0 0 8px">
       <button class="btn" type="button" id="impFileBtn">파일 올리기</button>
@@ -647,15 +648,20 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       <div class="in">
         <div class="prods" id="prodPick"></div>
         <button class="btn" type="button" id="bAddProd" style="margin-top:8px">+ 상품 종류 추가</button>
-        <div class="sample-row" id="sampleRow">예시 양식으로 추가
-          <button class="btn" type="button" data-sample="home" title="홈페이지 제작 견적 품목 · 안내사항 · 계약서 조항 예시">홈페이지 제작</button>
-          <button class="btn" type="button" data-sample="blog" title="홈페이지형 블로그 제작 견적 품목 · 안내사항 · 특약 조항 예시">홈페이지형 블로그 제작</button>
-        </div>
-        <div class="sample-row">근로계약서 예시
-          <button class="btn" type="button" data-sample="lab-regular" title="고용노동부 표준근로계약서 (기간의 정함이 없는 경우)">정규직</button>
-          <button class="btn" type="button" data-sample="lab-fixed" title="고용노동부 표준근로계약서 (기간의 정함이 있는 경우)">기간제</button>
-          <button class="btn" type="button" data-sample="lab-part" title="고용노동부 표준근로계약서 (단시간근로자)">아르바이트 (단시간)</button>
-        </div>
+        <label class="sample-row" id="sampleRow">예시 양식으로 추가
+          <select id="sampleSel">
+            <option value="">— 골라 주세요 —</option>
+            <optgroup label="견적서 · 계약서">
+              <option value="home">홈페이지 제작</option>
+              <option value="blog">홈페이지형 블로그 제작</option>
+            </optgroup>
+            <optgroup label="근로계약서 (고용노동부 표준 양식)">
+              <option value="lab-regular">근로계약서 — 정규직</option>
+              <option value="lab-fixed">근로계약서 — 기간제</option>
+              <option value="lab-part">근로계약서 — 아르바이트 (단시간)</option>
+            </optgroup>
+          </select>
+        </label>
         <p class="hint">상품마다 견적서 1장 + 계약서가 만들어집니다. 품목 · 안내사항 · 조항은 상품마다 따로 정할 수 있습니다.<br>
           근로계약서는 견적서 없이 계약서만 만들어지며, 한 번에 하나만 (다른 상품과 따로) 고를 수 있습니다.</p>
       </div>
@@ -1231,11 +1237,13 @@ const SAMPLES={
     intro:"", terms:clone(SAMPLE_SRC.blogTerms)
   })
 };
-$("#sampleRow").addEventListener("click",e=>{
-  const b=e.target.closest("[data-sample]"); if(!b) return;
-  const s=SAMPLES[b.dataset.sample]();
+$("#sampleSel").addEventListener("change",e=>{
+  const key=e.target.value; e.target.value=""; if(!key||!SAMPLES[key]) return;
+  if(/^lab-/.test(key)) return addLaborSample(key);
+  const s=SAMPLES[key]();
   if(P().some(p=>p.name===s.name)&&!confirm(`'${s.name}' 상품이 이미 있습니다. 예시 양식으로 하나 더 추가할까요?`)) return;
   const p=Object.assign(GENERIC_PRODUCT(),s);
+  P().forEach(q=>{ if(q.kind==="labor") q.on=false; });   // 근로계약서와 함께 못 고름
   P().push(p); profile.templates.push(clone(p)); saveProfile();
   openSet.add(`p${p.pid}-tm`);
   renderProds(); esMarkStale(); save(); schedule();
@@ -1432,7 +1440,10 @@ $("#bCSignDel").onclick=()=>{ if(state.clientSign&&!confirm("고객 사인을 �
 let impKind="terms", impPi=0;
 function openImport(kind,pi){
   impKind=kind; impPi=pi;
-  $("#impTitle").textContent=kind==="terms"?"기존 계약서에서 조항 가져오기":"기존 견적서에서 안내사항 가져오기";
+  $("#impTitle").textContent={terms:"기존 계약서에서 조항 가져오기",labor:"기존 근로계약서 가져오기"}[kind]||"기존 견적서에서 안내사항 가져오기";
+  $("#impHint").innerHTML=kind==="labor"
+    ?"쓰시던 근로계약서 파일(PDF · 워드 .docx · .txt)을 올리거나 내용을 붙여넣으세요.<br><b>\"1. 근로개시일 : …\"</b>처럼 번호 붙은 항목을 나누고, 날짜 · 근무시간 · 임금 · 근로자 이름 같은 값은 <b>근로 조건 칸으로 옮겨</b> 칸에서 고치면 계약서에 바로 반영되게 합니다. 넣기 전에 아래에서 확인할 수 있습니다."
+    :"기존 계약서·견적서 파일(PDF · 워드 .docx · .txt)을 올리거나, 내용을 복사해 아래 칸에 붙여넣으세요.<br><b>조항</b>은 \"제1조 (목적)\"처럼 조 번호로, <b>안내사항</b>은 줄마다 나눠서 넣습니다. 넣기 전에 아래에서 확인할 수 있습니다.";
   $("#impText").value=""; $("#impPrev").innerHTML=""; $("#impFileR").textContent="";
   $("#impModal").hidden=false; $("#impText").focus();
 }
@@ -1503,11 +1514,13 @@ function parseNotices(text){
 }
 function impParsed(){
   const t=$("#impText").value.replace(/\t+/g," ");
+  if(impKind==="labor") return parseLabor($("#impText").value);
   if(impKind==="terms"){ const r=parseTerms(t); return r; }
   return {notices:parseNotices(t)};
 }
 function renderImpPrev(){
   const r=impParsed();
+  if(impKind==="labor"){ $("#impPrev").innerHTML=laborImpPrev(r); return; }
   if(impKind==="terms") $("#impPrev").innerHTML=r.terms.length?r.terms.map((x,i)=>`<div><b>제${i+1}조 ${esc(x.title)}</b> · ${esc(x.body.slice(0,60))}${x.body.length>60?"…":""}</div>`).join("")
     :($("#impText").value.trim()?`<div>"제1조"처럼 조 번호가 있는 글을 찾지 못했습니다.</div>`:"");
   else $("#impPrev").innerHTML=r.notices.map(x=>`<div>- ${esc(x)}</div>`).join("");
@@ -1521,6 +1534,7 @@ $("#impFile").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; 
 $("#impCancel").onclick=()=>{ $("#impModal").hidden=true; };
 $("#impOk").onclick=()=>{
   const r=impParsed(), p=P()[impPi], rep=$("#impReplace").checked;
+  if(impKind==="labor"){ if(laborImpApply(p,r,rep)===undefined&&r.terms.length){ $("#impModal").hidden=true; renderProds(); esMarkStale(); save(); schedule(); } return; }
   if(impKind==="terms"){
     if(!r.terms.length) return alert("가져올 조항이 없습니다.");
     p.terms=rep?r.terms:p.terms.concat(r.terms);
@@ -2550,7 +2564,7 @@ function laborCardHtml(p,pi){
         <div class="sub">항목</div>
         <div>${termsHtml(pi)}</div>
         <button class="btn" type="button" data-add="prods.${pi}.terms">+ 항목 추가</button>
-        <button class="btn" type="button" data-imp="terms" data-pi="${pi}">기존 계약서에서 가져오기</button>
+        <button class="btn" type="button" data-imp="labor" data-pi="${pi}" title="기존 근로계약서(PDF · 워드 · 글)를 읽어 항목과 근로 조건 · 근로자 정보를 채웁니다">기존 근로계약서 가져오기</button>
       </details>
       <div class="pbtns">
         <button class="btn" type="button" data-pact="tpl" data-pi="${pi}" title="다음 새 문서부터 이 근로계약서 양식이 기본으로 들어갑니다 (팀 공유)">이 양식을 기본값으로 저장</button>
@@ -2634,8 +2648,8 @@ SAMPLES["lab-regular"]=()=>laborSample("regular");
 SAMPLES["lab-fixed"]=()=>laborSample("fixed");
 SAMPLES["lab-part"]=()=>laborSample("part");
 // 근로계약서 예시 줄도 같은 버튼 처리 (app1.js의 #sampleRow 처리를 그대로 씀)
-$$(".sample-row [data-sample^='lab-']").forEach(b=>b.addEventListener("click",()=>{
-  const s=SAMPLES[b.dataset.sample]();
+function addLaborSample(key){
+  const s=SAMPLES[key]();
   if(P().some(p=>p.name===s.name)&&!confirm(`'${s.name}'이(가) 이미 있습니다. 하나 더 추가할까요?`)) return;
   const p=Object.assign(GENERIC_PRODUCT(),s);
   P().forEach(q=>{ q.on=false; });                       // 근로계약서는 따로
@@ -2644,7 +2658,101 @@ $$(".sample-row [data-sample^='lab-']").forEach(b=>b.addEventListener("click",()
   openSet.add(`p${p.pid}-tm`);
   renderProds(); esMarkStale(); save(); schedule();
   $("#saved").textContent=`'${p.name}' 예시 양식을 추가했습니다 — 근로 조건을 채우고 항목을 고쳐 쓰세요`;
-}));
+}
+
+/* --- 기존 근로계약서 가져오기 ---
+   "1. 근로개시일 : 2026년 1월 1일부터"처럼 번호 붙은 항목을 나누고,
+   날짜 · 시간 · 임금 같은 실제 값은 근로 조건 칸으로 옮긴 뒤 그 자리를 {근로개시일} 같은 자동 칸으로 바꿉니다.
+   (문구는 원래 계약서 그대로, 값만 칸에서 고치면 계약서에 반영) */
+function parseLabor(raw){
+  const t=String(raw).replace(/\r/g,"").replace(/\t+/g," ").replace(/[  ]+\n/g,"\n");
+  const fields={}, client={};
+  const one=s=>String(s||"").replace(/\s+/g," ").trim();
+  const sp=s=>/^([가-힣]\s)+[가-힣]$/.test(s)?s.replace(/\s/g,""):s;          // "근 무 장 소" → "근무장소"
+  const ymd=s=>{ const m=String(s).match(/(\d{4})\s*[년.\-/]\s*(\d{1,2})\s*[월.\-/]\s*(\d{1,2})\s*일?/); return m?{raw:m[0],v:`${m[1]}. ${+m[2]}. ${+m[3]}.`}:null; };
+  const hm=s=>{ const m=String(s).match(/(\d{1,2})\s*(?:시|:)\s*(\d{1,2})?\s*분?/); return m?{raw:m[0],v:`${String(m[1]).padStart(2,"0")}:${String(m[2]||"0").padStart(2,"0")}`}:null; };
+  // 번호 항목 찾기: 줄 맨 앞 "1." "2)" … 차례대로인 것만
+  const re=/(?:^|\n)[ \t]*(\d{1,2})\s*[.)]\s*([^\n]*)/g, marks=[]; let m, want=1;
+  while((m=re.exec(t))){ if(+m[1]!==want) continue; marks.push({i:m.index+(m[0].startsWith("\n")?1:0),head:m[2],end:re.lastIndex}); want++; }
+  const res={title:"",intro:"",terms:[],fields,client,type:""};
+  if(marks.length<3) return res;
+  // 머리: 제목 줄 + 머리말
+  const pre=t.slice(0,marks[0].i).split("\n").map(one).filter(Boolean);
+  if(pre.length&&/계약서/.test(pre[0])&&pre[0].length<=40) res.title=pre.shift().replace(/\s*\(.*?\)\s*$/,m=>m);
+  let intro=pre.join("\n");
+  const im=intro.match(/^(.*?)\s*\(\s*이하\s*["“”']?\s*사업주\s*["“”']?\s*(?:이?라)\s*함\s*\)\s*과\s*\(?와\)?\s*(.*?)\s*\(\s*이하\s*["“”']?\s*근로자/);
+  if(im&&im[1]){ if(im[2]&&!/^_+$/.test(im[2])) client.name=im[2].trim(); intro=intro.replace(im[1],"{사업주}").replace(im[2]?im[2]:"\u0000","{근로자}"); }
+  res.intro=intro;
+  // 꼬리(날짜 · 서명 칸) 자르기
+  const tailRe=/\n\s*(?:\d{4}\s*년\s*\d{0,2}\s*월?|\(\s*사업주\s*\)|사업주\s*사업체명|\(\s*근로자\s*\))/;
+  let tail="";
+  marks.forEach((k,j)=>{
+    let seg=t.slice(k.end,j+1<marks.length?marks[j+1].i:t.length);
+    if(j===marks.length-1){ const x=seg.search(tailRe); if(x>=0){ tail=seg.slice(x); seg=seg.slice(0,x); } }
+    let head=k.head.trim(), title, body;
+    const c=head.match(/^([^:：]{1,30}?)\s*[:：]\s*(.*)$/);
+    if(c){ title=c[1]; body=(c[2]+seg).trim(); } else if(head.length<=30){ title=head; body=seg.trim(); } else { title="항목"; body=(head+seg).trim(); }
+    title=sp(title.trim()); body=body.replace(/\n{3,}/g,"\n\n");
+    res.terms.push({title,body:fillLaborFields(title,body,fields)});
+  });
+  // 근로자 칸 (주소 · 연락처 · 성명)
+  const w=tail.slice(Math.max(0,tail.search(/근\s*로\s*자/)));
+  const g=(re)=>{ const x=w.match(re); return x?one(x[1]):""; };
+  const nm=g(/성\s*명\s*[:：]\s*([^\n(]+)/), ph=g(/연\s*락\s*처\s*[:：]\s*([0-9\-\s]{9,})/), ad=g(/주\s*소\s*[:：]\s*([^\n]+)/);
+  if(nm&&!/^_+$/.test(nm)) client.name=nm.replace(/\s*\(?\s*서명\s*\)?\s*$/,"");
+  if(ph) client.phone=ph; if(ad&&!/^_+$/.test(ad)) client.addr=ad;
+  res.type=/단시간/.test(t.slice(0,200))?"part":fields.end?"fixed":"regular";
+  return res;
+  function fillLaborFields(title,body,f){
+    // at: 값이 있는 정확한 위치 (같은 글자가 앞에 또 있어도 그 자리만 바꿈)
+    const put=(key,ph,raw,val,at)=>{ if(raw==null||!String(val).trim()) return; f[key]=String(val).trim();
+      if(at==null) at=body.indexOf(raw); if(at<0) return; body=body.slice(0,at)+ph+body.slice(at+raw.length); };
+    const line=re=>{ const x=body.match(re); return x?{raw:x[1],v:one(x[1]),at:x.index+x[0].lastIndexOf(x[1])}:null; };
+    if(/근로계약기간|계약기간/.test(title)){
+      const a=ymd(body); if(a){ put("start","{근로개시일}",a.raw,a.v); const b=ymd(body); if(b) put("end","{계약종료일}",b.raw,b.v); }
+    }else if(/근로개시일|입사일/.test(title)){ const a=ymd(body); if(a) put("start","{근로개시일}",a.raw,a.v); }
+    else if(/근무\s*장소/.test(title)){ const v=one(body.split("\n")[0]); if(v&&!/^_+$/.test(v)) put("place","{근무장소}",body.split("\n")[0].trim(),v); }
+    else if(/업무/.test(title)){ const v=one(body.split("\n")[0]); if(v&&!/^_+$/.test(v)) put("job","{업무내용}",body.split("\n")[0].trim(),v); }
+    else if(/근로시간|근무시간/.test(title)){
+      const r=line(/휴게\s*시간?\s*[:：]?\s*([^)\n]+)/); if(r) put("rest","{휴게시간}",r.raw,r.v,r.at);
+      const a=hm(body); if(a){ put("from","{시업시각}",a.raw,a.v); const b=hm(body); if(b) put("to","{종업시각}",b.raw,b.v); }
+      const d=line(/근로일\s*[:：]\s*([^\n]+)/); if(d) put("days","{근무일}",d.raw,d.v,d.at);
+    }
+    else if(/^주휴일$/.test(title)){ const first=body.split("\n")[0].trim(), v=one(first); if(v&&!/^_+$/.test(v)) put("holiday","{주휴일}",first,v); }
+    else if(/근무일|휴일/.test(title)){
+      const h=body.match(/주휴일\s*[:：]?\s*((?:매주\s*)?[가-힣]{1,3}요일)/); if(h) put("holiday","{주휴일}",h[1],one(h[1]));
+      const d=body.match(/(매주\s*\d+\s*일[^,\n]*?|주\s*\d+\s*일[^,\n]*?)(?=\s*근무|,|\n|$)/); if(d) put("days","{근무일}",d[1],one(d[1]));
+    }
+    else if(/^임금|급여/.test(title)){
+      const p=body.match(/(월|일|시간)\s*(?:\([^)]*\))?\s*급\s*[:：]\s*([\d,]{3,})\s*원/);
+      if(p){ f.payType={월:"월급",일:"일급",시간:"시급"}[p[1]]; put("pay","{임금}",p[2],p[2].replace(/,/g,"")); f.pay=Number(f.pay); }
+      const bo=line(/상여금\s*[:：]\s*([^\n]+)/); if(bo) put("bonus","{상여금}",bo.raw,bo.v,bo.at);
+      const al=line(/기타\s*급여[^:：\n]*[:：]\s*([^\n]+)/); if(al) put("allow","{기타수당}",al.raw,al.v,al.at);
+      const pd=body.match(/지급일\s*[:：][^\n\d]*?(\d{1,2})\s*일/); if(pd){ f.payDay=pd[1]; const at=pd.index+pd[0].lastIndexOf(pd[1]); body=body.slice(0,at)+"{임금지급일}"+body.slice(at+pd[1].length); }
+      const mt=line(/지급\s*방법\s*[:：]\s*([^\n]+)/); if(mt) put("payMethod","{지급방법}",mt.raw,mt.v,mt.at);
+    }
+    else if(/사회보험/.test(title)){ const v=one(body.replace(/[□■☐☑✔✓]/g," ")); if(v) { f.ins=v; body="{사회보험}"; } }
+    return body;
+  }
+}
+function laborImpPrev(r){
+  if(!r.terms.length) return $("#impText").value.trim()?`<div>"1. 근로개시일"처럼 번호가 붙은 항목을 찾지 못했습니다.</div>`:"";
+  const names=Object.fromEntries(laborFields());
+  const fs=Object.entries(r.fields).map(([k,v])=>`${names[k]||k}: <b>${esc(k==="pay"?won(v):v)}</b>`);
+  const cs=[["name","근로자"],["phone","연락처"],["addr","주소"]].filter(([k])=>r.client[k]).map(([k,l])=>`${l}: <b>${esc(r.client[k])}</b>`);
+  return (fs.length||cs.length?`<div style="margin-bottom:6px;color:var(--green)">자동으로 채울 칸 — ${[...cs,...fs].join(" · ")}</div>`:"")+
+    r.terms.map((x,i)=>`<div><b>${i+1}. ${esc(x.title)}</b> · ${esc(x.body.slice(0,60))}${x.body.length>60?"…":""}</div>`).join("");
+}
+function laborImpApply(p,r,rep){
+  if(!r.terms.length) return alert("가져올 항목이 없습니다.");
+  p.terms=rep?r.terms:p.terms.concat(r.terms);
+  if(r.intro&&r.intro.length<400&&(rep||!p.intro)) p.intro=r.intro;
+  if(r.title&&rep) p.contractTitle=r.title;
+  p.labor=Object.assign(laborDefaults(r.type||(p.labor&&p.labor.type)),rep?{}:p.labor||{},r.fields,r.type?{type:r.type}:{});
+  ["name","phone","addr"].forEach(k=>{ if(r.client[k]&&(rep||!state.client[k])) state.client[k]=r.client[k]; });
+  state.client.ceo=state.client.name||"";
+  bindSimple(); openSet.add(`p${p.pid}-tm`);
+}
 
 </script>
 </body>
