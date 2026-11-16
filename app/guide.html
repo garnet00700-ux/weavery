@@ -185,6 +185,11 @@ details.stuck>div{padding:0 16px 14px;line-height:1.7}
 .cover .sig b{font-size:16px;letter-spacing:.02em}
 .cover .sig em{font-size:12.5px;opacity:.7}
 
+.idiff{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;margin:14px 0 4px;font-size:14px;line-height:1.6}
+.idiff dt{font-weight:800;color:var(--green);white-space:nowrap}
+.idiff dd{margin:0;color:#555}
+.idiff-n{margin:2px 0 0;font-size:13px;color:#777}
+@media (max-width:560px){.idiff{grid-template-columns:1fr;gap:2px}.idiff dd{margin-bottom:8px}}
 .inst{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(205,242,122,.35);backdrop-filter:blur(8px);max-width:620px}
 .inst-ic{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(205,242,122,.16);color:var(--lime);flex:none}
 .inst-ic svg{width:22px;height:22px}
@@ -504,6 +509,11 @@ body.all details.stuck{display:block}
         <button class="btn bigbtn" type="button" data-install>⬇ 지금 설치하기</button>
         <a class="btn ghost" style="font-size:15px;padding:12px 18px" href="https://garnet00700-ux.github.io/weavery/app/" target="_blank" rel="noopener">작성기 열고 설치 ↗</a>
       </div>
+      <dl class="idiff">
+        <dt>⬇ 지금 설치하기</dt><dd>이 안내 화면에서 바로 설치 창을 띄웁니다.<br>가장 빠른 방법입니다. (크롬 · 엣지)</dd>
+        <dt>작성기 열고 설치 ↗</dt><dd>작성기를 새 탭으로 연 뒤,<br>작성기 위쪽 <b>[⬇ 앱으로 설치]</b>를 눌러 설치합니다.<br>지금 설치하기가 안 될 때 쓰세요.</dd>
+      </dl>
+      <p class="idiff-n">어느 쪽으로 설치해도 같은 작성기 앱이 설치됩니다.</p>
       <div class="ok">설치하면 작성기가 따로 된 창으로 열립니다.<br>새 기능은 다음에 열 때 자동으로 들어옵니다.</div>
       <details class="stuck"><summary>설치 창이 안 떠요</summary><div>
         크롬 주소창 오른쪽 끝의 <b>설치 아이콘(모니터 + ↓)</b>을 누르세요.<br>
