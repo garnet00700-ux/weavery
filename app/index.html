@@ -1119,6 +1119,7 @@ function termsHtml(pi){
 function prodCardHtml(p,pi){
   if(p.kind==="labor") return laborCardHtml(p,pi);
   if(p.kind==="cert") return certCardHtml(p,pi);
+  statementNotices(p);
   const k=`p${p.pid}`, d=docsOf(p), qn=quoteTitleOf(p)||"견적서";
   const kindTxt={both:"견적 · 계약",quote:"계약서 없음",contract:"계약서만"}[d];
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
@@ -1151,6 +1152,7 @@ function prodCardHtml(p,pi){
         <div>${noticesHtml(pi)}</div>
         <button class="btn" type="button" data-add="prods.${pi}.notices">+ 항목 추가</button>
         <button class="btn" type="button" data-imp="notices" data-pi="${pi}">기존 양식에서 가져오기</button>
+        ${d==="quote"&&/명세(서|표)$/.test(qn)?`<button class="btn" type="button" data-pact="stmt" data-pi="${pi}">거래명세서 기본 문구로</button>`:""}
       </details>`:""}
       ${d!=="quote"?`<details class="prodcfg" data-k="${k}-tm" ${isOpen(k+"-tm")}><summary>계약서 조항 (${p.terms.length}개)</summary>
         <p class="hint" style="margin:0 0 8px">조 번호는 자동입니다. 줄이 <code>- </code>로 시작하면 들여쓰기, 빈 줄은 간격이 됩니다.<br>
@@ -1222,6 +1224,11 @@ $("#editor").addEventListener("click",e=>{
     else arr.push({title:"새 조항",body:""});
   }else if(b.dataset.pact){
     const pi=+b.dataset.pi, p=P()[pi], a=b.dataset.pact;
+    if(a==="stmt"){
+      if(!confirm("안내사항을 거래명세서 기본 문구로 바꿀까요?\n지금 안내사항은 지워집니다.")) return;
+      const g=GENERIC_PRODUCT(); p.noticeIntro=g.noticeIntro; p.notices=g.notices; statementNotices(p);
+      renderProds(); esMarkStale(); save(); schedule(); return;
+    }
     if(a==="tpl"){
       if(!confirm(`'${p.name}' 상품의 지금 품목 · 안내사항 · 조항을 기본값으로 저장할까요?\n다음에 만드는 새 문서부터 적용됩니다.${connected()?" (팀 전체)":""}`)) return;
       const t=clone(p); t.deliver=""; t.items.forEach(it=>{ it.amount=null; it.disc=false; });
@@ -1924,26 +1931,50 @@ function docsOf(p){
   if(p.docs==="both"||p.docs==="quote"||p.docs==="contract") return p.docs;
   return NO_CONTRACT.test((p.name||"").trim())||NO_CONTRACT.test(quoteTitleOf(p))?"quote":"both";
 }
+// 견적서가 아닌 문서(거래명세서 · 청구서 · 영수증 …)만 만들 때 쓰는 문구. 견적서면 null (원래 문구 그대로)
+function docWords(p){
+  const t=quoteTitleOf(p);
+  if(special(p)||docsOf(p)!=="quote"||/견적서$/.test(t)) return null;
+  const m=[[/(명세서|명세표|계산서|내역서)$/,"아래와 같이 계산합니다","거래일"],[/청구서$/,"아래와 같이 청구합니다","청구일"],
+    [/영수증$/,"아래 금액을 정히 영수합니다","영수일"],[/발주서$/,"아래와 같이 발주합니다","발주일"],[/주문서$/,"아래와 같이 주문합니다","주문일"]].find(x=>x[0].test(t));
+  return {lead:m?m[1]:"아래와 같이 작성합니다", date:m?m[2]:"작성일"};
+}
+// 거래명세서 기본 안내사항 (임시 문구) — 안내사항이 처음 기본값(견적서용) 그대로일 때만 바꿈. 고친 문구는 건드리지 않음
+function statementNotices(p){
+  if(special(p)||docsOf(p)!=="quote"||!/명세(서|표)$/.test(quoteTitleOf(p))) return;
+  const g=GENERIC_PRODUCT();
+  if(p.noticeIntro!==g.noticeIntro||JSON.stringify(p.notices)!==JSON.stringify(g.notices)) return;
+  p.noticeIntro="위 내역과 같이 물품(용역)을 공급하였습니다. 내용을 확인하신 후 **하단 인수자 란에 서명**해 주세요.";
+  p.notices=[
+    "물품 수령 시 **수량 · 규격 · 상태**를 확인해 주세요.",
+    "불량 · 파손 · 수량 차이는 수령일로부터 **7일 이내**에 알려 주셔야 교환 · 반품이 가능합니다.",
+    "대금은 명세서 발행일로부터 **30일 이내**에 결제해 주세요.",
+    "세금계산서가 필요하시면 **사업자등록증**을 보내 주세요.",
+    "본 명세서는 거래 사실을 확인하는 서류로, 공급자와 공급받는자가 각 1부씩 보관합니다."
+  ];
+}
 function quoteTitleOf(p){
   const t=(p.quoteTitle||"견적서").trim(), n=(p.name||"").trim();
   return n&&DOC_NAME.test(n)&&(t===`${n} 견적서`||t==="견적서")?n:t;   // 제목을 따로 안 정했으면 문서 이름 그대로
 }
 /* ===== 미리보기: 견적서 (원본 디자인 기준, 로고 없음) ===== */
 function quoteBlocks(p){
-  const c=state.client,s=profile,t=totals(p),items=p.items;
+  statementNotices(p);
+  const c=state.client,s=profile,t=totals(p),items=p.items, w=docWords(p);
+  const vt=x=>x.split("").join("<br>");
   const out=[];
   out.push(`<div class="qttl">${esc(quoteTitleOf(p))}</div>
   <table class="t party">
     <colgroup><col style="width:5.1%"><col style="width:8.5%"><col style="width:23.5%"><col style="width:5.4%"><col style="width:9%"><col style="width:18.9%"><col style="width:10.5%"><col style="width:19.1%"></colgroup>
-    <tr><td class="vt" rowspan="5">의<br>뢰<br>자</td><td class="lb">업체명</td><td class="val">${esc(c.name)}</td>
-        <td class="vt" rowspan="5">수<br>행<br>자</td><td class="lb">등록번호</td><td class="val" colspan="3">${esc(s.bizno)}</td></tr>
+    <tr><td class="vt" rowspan="5">${vt(w?"공급받는자":"의뢰자")}</td><td class="lb">업체명</td><td class="val">${esc(c.name)}</td>
+        <td class="vt" rowspan="5">${vt(w?"공급자":"수행자")}</td><td class="lb">등록번호</td><td class="val" colspan="3">${esc(s.bizno)}</td></tr>
     <tr><td class="lb">대표자</td><td class="val"><div class="ceo"><span>${esc(c.ceo)}</span><span>귀하</span></div></td>
         <td class="lb">상호명</td><td class="val" colspan="3">${esc(s.name)}</td></tr>
     <tr><td class="lb">연락처</td><td class="val">${esc(c.phone)}</td><td class="lb">대표자</td><td class="val" colspan="3">${esc(String(s.ceo).split("").join(" "))}</td></tr>
-    <tr><td class="lb">견적일</td><td class="val">${esc(fmtDate(state.quoteDate))}</td><td class="lb">연락처</td><td class="val" colspan="3">${esc(s.phone)}</td></tr>
+    <tr><td class="lb">${w?w.date:"견적일"}</td><td class="val">${esc(fmtDate(state.quoteDate))}</td><td class="lb">연락처</td><td class="val" colspan="3">${esc(s.phone)}</td></tr>
     <tr><td class="lb">납품일</td><td class="val">${esc(p.deliver)}</td><td class="lb">업태</td><td>${esc(s.bizType)}</td><td class="lb">업종</td><td style="font-size:7.8pt">${esc(s.bizItem)}</td></tr>
   </table>
-  <div class="lead">아래와 같이 견적 드립니다<i>……</i></div>`);
+  <div class="lead">${w?w.lead:"아래와 같이 견적 드립니다"}<i>……</i></div>`);
   const rowsArr=items.slice();
   while(rowsArr.length<2) rowsArr.push(null);
   let rows="";
@@ -1972,7 +2003,7 @@ function quoteBlocks(p){
   if(s.account) extra.push(`<b>입금 계좌</b> : ${esc(s.account)}`);
   if(p.extra) extra.push(esc(fill(p.extra,p)));
   out.push(`<div class="totals">
-    <div class="row"><div class="cell">계약금(${t.rate}%).<b>${v(t.dep)}</b></div><div class="cell">잔금(${100-t.rate}%).<b>${v(t.bal)}</b></div></div>
+    ${w?"":`<div class="row"><div class="cell">계약금(${t.rate}%).<b>${v(t.dep)}</b></div><div class="cell">잔금(${100-t.rate}%).<b>${v(t.bal)}</b></div></div>`}
     ${state.vatMode==="inprice"
       ?`<div class="row"><div class="cell">공급가액 .<b>${v(t.supply)}</b></div><div class="cell">총 액 .<b>${v(t.total)}${t.total?' <span class="vin">(VAT 포함)</span>':""}</b></div></div>`
       :state.vatMode==="include"
@@ -1983,7 +2014,7 @@ function quoteBlocks(p){
   ${{include:'<div class="vatn">부가세 10%가 포함된 금액입니다.</div>',inprice:"",none:""}[state.vatMode]??'<div class="vatn">계산서 발행시 VAT 10% 발생됩니다.</div>'}
   ${extra.map(x=>`<div class="qx">${x}</div>`).join("")}`);
   const list=p.notices.filter(x=>String(x).trim());
-  if(p.noticeIntro||list.length) out.push(`<fieldset class="notice"><legend>작업안내 및 안내사항.</legend>
+  if(p.noticeIntro||list.length) out.push(`<fieldset class="notice"><legend>${w?"안내사항.":"작업안내 및 안내사항."}</legend>
     ${p.noticeIntro?`<p>${bold(esc(fill(p.noticeIntro,p))).replace(/\n/g,"<br>")}</p>`:""}
     <ul>${list.map(x=>`<li>- ${bold(esc(fill(x,p)))}</li>`).join("")}</ul></fieldset>`);
   if(recvOn(p)) out.push(recvBlock());
@@ -2646,6 +2677,15 @@ function applyMode(){
   const mode=docKind();   // quote | labor | cert
   $$("[data-ll]").forEach(e=>{ if(e.dataset.lq==null) e.dataset.lq=e.textContent; e.textContent=mode==="quote"?e.dataset.lq:mode==="cert"?(e.dataset.lc||e.dataset.ll):e.dataset.ll; });
   $$("[data-only]").forEach(e=>{ e.style.display=e.dataset.only.split(" ").includes(mode)?"":"none"; });
+  // 거래명세서 · 청구서처럼 견적서 아닌 문서만 고른 경우: 입력 칸 이름도 그 문서에 맞게
+  if(mode==="quote"){
+    const ws=onProds().map(docWords);
+    if(ws.length&&ws.every(Boolean)){
+      const dl=$$("[data-ll]").find(e=>e.dataset.lc==="발급일"), cl=$$("[data-ll]").find(e=>e.dataset.lc==="직원 정보");
+      if(dl) dl.textContent=ws.every(x=>x.date===ws[0].date)?ws[0].date:"작성일";
+      if(cl) cl.textContent="공급받는자 정보";
+    }
+  }
 }
 
 /* --- 미리보기: 근로계약서 --- */
