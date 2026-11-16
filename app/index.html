@@ -2761,7 +2761,7 @@ function licAsk(msg,entry){
    연결된 서버가 예전 버전이면 작성기 위쪽에 알림과 [새 서버 코드 복사] 버튼이 뜹니다.
    새 코드는 작성기 옆의 server-code.txt (build.js가 Code.gs를 복사해 둠)에서 가져옵니다.
    SERVER_VER 줄이 없는 예전 서버는 1로 봅니다. */
-var SERVER_LATEST = 3;
+var SERVER_LATEST = 2;   // 3(자동 업데이트)은 방식 결정 전까지 보류
 var SU_KEY = "wq-srvupd-closed";
 async function serverVerCheck(){
   if(typeof connected!=="function"||!connected()||!cfg.url) return;
