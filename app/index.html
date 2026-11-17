@@ -466,6 +466,27 @@ textarea{resize:vertical;line-height:1.5}
 .fm-cl-b .fm-c:hover{border-color:var(--ui-border)}
 .fm-g3{display:grid;grid-template-columns:1fr 1.4fr 1.4fr;gap:6px}
 .fm-rows>*{flex-shrink:0}
+/* 이름표 카드 (계약 당사자 정보 등): 이름표 고정 · 내용만 수정 */
+.fm-kv{border:1px solid var(--ui-border);border-radius:12px;padding:12px 14px;margin-bottom:8px;background:#faf9f5}
+.fm-kv[hidden]{display:none}
+.fm-kv-g{display:grid;gap:8px 14px}
+.fm-kv-col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.fm-kv-h{font-weight:800;font-size:13.5px;color:#2b3a1f;padding-bottom:4px;border-bottom:1px dashed var(--ui-border)}
+.fm-kf{display:flex;flex-direction:column;gap:3px;min-width:0;border-radius:8px}
+.fm-kl{display:flex;align-items:center;gap:5px;font-size:12.5px;color:#666;min-height:20px}
+.fm-kl>span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fm-kl .fm-cb{padding:0 4px}
+.fm-kin{display:flex;align-items:center;gap:6px}
+.fm-kin .fm-v{flex:1;min-width:0;border:1px solid var(--ui-border);border-radius:8px;background:#fff;padding:8px 10px;font-size:14px;outline:none}
+.fm-kin .fm-v:focus{border-color:#7aa64a;box-shadow:0 0 0 2px #e3f1d1}
+.fm-kf.sel .fm-v{border-color:#1565c0;background:#f1f6fd}
+.fm-kx{font-size:12px;color:#888;white-space:nowrap}
+.fm-sech{margin:12px 0 6px;border-left:3px solid #cdf27a;padding-left:6px}
+.fm-sech[hidden]{display:none}
+.fm-sech .fm-v{width:100%;box-sizing:border-box;border:1px solid transparent;border-radius:6px;background:transparent;font-weight:800;font-size:14px;padding:4px 6px;outline:none}
+.fm-sech .fm-v:hover{border-color:var(--ui-border)}
+.fm-sech .fm-v:focus{border-color:#7aa64a;background:#fff}
+.fm-sech.sel .fm-v{background:#f1f6fd}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -4070,6 +4091,21 @@ async function fmBuildB(f,kind){
     marks.push({id:newId(),pg,t:"text",b:"",v:t,x:Math.max(0,it.x-1)/p.W,y:(it.y-it.h*.1)/p.H,w:(it.w+2)/p.W,f:it.h/p.W,o:1,bd:it.bd?1:undefined,al:it.x>p.W*.55?"r":""});
   }));
   for(let i=marks.length-1;i>=0;i--) if(marks[i].gap&&!marks[i].b) marks.splice(i,1);   // 띄어쓰기로 비어 보이는 자리(채울 내용 없음)는 칸으로 안 만듦
+  // 이름표 오른쪽 빈칸: 표 칸이면 이름표 칸의 경계선을 넘어 '내용 칸' 안쪽에서 시작 (원본 글자 위치처럼)
+  marks.forEach(m=>{ if(!m.gap||m.lx==null) return; const P0=pp[m.pg]; delete m.gap;
+    const lx=m.lx, rx=m.rx; delete m.lx; delete m.rx; if(!P0||!P0.cv) return;
+    const g=P0.cv.getContext("2d"), s=P0.sc, Wc=P0.cv.width, hp=m.f*P0.W, py=Math.round((m.y*P0.H+hp*.5)*s);
+    const a=Math.round(lx*P0.W*s)+2, b=Math.min(Wc-1,Math.round(rx*P0.W*s)); if(b-a<8) return;
+    const D=g.getImageData(a,py,b-a,1).data, px=k=>[D[k*4],D[k*4+1],D[k*4+2]], df=(u,v)=>Math.abs(u[0]-v[0])+Math.abs(u[1]-v[1])+Math.abs(u[2]-v[2]);
+    const base=px(0); let k=1; while(k<b-a&&df(px(k),base)<40) k++;
+    if(k>=b-a) return;                                         // 경계선 없음 → 표가 아님, 그대로
+    const bd=px(k); let st=-1;
+    for(let j=k+1;j<b-a-3;j++){ const c=px(j); if(df(c,bd)>30&&df(c,px(j+1))<12&&df(c,px(j+2))<12){ st=j; break; } }
+    if(st<0) return;
+    const cell=px(st); let e=st; while(e<b-a&&df(px(e),cell)<40) e++;
+    const pad=hp*.55, x0=(a+st)/s+pad, x1=(a+e)/s-pad;
+    if(x1-x0<hp*2) return;
+    m.x=x0/P0.W; m.w=Math.min(x1-x0,P0.W*.42)/P0.W; });
   marks.unshift(...T.marks);
   const fam=getComputedStyle(document.querySelector("#pages .page")||document.body).fontFamily, mc=document.createElement("canvas").getContext("2d");
   const fit=(m,str,wpt,hpt,bd)=>{ mc.font=`${bd?700:500} ${(hpt*.92).toFixed(2)}px ${fam}`; const n=[...str].length; if(n<2) return;
@@ -4178,7 +4214,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
   const isSign=s=>/[(（]\s*(인|印|서\s*명|날\s*인|서명\s*또는|사\s*인)/.test(s);
   const bindOf=(k,pt)=>({name:pt==="company"?"co.ceo":"client.name", ceo:pt==="company"?"co.ceo":"client.ceo", co:pt==="company"?"co.name":"client.name",
       addr:pt==="company"?"co.address":"client.addr", phone:pt==="company"?"co.phone":"client.phone", email:pt==="company"?"co.email":"client.email",
-      bizno:pt==="company"?"co.bizno":"", date:"date"})[k]||"";
+      bizno:pt==="company"?"co.bizno":"client.bizno", date:"date"})[k]||"";
   rows.forEach(r=>r.its.forEach((it,j)=>{
     const k=labOf(it.s); if(!k||isSign(it.s)) return;
     const nx=r.its[j+1], cy=it.y+it.h/2, party=partyAt(it.x,cy,it);
@@ -4194,7 +4230,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     if(gap<Math.max(36,it.h*3)) return;
     const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3);
     if(k==="sign"){ sign(x0+Math.min(w,80)/2,cy,party); return; }
-    add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,gap:1,cx:x0+w/2,cy,cw:w,ch:it.h});
+    add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,gap:1,lx:(it.x+it.w)/W,rx:end/W,cx:x0+w/2,cy,cw:w,ch:it.h});
   }));
   // ②-2 한 덩어리 안의 "이름표 : 내용" ("의뢰인 : 블루드래곤", "대표자: 홍길동")
   items.forEach(it=>{
@@ -4404,7 +4440,7 @@ function fmRender(p){
 
 /* --- 6. 원본 모양 문서 편집 카드 --- */
 var fmSel=null, fmAddT=null, fmDrag=null;
-function fmBinds(){ return [["","직접 입력"],["client.name","상대방 업체명 · 성명"],["client.ceo","상대방 대표자"],["client.phone","상대방 연락처"],["client.addr","상대방 주소"],["client.email","상대방 이메일"],
+function fmBinds(){ return [["","직접 입력"],["client.name","상대방 업체명 · 성명"],["client.ceo","상대방 대표자"],["client.phone","상대방 연락처"],["client.addr","상대방 주소"],["client.email","상대방 이메일"],["client.bizno","상대방 사업자번호"],
   ["date","작성일"],["co.name","우리 상호"],["co.name co.ceo","우리 상호 + 대표자"],["client.name client.ceo","상대방 업체명 + 대표자"],["co.ceo","우리 대표자"],["co.bizno","우리 사업자등록번호"],["co.address","우리 주소"],["co.phone","우리 연락처"],["co.email","우리 이메일"]]; }
 function fmBindName(b){ const r=fmBinds().find(x=>x[0]===(b||"")); return b&&r?r[1]:""; }
 function formCardHtml(p,pi){
@@ -4435,11 +4471,32 @@ function formCardHtml(p,pi){
   const plain=L=>L.ids.length===1&&F.marks[L.ids[0]].t==="text"&&!F.marks[L.ids[0]].b;
   const isHead=L=>plain(L)&&/^\s*(제\s*\d+\s*조|특\s*약)/.test(F.marks[L.ids[0]].v||"");
   const isSect=L=>plain(L)&&/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(F.marks[L.ids[0]].v||"");
+  // 이름표 + 내용 줄 ("상호명 | 블루드래곤", "대표자 | ○○"): 이름표는 고정, 내용만 고치는 카드로
+  const short=i=>{ const m=F.marks[i]; return m.t==="text"&&!m.b&&!/\{/.test(m.v||"")&&String(m.v||"").trim().length>0&&String(m.v||"").trim().length<=16; };
+  const isVal=i=>{ const m=F.marks[i]; return m.t==="text"&&m.b&&!m.b.startsWith("it."); };
+  const kvOf=L=>{ const ids=L.ids, pairs=[], rest=[];
+    for(let k=0;k<ids.length;k++){ if(short(ids[k])&&ids[k+1]!=null&&isVal(ids[k+1])){ pairs.push({l:ids[k],v:ids[k+1],suf:[]}); k++; }
+      else if(pairs.length&&F.marks[ids[k]].t==="text"&&!F.marks[ids[k]].b&&/^\s*[(（][^()（）]{1,8}[)）]\s*$/.test(F.marks[ids[k]].v||"")) pairs[pairs.length-1].suf.push(ids[k]);   // "(인)" 같은 꼬리 글자
+      else if(F.marks[ids[k]].t!=="text"&&pairs.length) pairs[pairs.length-1].suf.push(ids[k]);
+      else rest.push(ids[k]); }
+    return pairs.length&&rest.every(short)?{pairs,rest}:null; };
   const blocks=[]; let cur=null;
   lines.forEach(L=>{ L.ids.sort((a,b)=>F.marks[a].x-F.marks[b].x);
+    const kv=kvOf(L);
+    if(kv){ const pb=blocks[blocks.length-1];
+      if(pb&&pb.kv&&pb.pg===L.pg) pb.kv.push(kv);
+      else{ const hd=pb&&pb.line&&pb.pg===L.pg&&pb.line.ids.length>=2&&pb.line.ids.every(short)&&!isSect(pb.line)?blocks.pop().line:null;
+        blocks.push({kv:[kv],hd,pg:L.pg}); }
+      cur=null; return; }
     if(isHead(L)){ cur={head:L,body:[],pg:L.pg}; blocks.push(cur); return; }
-    if(cur&&plain(L)&&!isSect(L)){ cur.body.push(L); return; }
-    cur=null; blocks.push({line:L,pg:L.pg}); });
+    if(cur&&plain(L)&&!isSect(L)&&L.pg===cur.pg&&Math.abs(F.marks[L.ids[0]].x-F.marks[cur.head.ids[0]].x)<.06){ cur.body.push(L); return; }
+    cur=null; blocks.push({line:L,pg:L.pg,sect:isSect(L)}); });
+  // 카드 안 한 칸: 고정 이름표 + 고칠 내용
+  const kf=(P)=>{ const lm=F.marks[P.l], i=P.v, m=F.marks[i], b=`prods.${pi}.form.marks.${i}`, auto=fmVal(Object.assign({},m,{v:""}),p);
+    const suf=P.suf.map(j=>{ const s=F.marks[j]; return s.t==="text"?`<span class="fm-kx">${esc(s.v)}</span>`:`<span class="fm-kx">${s.t==="client"?"✍ 서명":"🔴 직인"}</span>`; }).join("");
+    return `<div class="fm-kf${fmSel===m.id?" sel":""}" data-mrow="${m.id}">
+      <div class="fm-kl"><span title="원본 양식의 이름표 (고정)">${esc(String(lm.v).replace(/\s*[:：]\s*$/,""))}</span><i class="fm-tag" title="${esc(fmBindName(m.b)||"자동")} — 비워 두면 자동으로 들어갑니다">자동</i><button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></div>
+      <div class="fm-kin"><input class="fm-v" data-p="${b}.v" placeholder="${esc(auto||"(비어 있음)")}" aria-label="${esc(lm.v)}">${suf}</div></div>`; };
   let cn=0;
   const rows=blocks.map(B0=>{
     const ph=F.r.length>1&&B0.pg!==lastPg?`<div class="fm-pgh">${B0.pg+1}쪽</div>`:""; lastPg=B0.pg;
@@ -4450,9 +4507,20 @@ function formCardHtml(p,pi){
       return `${ph}<div class="fm-clause" data-line data-ftxt="${esc(txt)}">
         <div class="fm-cl-h${fmSel===hm.id?" sel":""}" data-mrow="${hm.id}"><input class="fm-v" data-p="prods.${pi}.form.marks.${h}.v" aria-label="조항 제목"><button class="fm-cb" type="button" data-fmdel="${h}" data-pi="${pi}" title="제목 줄 지우기">✕</button></div>
         <div class="fm-cl-b">${bl||`<span class="hint" style="margin:0">(본문 없음)</span>`}</div></div>`; }
+    if(B0.kv){   // 이름표 카드: 원본의 왼쪽 · 오른쪽 묶음(의뢰인 / 공급자)을 나란히
+      const big=B0.kv.reduce((a,k)=>k.pairs.length>a.pairs.length?k:a,B0.kv[0]), anc=big.pairs.map(P=>F.marks[P.l].x), n=anc.length;
+      const cols=anc.map(()=>[]);
+      B0.kv.forEach(k=>k.pairs.forEach(P=>{ const x=F.marks[P.l].x; let c=0; anc.forEach((a,j)=>{ if(Math.abs(a-x)<Math.abs(anc[c]-x)) c=j; }); cols[c].push(P); }));
+      const hd=B0.hd?B0.hd.ids:[], ht=hd.length===n*2?hd.filter((_,j)=>j%2===0):hd.length===n?hd:[];
+      const all=[...hd,...B0.kv.flatMap(k=>[...k.rest,...k.pairs.flatMap(P=>[P.l,P.v,...P.suf])])];
+      const txt=all.map(i=>{ const m=F.marks[i]; return m.v||(m.b?fmVal(m,p):""); }).join(" ").toLowerCase();
+      const rest=B0.kv.flatMap(k=>k.rest);
+      return `${ph}<div class="fm-kv" data-line data-ftxt="${esc(txt)}"><div class="fm-kv-g" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${cols.map((c,j)=>`<div class="fm-kv-col">${ht[j]!=null?`<div class="fm-kv-h">${esc(String(F.marks[ht[j]].v).replace(/\s*[:：]\s*$/,""))}</div>`:""}${c.map(kf).join("")}</div>`).join("")}</div>${rest.length?`<div class="fm-cells" style="margin-top:6px">${rest.map(cell).join("")}</div>`:""}</div>${B0.kv.flatMap(k=>k.pairs.flatMap(P=>[P.v,...P.suf.filter(j=>F.marks[j].t!=="text")])).map(fullRow).join("")}`; }
     const L=B0.line;
     const txt=L.ids.map(i=>{ const m=F.marks[i]; return m.v||(m.b?fmVal(m,p):""); }).join(" ").toLowerCase();
-    return `${ph}<div class="fm-line" data-line data-ftxt="${esc(txt)}"><span class="fm-no">${L.ids[0]+1}</span><div class="fm-cells">${L.ids.map(cell).join("")}</div></div>${L.ids.filter(i=>F.marks[i].b||F.marks[i].t!=="text").map(fullRow).join("")}`;
+    if(B0.sect){ const i=L.ids[0], m=F.marks[i];
+      return `${ph}<div class="fm-sech${fmSel===m.id?" sel":""}" data-line data-ftxt="${esc(txt)}" data-mrow="${m.id}"><input class="fm-v" data-p="prods.${pi}.form.marks.${i}.v" aria-label="단락 제목"></div>`; }
+    return `${ph}<div class="fm-line" data-line data-ftxt="${esc(txt)}"><div class="fm-cells">${L.ids.map(cell).join("")}</div></div>${L.ids.filter(i=>F.marks[i].b||F.marks[i].t!=="text").map(fullRow).join("")}`;
   }).join("");
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
     <summary>${esc(p.name||"(이름 없는 양식)")} — 원본 양식</summary>
