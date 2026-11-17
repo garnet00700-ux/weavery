@@ -451,6 +451,21 @@ textarea{resize:vertical;line-height:1.5}
 .fm-cb:hover,.fm-cb.on{background:#eee;color:#333}
 .fm-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-2px 0 6px 30px;padding:6px 8px;border:1px dashed #cfe3b8;border-radius:8px;background:#f8fbf3;font-size:12.5px}
 .fm-set[hidden]{display:none}
+.fm-opts.one{grid-template-columns:1fr !important}
+.fm-opt[hidden]{display:none !important}
+.fm-icards{display:flex;flex-direction:column;gap:8px;margin:6px 0 8px}
+.fm-icards .item .tools{display:flex;gap:4px}
+.fm-icards .item .tools .btn{padding:4px 9px}
+.fm-clause{border:1px solid var(--ui-border);border-radius:10px;margin-bottom:8px;background:#fff;overflow:hidden}
+.fm-clause[hidden]{display:none}
+.fm-cl-h{display:flex;align-items:center;gap:4px;padding:6px 8px;background:#f4f7ef;border-bottom:1px solid var(--ui-border)}
+.fm-cl-h.sel{background:#e6f0fb}
+.fm-cl-h .fm-v{flex:1;min-width:0;border:0;background:transparent;font-weight:800;font-size:13.5px;padding:4px 2px;outline:none}
+.fm-cl-b{display:flex;flex-direction:column;gap:3px;padding:6px 8px}
+.fm-cl-b .fm-c{min-width:0;background:#fff;border-color:transparent}
+.fm-cl-b .fm-c:hover{border-color:var(--ui-border)}
+.fm-g3{display:grid;grid-template-columns:1fr 1.4fr 1.4fr;gap:6px}
+.fm-rows>*{flex-shrink:0}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -708,34 +723,26 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
   <div class="mbox fmbox" role="dialog" aria-label="쓰던 양식 불러오기">
     <div class="mhead"><b>쓰던 양식 불러오기</b><span style="flex:1"></span><button class="btn" id="fmCancel" type="button">닫기</button></div>
     <div class="mbody">
-      <p class="hint" style="margin:0 0 8px">쓰던 양식 파일을 올리면 <b>어떤 서류인지</b>, <b>칸과 내용</b>, <b>서명 · 도장 자리</b>를 찾아<br>두 가지 방식으로 보여 드립니다.<br>미리보기를 보고 마음에 드는 쪽을 고르세요.</p>
+      <p class="hint" style="margin:0 0 8px">쓰던 계약서 · 견적서 파일을 올리면 원본 디자인은 그대로 두고,<br>글자 · 품목 · 금액 · 조항을 모두 읽어 기본 양식처럼 고칠 수 있게 만듭니다.<br>PDF로 올리면 가장 정확합니다.</p>
       <div class="padbtns" style="margin:0 0 8px">
         <button class="btn go" type="button" id="fmFileBtn">양식 파일 올리기</button>
         <input type="file" id="fmFile" accept=".pdf,.hwp,.hwpx,.docx,.xlsx,.xls,.csv,.txt,.png,.jpg,.jpeg,.webp" hidden>
         <span class="hint" id="fmFileR" style="margin:0;align-self:center"></span>
       </div>
-      <div class="fm-opts" id="fmOpts" hidden>
-        <div class="fm-guide">
-          <b>어느 쪽을 고를까요?</b>
-          <ul>
-            <li>원본과 <b>글자 · 모양까지 똑같아야</b> 하면 → <b>B. 원본 모양 그대로</b> <br>(보이는 내용이 하나도 빠지지 않습니다. 앞 8쪽까지 넣습니다.)</li>
-            <li>내용을 <b>고쳐 쓰고 금액 계산</b>까지 하려면 → <b>A. 우리 양식에 채우기</b></li>
-          </ul>
-          <p>A를 고를 때는 미리보기에서 <b>품목 · 조항 수가 원본과 맞는지</b> 꼭 확인하세요.<br>조항은 "제1조, 제2조…"처럼 번호가 있어야 나눠 읽습니다.<br>번호 없는 특약 문단 · 계좌번호 · 원본 서명란 · 로고는 우리 양식 것으로 바뀝니다.</p>
-        </div>
-        <section class="fm-opt" id="fmA">
-          <div class="fm-oh"><b>A. 우리 양식에 채우기</b><label>서류 종류 <select id="fmKind"></select></label></div>
-          <p class="hint">읽은 내용을 이 작성기의 깔끔한 양식으로 옮깁니다.<br>칸을 고치기 쉽고 금액 계산 · 전자서명 · 직인이 자동으로 들어갑니다.</p>
+      <div class="fm-opts one" id="fmOpts" hidden>
+        <section class="fm-opt" id="fmA" hidden>
+          <div class="fm-oh"><b>불러올 모습</b><label>서류 종류 <select id="fmKind"></select></label></div>
+          <p class="hint">이 파일은 원본 모양을 그대로 쓸 수 없어(한글 · 워드 · 엑셀),<br>읽은 내용을 작성기 기본 양식으로 옮깁니다.<br>원본 모양 그대로 쓰려면 [PDF로 저장]한 뒤 다시 올려 주세요.</p>
           <div class="fm-info" id="fmInfoA"></div>
           <div class="fm-prev" id="fmPrevA"></div>
-          <button class="btn go" id="fmOkA" type="button">A 방식으로 넣기</button>
+          <button class="btn go" id="fmOkA" type="button">이대로 불러오기</button>
         </section>
         <section class="fm-opt" id="fmB">
-          <div class="fm-oh"><b>B. 원본 모양 그대로</b></div>
-          <p class="hint">올린 양식을 그대로 바탕에 깔고,<br>찾은 빈칸에 내용 · 서명 · 직인만 얹습니다.<br>칸은 넣은 뒤에 끌어서 옮기거나 더할 수 있습니다.</p>
+          <div class="fm-oh"><b>불러올 모습</b></div>
+          <p class="hint">원본 디자인 그대로 불러옵니다.<br>품목 · 금액 · 조항 · 회사 정보는 왼쪽에서 기본 양식처럼 고칠 수 있습니다.</p>
           <div class="fm-info" id="fmInfoB"></div>
           <div class="fm-prev" id="fmPrevB"></div>
-          <button class="btn go" id="fmOkB" type="button">B 방식으로 넣기</button>
+          <button class="btn go" id="fmOkB" type="button">이대로 불러오기</button>
         </section>
       </div>
     </div>
@@ -4421,9 +4428,26 @@ function formCardHtml(p,pi){
   const lines=[]; order.forEach(i=>{ const m=F.marks[i], L=lines[lines.length-1], my=m.t==="text"?m.y+m.f*.5:m.y;
     if(L&&L.pg===m.pg&&Math.abs(L.y-my)<.007) L.ids.push(i); else lines.push({pg:m.pg,y:my,ids:[i]}); });
   let lastPg=-1;
-  const rows=lines.map(L=>{
-    const ph=F.r.length>1&&L.pg!==lastPg?`<div class="fm-pgh">${L.pg+1}쪽</div>`:""; lastPg=L.pg;
-    L.ids.sort((a,b)=>F.marks[a].x-F.marks[b].x);
+  // 조항: "제 N조 …" · "특약" 제목 줄과 그 아래 문장 줄을 한 카드로 (기본 양식의 조항 카드처럼)
+  const plain=L=>L.ids.length===1&&F.marks[L.ids[0]].t==="text"&&!F.marks[L.ids[0]].b;
+  const isHead=L=>plain(L)&&/^\s*(제\s*\d+\s*조|특\s*약)/.test(F.marks[L.ids[0]].v||"");
+  const isSect=L=>plain(L)&&/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(F.marks[L.ids[0]].v||"");
+  const blocks=[]; let cur=null;
+  lines.forEach(L=>{ L.ids.sort((a,b)=>F.marks[a].x-F.marks[b].x);
+    if(isHead(L)){ cur={head:L,body:[],pg:L.pg}; blocks.push(cur); return; }
+    if(cur&&plain(L)&&!isSect(L)){ cur.body.push(L); return; }
+    cur=null; blocks.push({line:L,pg:L.pg}); });
+  let cn=0;
+  const rows=blocks.map(B0=>{
+    const ph=F.r.length>1&&B0.pg!==lastPg?`<div class="fm-pgh">${B0.pg+1}쪽</div>`:""; lastPg=B0.pg;
+    if(B0.head){ const h=B0.head.ids[0], hm=F.marks[h]; cn++;
+      const txt=[hm.v,...B0.body.map(L=>F.marks[L.ids[0]].v)].join(" ").toLowerCase();
+      const bl=B0.body.map(L=>{ const i=L.ids[0], m=F.marks[i], tp=/\{[^{}]+\}/.test(m.v||"");
+        return `<span class="fm-c fm-cl-l${fmSel===m.id?" sel":""}" data-mrow="${m.id}">${tp?`<i class="fm-tag" title="중괄호 부분은 금액 · 이름으로 자동으로 바뀝니다">자동</i>`:""}<input class="fm-v" data-p="prods.${pi}.form.marks.${i}.v" placeholder="(빈 줄)" aria-label="${i+1}번 글자"><button class="fm-cb" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 줄 지우기" aria-label="이 줄 지우기">✕</button></span>`; }).join("");
+      return `${ph}<div class="fm-clause" data-line data-ftxt="${esc(txt)}">
+        <div class="fm-cl-h${fmSel===hm.id?" sel":""}" data-mrow="${hm.id}"><input class="fm-v" data-p="prods.${pi}.form.marks.${h}.v" aria-label="조항 제목"><button class="fm-cb" type="button" data-fmdel="${h}" data-pi="${pi}" title="제목 줄 지우기">✕</button></div>
+        <div class="fm-cl-b">${bl||`<span class="hint" style="margin:0">(본문 없음)</span>`}</div></div>`; }
+    const L=B0.line;
     const txt=L.ids.map(i=>{ const m=F.marks[i]; return m.v||(m.b?fmVal(m,p):""); }).join(" ").toLowerCase();
     return `${ph}<div class="fm-line" data-line data-ftxt="${esc(txt)}"><span class="fm-no">${L.ids[0]+1}</span><div class="fm-cells">${L.ids.map(cell).join("")}</div></div>${L.ids.filter(i=>F.marks[i].b||F.marks[i].t!=="text").map(fullRow).join("")}`;
   }).join("");
@@ -4454,19 +4478,30 @@ function formCardHtml(p,pi){
     </div>
   </details>`;
 }
-// 원본 품목 표 편집: 줄마다 품목 · 세부내용 · 수량 · 단위 · 단가 · 공급가액 · 구분
+// 원본 품목 표 편집: 기본 양식과 같은 품목 카드 (줄 수는 원본 표의 줄 수까지)
 function fmColN(){ return {cat:"품목",desc:"세부내용",qty:"수량",unit:"단위",up:"단가",amt:"공급가액",note:"비고"}; }   // 함수로: 시작할 때(이 줄보다 먼저) 불려도 됨
+function fmRowEmpty(r){ return !(r.cat||r.desc||r.qty||r.unit||fmNum(r.up)!==null||fmNum(r.amt)!==null); }
+function fmRowHead(r){
+  const a=fmRowAmt(r), money=r.mode&&r.mode!=="normal"?fmFlagText(r):a===""?"":won(a)+"원";
+  return `<b>${esc(r.desc||r.cat||"(빈 줄)")}</b><small>${esc([r.desc?r.cat:"",[r.qty,r.unit].filter(Boolean).join(" "),money].filter(Boolean).join(" · "))}</small>`;
+}
 function fmItemsHtml(p,pi){
   const F=p.form; if(!F.rows||!F.rows.length) return "";
-  const cols=(F.cols||Object.keys(fmColN())).filter(k=>fmColN()[k]), t=totals(p);
-  const head=cols.map(k=>`<th>${fmColN()[k]}</th>`).join("")+"<th>구분</th>";
-  const body=F.rows.map((r,n)=>{ const b=`prods.${pi}.form.rows.${n}`;
-    return `<tr>${cols.map(k=>{
-      if(k==="amt"){ const a=fmRowAmt(Object.assign({},r,{amt:""})); return `<td><input data-p="${b}.amt" data-fmrow inputmode="numeric" placeholder="${r.mode!=="normal"?esc(fmFlagText(r)):a===""?"":"자동 "+won(a)}" aria-label="공급가액"></td>`; }
-      return `<td><input data-p="${b}.${k}" data-fmrow${/^(qty|up)$/.test(k)?' inputmode="numeric"':""} aria-label="${fmColN()[k]}"></td>`; }).join("")}
-      <td><select data-p="${b}.mode" data-fmrow aria-label="구분">${[["normal","금액"],["service","서비스 제공"],["exclude","별도"]].map(([v,l])=>`<option value="${v}"${(r.mode||"normal")===v?" selected":""}>${l}</option>`).join("")}</select></td></tr>`; }).join("");
-  return `<div class="sub" style="margin-top:12px">품목 표 <span class="hint" style="margin:0;font-weight:400">— 원본 표의 같은 칸에 그대로 들어갑니다. 수량 · 단가를 고치면 공급가액이 자동 계산됩니다</span></div>
-    <div class="fm-items"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+  const cols=(F.cols||Object.keys(fmColN())).filter(k=>fmColN()[k]);
+  const shown=F.rows.map((r,n)=>n).filter(n=>!fmRowEmpty(F.rows[n])||F.rows[n].on), left=F.rows.length-shown.length;
+  const cards=shown.map((n,j)=>{ const r=F.rows[n], b=`prods.${pi}.form.rows.${n}`;
+    const f=k=>{ if(!cols.includes(k)) return "";
+      if(k==="amt"){ const a=fmRowAmt(Object.assign({},r,{amt:""})); return `<label class="f">${fmColN()[k]} (원)<input data-p="${b}.amt" data-fmrow inputmode="numeric" placeholder="${r.mode!=="normal"?esc(fmFlagText(r)):a===""?"":"자동 "+won(a)}"></label>`; }
+      return `<label class="f">${fmColN()[k]}${k==="up"?" (원)":""}<input data-p="${b}.${k}" data-fmrow${/^(qty|up)$/.test(k)?' inputmode="numeric"':""}></label>`; };
+    return `<div class="item" data-irow="${n}">
+      <div class="ih"><div class="it" data-ih="${pi}.${n}">${fmRowHead(r)}</div>
+        <div class="tools"><button class="btn" type="button" data-fmit="up" data-pi="${pi}" data-n="${n}" title="위로"${j?"":" disabled"}>↑</button><button class="btn" type="button" data-fmit="down" data-pi="${pi}" data-n="${n}" title="아래로"${j<shown.length-1?"":" disabled"}>↓</button><button class="btn" type="button" data-fmit="clear" data-pi="${pi}" data-n="${n}" title="이 줄 비우기">✕</button></div></div>
+      <div class="need"><div class="fm-g3">${f("qty")}${f("up")}${f("amt")}</div></div>
+      <details class="more" data-k="${b}" ${isOpen(b)}><summary>항목 수정</summary><div class="grid2">${f("cat")}${f("desc")}</div><div class="grid2">${f("unit")}<label class="f">합계 반영<select data-p="${b}.mode" data-fmrow>${[["normal","금액 (합계 포함)"],["service","서비스 제공 (무상)"],["exclude","별도 (합계 제외)"]].map(([v,l])=>`<option value="${v}"${(r.mode||"normal")===v?" selected":""}>${l}</option>`).join("")}</select></label></div>${f("note")}</details>
+    </div>`; }).join("");
+  return `<div class="sub" style="margin-top:12px">견적 품목 <span class="hint" style="margin:0;font-weight:400">— 원본 표의 같은 자리에 들어갑니다. 수량 · 단가를 고치면 공급가액이 자동 계산됩니다</span></div>
+    <div class="fm-icards">${cards}</div>
+    <button class="btn" type="button" data-fmit="add" data-pi="${pi}"${left?"":" disabled"} title="${left?`원본 표에 빈 줄 ${left}개가 남아 있습니다`:"원본 표에 남은 빈 줄이 없습니다"}">+ 품목 추가${left?` (빈 줄 ${left}개)`:" (빈 줄 없음)"}</button>
     <div class="hint fm-sum" data-fmsum="${pi}">${fmSumText(p)}</div>`;
 }
 function fmSumText(p){ const t=totals(p); return `합계 <b>${won(t.total)}원</b> · 계약금 ${t.rate}% ${won(t.dep)}원 · 잔금 ${100-t.rate}% ${won(t.bal)}원 <span style="opacity:.75">(계약금 비율은 위 금액 · 조건 칸에서 바꿉니다)</span>`; }
@@ -4477,6 +4512,7 @@ $("#editor").addEventListener("input",e=>{
   if(m[3]==="qty"||m[3]==="up"){ r.amt=""; const a=$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`); if(a){ a.value=""; const v=fmRowAmt(r); a.placeholder=v===""?"":"자동 "+won(v); } }
   if(m[3]==="mode"){ const a=$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`); if(a){ const v=fmRowAmt(Object.assign({},r,{amt:""})); a.placeholder=r.mode!=="normal"?fmFlagText(r):v===""?"":"자동 "+won(v); } }
   const s=$(`#prodCards [data-fmsum="${m[1]}"]`); if(s) s.innerHTML=fmSumText(p);
+  const ih=$(`#prodCards [data-ih="${m[1]}.${m[2]}"]`); if(ih) ih.innerHTML=fmRowHead(r);
   const th=$$(`#prodCards [data-fpi="${m[1]}"]`); th.forEach(x=>{ const pg=+x.dataset.fpg; x.innerHTML=fmBox(p,pg,true)+(p.form.r.length>1?`<div class="fm-tn">${pg+1}쪽</div>`:""); });
   updateSums(); esMarkStale(); save(); schedule();
 });
@@ -4567,6 +4603,7 @@ function fmShowA(){
 }
 function fmShowB(){
   const c=fmCur, el=$("#fmPrevB"), B=c.B;
+  if(B&&B.err){ $("#fmB").hidden=true; $("#fmA").hidden=false; }
   if(!B||B.err){ $("#fmB").classList.add("off"); $("#fmInfoB").textContent=""; el.innerHTML=`<div class="fm-msg">${B?B.err:"읽는 중…"}</div>`; return; }
   $("#fmB").classList.remove("off");
   const n=t=>B.marks.filter(m=>m.t===t).length;
@@ -4596,6 +4633,8 @@ $("#fmFile").onchange=async e=>{
   fmCur={file:f,text,kind,B:null};
   $("#fmKind").innerHTML=Object.entries(fmKinds()).map(([v,t])=>`<option value="${v}"${v===kind?" selected":""}>${t}</option>`).join("");
   $("#fmFileR").textContent=`${f.name}${text.trim()?` — '${fmKinds()[kind]}'(으)로 인식했습니다`:""}`;
+  // 불러오기는 한 가지: PDF · 사진은 원본 모양 그대로, 한글 · 워드 · 엑셀은 기본 양식으로
+  const canB=img||/.pdf$/i.test(f.name); $("#fmA").hidden=canB; $("#fmB").hidden=!canB;
   $("#fmOpts").hidden=false; fmShowA(); fmShowB();
   try{ fmCur.B=await fmBuildB(f,kind); }catch(err){ fmCur.B={err:"원본 그림을 만들지 못했습니다: "+esc(err.message)}; }
   if(fmCur&&fmCur.file===f) fmShowB();
@@ -4755,6 +4794,18 @@ $("#editor").addEventListener("focusin",e=>{
 $("#editor").addEventListener("focusout",()=>{ setTimeout(()=>{ const a=document.activeElement; if(a&&a===fmHlEl) return; fmHl=null; fmHlEl=null; fmHlShow(false); },0); });
 // 문서를 다시 그린 뒤(글자를 고칠 때마다)에도 표시 유지
 new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")) fmHlShow(false); }).observe(document.getElementById("pages"),{childList:true});
+// 원본 품목 카드: 위 · 아래 · 비우기 · 빈 줄에 추가 (원본 표의 줄 자리는 그대로, 내용만 옮김)
+document.getElementById("editor").addEventListener("click",e=>{
+  const b=e.target.closest("[data-fmit]"); if(!b) return;
+  const p=P()[+b.dataset.pi], R=p&&p.form&&p.form.rows; if(!R) return;
+  const vis=R.map((r,n)=>n).filter(n=>!fmRowEmpty(R[n])||R[n].on), n=+b.dataset.n, j=vis.indexOf(n), act=b.dataset.fmit;
+  const keep=r=>{ const o=Object.assign({},r); delete o.on; return o; };
+  if(act==="up"||act==="down"){ const m=vis[j+(act==="up"?-1:1)]; if(m===undefined) return; const a=keep(R[n]), c=keep(R[m]); R[n]=Object.assign(c,{on:1}); R[m]=Object.assign(a,{on:1}); }
+  else if(act==="clear"){ if(!fmRowEmpty(R[n])&&!confirm("이 품목 줄을 비울까요?\n원본 표의 그 줄이 빈 칸이 됩니다.")) return; R[n]={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""}; }
+  else if(act==="add"){ const k=R.findIndex((r,i)=>fmRowEmpty(r)&&!r.on); if(k<0) return alert("원본 표에 남은 빈 줄이 없습니다.\n필요 없는 줄을 비우거나 다른 줄 내용을 고쳐 써 주세요."); R[k].on=1; R[k].mode="normal"; openSet.add(`prods.${b.dataset.pi}.form.rows.${k}`);
+    setTimeout(()=>{ const i=$(`#prodCards [data-p="prods.${b.dataset.pi}.form.rows.${k}.desc"]`); if(i){ i.scrollIntoView({block:"center"}); i.focus(); } },50); }
+  renderProds(); updateSums(); esMarkStale(); save(); schedule();
+});
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다.
