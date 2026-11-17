@@ -1064,7 +1064,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <label class="f" id="cBizno" style="display:none">사업자 번호<input data-p="client.bizno"></label>
           <label class="f">이메일 <span style="font-weight:400" data-only="quote labor">(최종 계약서 받을 주소)</span><span style="font-weight:400" data-only="cert">(증명서 PDF 받을 주소 · 원할 때만 발송)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
           <label class="f" data-only="labor cert" style="grid-column:1/-1">주소<input data-p="client.addr" data-addr></label>
-          <label class="f"><span data-ll="작성일" data-lc="발급일">견적일</span><input type="date" data-p="quoteDate"></label>
+          <label class="f"><span data-ll="작성일 · 계약일" data-lc="발급일">견적일 · 계약일</span><input type="date" data-p="quoteDate"></label>
         </div>
         <div class="grid2" id="deliverBox" style="margin-top:10px"></div>
       </div>
@@ -1089,14 +1089,9 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
     </details>
 
     <details class="card" open data-only="quote labor">
-      <summary>계약일 ·<span data-ll="근로자">의뢰자</span> 서명</summary>
+      <summary><span data-ll="근로자">의뢰자</span> 서명</summary>
       <div class="in">
-        <div class="grid3">
-          <label class="f">년<input data-p="date.y"></label>
-          <label class="f">월<input data-p="date.m"></label>
-          <label class="f">일<input data-p="date.d"></label>
-        </div>
-        <p class="hint">빈칸이면 계약서에 공란으로 인쇄됩니다. <button class="btn" id="bToday" type="button" style="padding:3px 8px">오늘 날짜</button></p>
+        <p class="hint" style="margin-top:0">계약서 맨 아래 날짜는 위 <span data-ll="근로자">의뢰자</span> 정보의 날짜로 들어갑니다.<br>전자서명을 받으면 고객이 서명한 날짜로 바뀝니다.</p>
         <div class="sub"><span data-ll="근로자">의뢰자(고객)</span> 사인</div>
         <div class="signbox">
           <div class="signprev" id="cSignPrev"></div>
@@ -1717,7 +1712,13 @@ $("#bAddProd").onclick=()=>{
   openSet.add(`p${p.pid}-cfg`);
   renderProds(); save(); schedule();
 };
-$("#bToday").onclick=()=>{state.date=todayYMD();bindSimple();save();schedule();};
+// 계약일은 따로 입력하지 않음: 의뢰자 정보의 견적일(작성일)을 그대로 씀 (ctrDate)
+function ctrDate(){
+  if(typeof esignMode!=="undefined"&&esignMode) return {y:"",m:"",d:""};     // 서명 요청 보낼 때는 비워 두고, 서명하면 서명한 날로 채워짐
+  if(state.esign&&state.esign.status==="signed"&&state.date&&state.date.d) return state.date;
+  const m=String(state.quoteDate||"").match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  return m?{y:m[1],m:String(+m[2]),d:String(+m[3])}:{y:"",m:"",d:""};
+}
 
 /* ===== 예시 양식 =====
    개인용 weavery LAB 작성기에 실제 쓰던 홈페이지(유지보수) · 블로그 계약서를 그대로 가져옵니다.
@@ -2549,7 +2550,7 @@ function recvOn(p){
   return p.recvSign!=null?!!p.recvSign:/명세(서|표)$/.test(quoteTitleOf(p));
 }
 function recvBlock(){
-  const c=state.client, d=esignMode?{y:"",m:"",d:""}:state.date, bl="&nbsp;&nbsp;&nbsp;";
+  const c=state.client, d=ctrDate(), bl="&nbsp;&nbsp;&nbsp;";
   const cs=state.clientSign&&!esignMode?`<img src="${state.clientSign}" alt="">`:"";
   // 서명 자리(data-client-seal)는 전자서명 · 고객 사인 이미지가 들어가는 곳 — 계약서와 같은 방식
   return `<div class="recv">
@@ -2576,7 +2577,7 @@ function contractBlocks(p){
   out.push(`<div class="cttl${ttl.length>18?" sm":""}">${esc(ttl)}</div>`);
   if(p.intro) out.push(`<div class="intro">${blankLine(esc(fill(p.intro,p,true))).replace(/\n/g,"<br>")}</div>`);
   p.terms.forEach((tm,i)=>out.push(`<div class="art"><b>제${i+1}조 【${esc(tm.title)}】</b>${blankLine(termBody(tm.body,p))}</div>`));
-  const d=esignMode?{y:"",m:"",d:""}:state.date,bl="&nbsp;&nbsp;&nbsp;";
+  const d=ctrDate(),bl="&nbsp;&nbsp;&nbsp;";
   const cs=state.clientSign&&!esignMode?`<img src="${state.clientSign}" alt="">`:"";
   const ss=s.sign?`<img src="${s.sign}" alt="">`:"";
   out.push(`<div>
@@ -3314,7 +3315,7 @@ function laborContractBlocks(p){
   out.push(`<div class="cttl${ttl.length>18?" sm":""}">${esc(ttl)}</div>`);
   if(p.intro) out.push(`<div class="intro">${blankLine(esc(fill(p.intro,p,true))).replace(/\n/g,"<br>")}</div>`);
   p.terms.forEach((tm,i)=>out.push(`<div class="art"><b>${i+1}. ${esc(tm.title)}</b>${blankLine(termBody(tm.body,p))}</div>`));
-  const d=esignMode?{y:"",m:"",d:""}:state.date,bl="&nbsp;&nbsp;&nbsp;";
+  const d=ctrDate(),bl="&nbsp;&nbsp;&nbsp;";
   const cs=state.clientSign&&!esignMode?`<img src="${state.clientSign}" alt="">`:"";
   const ss=s.sign?`<img src="${s.sign}" alt="">`:"";
   out.push(`<div>
@@ -4445,7 +4446,12 @@ function fmVal(m,p){
     if(k==="up"){ const u=fmNum(r.up); return u===null?String(r.up??""):won(u); }
     return String(r[k]??"");
   }
-  if(m.b==="date"){ return certYmd(certDate(state.quoteDate)||new Date()); }
+  if(m.b==="date"){
+    // 서명 · 직인 칸 가까이(같은 쪽 · 위아래 12% 안)에 있는 날짜 = 계약일 → '계약일 · 의뢰자 서명'의 년 · 월 · 일 (기본 양식과 같음)
+    const sg=p&&p.form&&(p.form.marks||[]).some(s=>s.t!=="text"&&s.pg===m.pg&&Math.abs(s.y-m.y)<.12);
+    if(sg){ const d=ctrDate(), sp="   ";
+      return `${d.y||sp}년 ${d.m||sp}월 ${d.d||sp}일`; }
+    return certYmd(certDate(state.quoteDate)||new Date()); }
   if(!m.b) return "";
   if(m.b.includes(" ")) return m.b.split(" ").map(b=>fmVal({b,d:""})).filter(Boolean).join(" ")||m.d||"";   // 상호 + 대표자
   const [o,k]=m.b.split("."); return String(((o==="co"?profile:state.client)||{})[k]||(o==="co"&&m.d)||"");   // 우리 회사 정보가 비어 있으면 원본 글자 유지
