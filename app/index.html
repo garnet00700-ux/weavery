@@ -4148,7 +4148,7 @@ function fmAnalyze(pp,pages,r,txt,more,kind){
   // 품목 표 → 칸마다 수정 칸 (표 안에 겹친 다른 칸은 버림)
   const T={rows:[],marks:[],used:new Set(),cols:null};
   if(!/^(labor|cert)/.test(kind)) pp.forEach((p,i)=>{ const n0=T.rows.length, m0=T.marks.length, u0=new Set(T.used);
-    if(safe(()=>{ fmTable(p.items,p.W,p.H,i,T); return 1; },"품목 표")===null){ T.rows.length=n0; T.marks.length=m0; T.used=u0; } });
+    if(safe(()=>{ fmTable(p.items,p.W,p.H,i,T,p); return 1; },"품목 표")===null){ T.rows.length=n0; T.marks.length=m0; T.used=u0; } });
   const hit=(a,b)=>a.pg===b.pg&&a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+(b.h||b.f*1.2)*(1/(r[b.pg]||1.4142))&&b.y<a.y+(a.h||a.f*1.2)*(1/(r[a.pg]||1.4142));
   for(let i=marks.length-1;i>=0;i--) if(marks[i].t==="text"&&T.marks.some(t=>hit(t,marks[i]))) marks.splice(i,1);
   // 합계 · 계약금 · 약관 문장: 기본 양식처럼 {총액} {계약금비율} {의뢰인} … 로 바꿔 덮어 씀
@@ -4164,7 +4164,7 @@ function fmAnalyze(pp,pages,r,txt,more,kind){
     for(let i=marks.length-1;i>=0;i--) if(marks[i].t==="text"&&(marks[i].n5||!marks[i].b)&&hit(marks[i],me)) marks.splice(i,1);
     marks.push({id:newId(),pg,t:"text",b:"",v:t,x:Math.max(0,it.x-1)/p.W,y:(it.y-it.h*.1)/p.H,w:(it.w+2)/p.W,f:it.h/p.W,o:1,bd:it.bd?1:undefined,al:it.x>p.W*.55?"r":""});
   }));
-  for(let i=marks.length-1;i>=0;i--) if(marks[i].gap&&!marks[i].b) marks.splice(i,1);   // 띄어쓰기로 비어 보이는 자리(채울 내용 없음)는 칸으로 안 만듦
+  for(let i=marks.length-1;i>=0;i--) if(marks[i].gap&&!marks[i].b&&!marks[i].tot) marks.splice(i,1);   // 띄어쓰기로 비어 보이는 자리(채울 내용 없음)는 칸으로 안 만듦
   // 이름표 오른쪽 빈칸: 표 칸이면 이름표 칸의 경계선을 넘어 '내용 칸' 안쪽에서 시작 (원본 글자 위치처럼)
   marks.forEach(m=>{ if(!m.gap||m.lx==null) return; const P0=pp[m.pg]; delete m.gap; m.ga=1;
     const lx=m.lx, rx=m.rx; delete m.lx; delete m.rx; if(!P0||!P0.cv) return;
@@ -4326,6 +4326,10 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     const hon=s=>/^\s*(귀하|귀중|님|님께|좌하|앞)\s*$/.test(s);     // "○○ 귀하"의 귀하 · 님은 내용이 아니라 꼬리 글자
     if(k==="total"){   // "합계금액 | 0" · "총액 | ₩0": 적힌 금액을 실제 합계로
       if(nx&&/[\d-]/.test(nx.s)&&/^[\s₩￦\d,.\-원]+$/.test(nx.s)) cover(nx.x,nx.x+nx.w,nx,"",(/[₩￦]/.test(nx.s)?"₩":"")+"{총액}"+(/원\s*$/.test(nx.s)?"원":""));
+      else if(!nx||labOf(nx.s)){   // 금액 칸이 비어 있음: 그 칸에 합계 금액이 들어가게
+        const x0=it.x+it.w+Math.max(4,it.h*.6), end=nx?nx.x:W-W*.05, gap=end-x0;
+        if(gap>=Math.max(36,it.h*3)){ const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3);
+          add({id:newId(),pg,t:"text",b:"",v:"{총액}",tot:1,x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,gap:1,lx:(it.x+it.w)/W,rx:end/W,cx:x0+w/2,cy,cw:w,ch:it.h}); } }
       return; }
     if(nx&&isSign(nx.s)&&k!=="sign"){   // "홍길동 (인)": 이름 부분만 수정 칸 · (인)은 직인 자리
       const pre=nx.s.split(/[(（]/)[0], v=pre.trim();
@@ -4448,7 +4452,7 @@ function fmGrid(marks,pp,T){
       if(/^[가-힣]$/.test(t)) return "";   // 한 글자("총 계"의 "총" · "개")는 이름표가 아님
       if(/^(공급가액|공급가|부가세|부가가치세|세액|총계|총합계|합계|소계)$/.test(t.replace(/\s/g,""))) return "";   // 합계 줄 이름표 (값은 자동 금액)
       return t.length>=1&&t.length<=24&&/[가-힣A-Za-z]/.test(t)&&!/[(（]\s*(인|서명)\s*[)）]/.test(t)?t.replace(/(?<=[가-힣])\s+(?=[가-힣](\s|$))/g,""):""; };
-    items.forEach(it=>{ if(total>240||T.used.has(it)) return; const lb=lab(it); if(!lb) return;
+    fmJoinSpaced(items).forEach(it=>{ if(total>240||T.used.has(it)||(it.parts&&it.parts.some(q=>T.used.has(q)))) return; const lb=lab(it); if(!lb) return;   // 한 글자씩 찍힌 이름표("품   명")도 한 낱말로
       const c=cellAt((it.x+it.w/2)*s,(it.y+it.h/2)*s); if(!c) return;
       if(c.R-c.L>Wc*.6) return;                                   // 한 줄 전체 칸 = 제목 · 문장 줄
       const cy=Math.round((it.y+it.h/2)*s);
@@ -4521,16 +4525,42 @@ function fmItems(rows){
   return (rows||[]).filter(r=>r.cat||r.desc||fmRowAmt(r)!=="").map(r=>{ const a=fmRowAmt(r);
     return {cat:r.cat||"",desc:r.desc||"",sub:"",qty:[r.qty,r.unit].filter(Boolean).join(""),price:a===""?"":a,amount:null,note:"",mode:r.mode||"normal"}; });
 }
+// 한 글자씩 따로 찍힌 이름표("품   명" · "합 계 금 액")를 한 낱말로: 같은 줄에서 가까이 이어진 한 글자 덩어리들을 합친 새 덩어리 (xs: 글자마다 위치)
+function fmJoinSpaced(its){
+  const one=it=>/^[가-힣A-Za-z]$/.test(String(it.s).trim()), rows=[];
+  its.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
+  const out=[];
+  rows.forEach(R=>{ const s=R.its.sort((a,b)=>a.x-b.x);
+  for(let i=0;i<s.length;i++){
+    if(!one(s[i])){ out.push(s[i]); continue; }
+    const run=[s[i]]; let j=i+1;
+    while(j<s.length&&one(s[j])&&s[j].x-(run[run.length-1].x+run[run.length-1].w)<s[i].h*3.2) run.push(s[j++]);
+    if(run.length<2){ out.push(s[i]); continue; }
+    const L=run[run.length-1];
+    out.push({s:run.map(r=>String(r.s).trim()).join(""),x:run[0].x,y:Math.min(...run.map(r=>r.y)),w:L.x+L.w-run[0].x,h:Math.max(...run.map(r=>r.h)),xs:run.map(r=>r.x),bd:run.every(r=>r.bd)||undefined,parts:run});
+    i=j-1; } });
+  return out;
+}
 // 머리줄(품목 · 세부내용 · 수량 · 단가 · 공급가액 …)을 찾아 아래 줄들을 칸으로 나눔. 칸마다 흰 바탕 수정 칸(b: it.줄.항목)
-function fmTable(items,W,H,pg,T){
+function fmTable(items,W,H,pg,T,P0){
   const nm=s=>String(s).replace(/[(（][^)）]*[)）]/g,"").replace(/[\s:：]/g,"");
   const rows=[]; items.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
   rows.forEach(r=>r.its.sort((a,b)=>a.x-b.x));
+  // 디자인 그림에서 x 위치를 세로로 내려가며 가로선을 찾아 줄 칸 [위, 아래](pt) 목록 · 칸 높이가 갑자기 달라지면 거기서 멈춤
+  const lineRows=(P0,x,y0,y1)=>{ const sc=P0.sc, cv=P0.cv, X=Math.min(cv.width-1,Math.max(0,Math.round(x*sc))), Y0=Math.max(0,Math.round(y0*sc)), Y1=Math.min(cv.height-1,Math.round(y1*sc));
+    if(Y1-Y0<4) return [];
+    const d=cv.getContext("2d").getImageData(X,Y0,1,Y1-Y0+1).data, ln=[]; let run=-1;
+    for(let k=0;k<=Y1-Y0;k++){ const v=d[k*4]*.3+d[k*4+1]*.59+d[k*4+2]*.11, dark=v<150;
+      if(dark&&run<0) run=k; if(!dark&&run>=0){ ln.push((Y0+(run+k-1)/2)/sc); run=-1; } }
+    const out=[]; for(let i=0;i+1<ln.length&&out.length<80;i++){ const h=ln[i+1]-ln[i]; if(h<4) continue;
+      if(out.length){ const h0=out[0][1]-out[0][0]; if(h>h0*1.6||h<h0*.6) break; }
+      out.push([ln[i],ln[i+1]]); }
+    return out; };
   for(let hi=0;hi<rows.length;hi++){
     const hr=rows[hi], cols=[];
     const hit=s=>FM_COLS.find(([,re])=>re.test(nm(s)));
     const addC=(k,x0,x1,n)=>{ if(!cols.some(x=>x.k===k)) cols.push({k,x0,x1,cx:(x0+x1)/2,n}); };
-    hr.its.forEach(it=>{ const c=hit(it.s); if(c){ addC(c[0],it.x,it.x+it.w,it.s); return; }
+    fmJoinSpaced(hr.its).forEach(it=>{ const c=hit(it.s); if(c){ addC(c[0],it.x,it.x+it.w,it.s); return; }   // "품   명"처럼 한 글자씩 찍힌 머리글도
       // 붙어서 한 덩어리로 읽힌 머리글("품 번 품 명"): 칸 이름 낱말로 나눠 칸마다
       const ch=[], idx=[]; [...String(it.s)].forEach((c,i)=>{ if(!/[\s:：]/.test(c)){ ch.push(c); idx.push(i); } });
       const seg=[]; let q=0;
@@ -4557,7 +4587,7 @@ function fmTable(items,W,H,pg,T){
       if(/^(합계|소계)$/.test(m[1])&&r===sumRow) continue;   // 칸별 합계 줄(공급가액 · 세액 칸 아래): 아래에서 칸 기준으로
       sumL.push([r,/^(공급가|소계)/.test(m[1])?"{금액}":/^(부가|세액|VAT)/i.test(m[1])?"{부가세}":"{총액}"]); }
     if(sumL.some(x=>x[1]==="{부가세}")) T.vat=1;
-    if(!body.length) continue;
+    if(!body.length&&!(P0&&P0.cv)) continue;
     const C=k=>cols.find(c=>c.k===k);
     const colOf=it=>{ const cx=it.x+it.w/2; let best=cols[0], bd=1e9; cols.forEach(c=>{ const d=cx>=c.x0-2&&cx<=c.x1+2?0:Math.abs(c.cx-cx); if(d<bd){ bd=d; best=c; } }); return best.k; };
     const isNum=s=>fmNum(s)!==null||FM_FLAG.test(String(s).trim());
@@ -4572,6 +4602,9 @@ function fmTable(items,W,H,pg,T){
     // 숫자가 없는 표("1회" · "월" · "별도")도: 수량 · 단위 · 단가 · 금액 칸에 글자가 있는 줄을 품목 줄로
     const anchor=r=>r.its.some(i=>(/^(qty|unit|up|amt)$/.test(kOf(i))&&String(i.s).trim())||(kOf(i)==="no"&&/^\d{1,3}$/.test(String(i.s).trim())));   // 빈 양식: 번호(1 · 2 · 3 …)만 있는 줄도 품목 줄
     const R=[]; body.forEach(r=>{ if(anchor(r)) R.push({y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}); });
+    // 빈 양식(번호도 글자도 없는 줄): 표에 그어진 가로선으로 줄을 셈 (머리줄 아래 ~ 합계 줄 · 표 끝까지)
+    if(!R.length&&P0&&P0.cv){ const yEnd=jEnd<rows.length?rows[jEnd].y:H; lineRows(P0,(C("cat")||cols[0]).cx,hr.y+hh*.6,yEnd).forEach(([a,b])=>R.push({y:(a+b)/2-hh*.55,h:hh,cells:{}})); }
+    if(!R.length) continue;
     const rowOf=new Map(), A0=R.length?Math.min(...R.map(x=>x.y)):0, A1=R.length?Math.max(...R.map(x=>x.y)):0;
     body.forEach(r=>{
       let t=R.find(x=>x.y===r.y), own=null;
@@ -5211,7 +5244,7 @@ new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")
 /* --- 등록된 양식 다시 검토: 인식 방식이 좋아지면, 예전에 등록한 양식도 저장해 둔 글자 · 디자인 그림으로 최신 방식으로 다시 읽음 ---
    원본 파일이 없어도 됨 (등록할 때 글자 위치(lines)와 글자 뺀 그림을 저장해 둠).
    더 많이 찾으면(품목 칸 · 연결 칸 · 입력 칸) 바로 바꾸고, 바꾼 내용과 [되돌리기]를 카드 위에 알림. 입력해 둔 품목 내용은 그대로 옮김. */
-var FM_VER="2026-11-17c";
+var FM_VER="2026-11-17d";
 function fmSig(marks){ let h=0; const s=JSON.stringify((marks||[]).map(m=>[m.t,m.b,m.v,m.x,m.y,m.w,m.f,m.al,m.fld])); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return h; }
 function fmScore(F){ const M=F.marks||[];
   return {rows:(F.rows||[]).length, cells:M.filter(m=>/^it\./.test(m.b||"")).length, binds:M.filter(m=>m.t!=="text"||(m.b&&!/^it\./.test(m.b))||/\{[^{}]+\}/.test(m.v||"")).length, fields:M.filter(m=>m.fld).length, chk:(F.chk||[]).length}; }
