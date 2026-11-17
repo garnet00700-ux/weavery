@@ -1259,6 +1259,10 @@ function itemAmount(it){
 function totals(p){
   if(p&&p.kind==="form"&&p.form&&p.form.rows&&p.form.rows.length&&typeof fmItems==="function") p.items=fmItems(p.form.rows);   // 원본 양식 품목 표
   const supply=(p.items||[]).reduce((s,it)=>s+itemAmount(it),0);
+  // 원본 양식 표에 세액 칸이 있으면: 줄마다 공급가액의 10% · 합계 = 공급가액 + 세액
+  if(p&&p.kind==="form"&&p.form&&(p.form.cols||[]).includes("tax")){
+    const v=(p.form.rows||[]).reduce((s,r)=>{ if(r.mode&&r.mode!=="normal") return s; const a=fmRowAmt(r); return s+(a===""?0:Math.round(a*.1)); },0);
+    return totalsOut(supply,v,supply+v); }
   // include: 적은 금액에 10%를 더함 · inprice: 적은 금액이 이미 VAT 포함 (공급가액 = 합계 ÷ 1.1)
   let vat=state.vatMode==="include"?Math.round(supply*0.1):0, total=supply+vat, base=supply;
   if(state.vatMode==="inprice"){ total=supply; base=Math.round(supply/1.1); vat=total-base; }
@@ -1285,6 +1289,7 @@ function fill(text,p,underline){
     .replace(/\{잔금비율\}/g,100-t.rate)
     .replace(/\{금액\}/g,t.supply?won(t.supply):"　　　　")
     .replace(/\{총액\}/g,t.total?won(t.total):"　　　　")
+    .replace(/\{부가세\}/g,t.vat?won(t.vat):"　　　　")
     .replace(/\{납품일\}/g,(p&&p.deliver)||"　　　　")
     .replace(/\{계약금\}/g,t.dep?won(t.dep):"　　　　")
     .replace(/\{잔금\}/g,t.bal?won(t.bal):"　　　　")
@@ -4245,9 +4250,12 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     keys.forEach(k=>{ const kx=k.it.x+k.it.w/2, ky=k.it.y+k.it.h/2; if(ky>cy+H*.05) return;
       const d=Math.hypot((kx-cx)*.45,(ky-cy)*(ky>cy+2?2.5:1)); if(d<bd){ bd=d; best=k.p; } });   // 아래쪽 글자는 덜 믿음
     return bd<H*.22?best:""; };
-  const overlaps=(x,y,w,h)=>out.some(m=>m.pg===pg&&Math.abs(m.cx-x)<Math.max(w,m.cw)/2+4&&Math.abs(m.cy-y)<Math.max(h,m.ch)/2);
-  const add=m=>{ if(overlaps(m.cx,m.cy,m.cw,m.ch)) return; out.push(m); };
-  const sign=(cx,cy,party)=>{ const t=cert?"company":party||"client";
+  // 겹침은 같은 종류끼리만 봄 (글자 칸은 직인 · 서명 자리 위에 있어도 됨: "대표자 홍길동 (인)")
+  const overlaps=(x,y,w,h,t)=>out.some(m=>m.pg===pg&&(m.t==="text")===(t==="text")&&Math.abs(m.cx-x)<Math.max(w,m.cw)/2+4&&Math.abs(m.cy-y)<Math.max(h,m.ch)/2);
+  const add=m=>{ if(overlaps(m.cx,m.cy,m.cw,m.ch,m.t)) return; out.push(m); };
+  // "수신 : ○○" 이 있는 문서(견적서 등)는 수신 쪽이 상대방 → 이름표 없는 상호 · 대표자 · (인) 칸은 우리 회사
+  const hasRecv=items.some(it=>/^(수신|수신자|수신처|받는분|받는이)$/.test(nm(it.s)));
+  const sign=(cx,cy,party)=>{ const t=cert?"company":party||(hasRecv?"company":"client");
     const w=t==="company"?22/210:17/210;
     add({id:newId(),pg,t,x:cx/W,y:cy/H,w,cx,cy,cw:w*W,ch:w*W*.7}); };
   // 이미 적힌 글자 위를 흰 바탕으로 덮는 칸 (b: 채울 내용, v: 직접 입력 값)
@@ -4266,7 +4274,8 @@ function fmFind(items,W,H,pg,kind,ctx,final){
   });
   // ② 이름표 오른쪽 칸 — 비어 있으면 빈칸, 이미 적혀 있어도 그 글자를 덮어 수정 칸으로
   const FL=[[/^(성명|이름|성함|근로자명|직원명|성명또는명칭)$/,"name"],[/^(대표자|대표자명|대표|대표자성명|대표이사)$/,"ceo"],
-    [/^(상호|상호명|업체명|회사명|사업체명|상호법인명|법인명|거래처|거래처명|고객명)$/,"co"],[/^(주소|사업장주소|소재지|사업장소재지|현주소|주소지)$/,"addr"],
+    [/^(상호|상호명|업체명|회사명|사업체명|상호법인명|법인명|거래처|거래처명|고객명)$/,"co"],[/^(주소|사업장주소|소재지|사업장소재지|사업자소재지|사업자주소|본점소재지|현주소|주소지)$/,"addr"],
+    [/^(수신|수신자|수신처|받는분|받는이)$/,"recv"],[/^(참조|참조인|담당|담당자)$/,"attn"],
     [/^(연락처|전화|전화번호|휴대폰|휴대전화|핸드폰|tel|연락처휴대폰)$/i,"phone"],[/^(이메일|e-?mail|메일)$/i,"email"],
     [/^(사업자등록번호|사업자번호|등록번호)$/,"bizno"],[/^(작성일|작성일자|발급일|발급일자|계약일|계약일자|일자|날짜|거래일|거래일자|견적일|견적일자|발행일)$/,"date"],
     [/^(서명|날인|서명또는날인|서명인|사인|서명란)$/,"sign"],
@@ -4276,12 +4285,17 @@ function fmFind(items,W,H,pg,kind,ctx,final){
   const isSign=s=>/[(（]\s*(인|印|서\s*명|날\s*인|서명\s*또는|사\s*인)/.test(s);
   const bindOf=(k,pt)=>({name:pt==="company"?"co.ceo":"client.name", ceo:pt==="company"?"co.ceo":"client.ceo", co:pt==="company"?"co.name":"client.name",
       addr:pt==="company"?"co.address":"client.addr", phone:pt==="company"?"co.phone":"client.phone", email:pt==="company"?"co.email":"client.email",
-      bizno:pt==="company"?"co.bizno":"client.bizno", date:"date"})[k]||"";
-  rows.forEach(r=>r.its.forEach((it,j)=>{
+      bizno:pt==="company"?"co.bizno":"client.bizno", date:"date", recv:"client.name", attn:"client.ceo"})[k]||"";
+  // 품목 표 머리줄(품명 · 규격 · 수량 · 단가 …)은 이름표 줄이 아님
+  const hdrRow=r=>r.its.filter(i=>FM_COLS.some(([,re])=>re.test(nm(i.s)))).length>=3;
+  rows.forEach(r=>{ if(hdrRow(r)) return; r.its.forEach((it,j)=>{
     const k=labOf(it.s); if(!k||isSign(it.s)) return;
     const nx=r.its[j+1], cy=it.y+it.h/2, party=partyAt(it.x,cy,it);
-    const pt=party||(cert&&/^(co|bizno|ceo)$/.test(k)?"company":"client"), b=bindOf(k,pt);
+    const pt=party||((cert&&/^(co|bizno|ceo)$/.test(k))||(hasRecv&&/^(co|bizno|ceo|addr|phone|email)$/.test(k))?"company":"client"), b=bindOf(k,pt);
     const hon=s=>/^\s*(귀하|귀중|님|님께|좌하|앞)\s*$/.test(s);     // "○○ 귀하"의 귀하 · 님은 내용이 아니라 꼬리 글자
+    if(nx&&isSign(nx.s)&&k!=="sign"){   // "홍길동 (인)": 이름 부분만 수정 칸 · (인)은 직인 자리
+      const pre=nx.s.split(/[(（]/)[0], v=pre.trim();
+      if(v){ const i0=pre.search(/\S/); remember(b,v); cover(xAt(nx,i0),xAt(nx,i0+v.length),nx,b,v); return; } }
     if(nx&&!labOf(nx.s)&&!isSign(nx.s)&&!/^[_\s]+$/.test(nx.s)&&!hon(nx.s)){          // 이미 내용이 적혀 있음 → 덮어 쓰는 칸
       if(k==="sign") return;
       let e=j+1, vEnd=nx.x+nx.w, val=nx.s;
@@ -4294,7 +4308,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3);
     if(k==="sign"){ sign(x0+Math.min(w,80)/2,cy,party); return; }
     add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,gap:1,lx:(it.x+it.w)/W,rx:end/W,cx:x0+w/2,cy,cw:w,ch:it.h});
-  }));
+  }); });
   // ②-2 한 덩어리 안의 "이름표 : 내용" ("의뢰인 : 블루드래곤", "대표자: 홍길동")
   items.forEach(it=>{
     const m=it.s.match(/^\s*([^:：]{1,14}?)\s*[:：]\s*(\S.*)$/); if(!m) return;
@@ -4398,7 +4412,7 @@ function fmAlign(marks,pp){
 
 /* --- 4-2. 원본 모양: 품목 표 · 합계 · 약관 문장 인식 --- */
 var FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명|구성|구성항목|대분류|카테고리|서비스|서비스명|작업명|작업항목|과업|분야|종류)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
-  ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/],["no",/^(No\.?|NO\.?|no\.?|번호|순번|연번)$/]];   // no: 줄 번호 칸 (원본 숫자 그대로 · 품목 내용 아님)
+  ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/],["tax",/^(세액|부가세|부가가치세|VAT)$/i],["no",/^(No\.?|NO\.?|no\.?|번호|순번|연번)$/]];   // no: 줄 번호 칸 (원본 숫자 그대로 · 품목 내용 아님)
 var FM_FLAG=/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/;
 function fmNum(s){ if(typeof s==="number") return s; const t=String(s??"").replace(/[₩\s원]/g,""); return /^-?\d[\d,]*(\.\d+)?$/.test(t)?Number(t.replace(/,/g,"")):null; }
 // 한 줄의 공급가액: 직접 적은 금액 → 없으면 수량 × 단가
@@ -4419,9 +4433,10 @@ function fmTable(items,W,H,pg,T){
     hr.its.forEach(it=>{ const c=FM_COLS.find(([,re])=>re.test(nm(it.s))); if(c&&!cols.some(x=>x.k===c[0])) cols.push({k:c[0],x0:it.x,x1:it.x+it.w,cx:it.x+it.w/2}); });
     if(cols.length<3||!cols.some(c=>c.k==="amt"||c.k==="up")) continue;
     cols.sort((a,b)=>a.cx-b.cx);
-    const hh=Math.max(...hr.its.map(i=>i.h)), body=[];
+    const hh=Math.max(...hr.its.map(i=>i.h)), body=[]; let sumRow=null;
     for(let j=hi+1;j<rows.length;j++){
       const s=rows[j].its.map(i=>i.s).join(" ");
+      if(/(합\s*계|소\s*계)/.test(s)&&!sumRow) sumRow=rows[j];
       if(/(합\s*계|소\s*계|총\s*액|총\s*금\s*액|대\s*금|계약금|부가세|vat)/i.test(s)||/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(s)||/^\s*제\s*\d+\s*조/.test(s)) break;
       if(rows[j].y-(body.length?body[body.length-1].y:hr.y)>hh*5) break;
       body.push(rows[j]);
@@ -4462,19 +4477,24 @@ function fmTable(items,W,H,pg,T){
       return [c.x0-4,c.x1+4]; };
     R.forEach(t=>{
       const n=T.rows.length, row={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""};
-      cols.forEach(c=>{ if(c.k==="no") return; const k=c.k, fr=(t.cells[k]||[]).sort((a,b)=>a.y-b.y||a.x-b.x);
+      cols.forEach(c=>{ const k=c.k, fr=(t.cells[k]||[]).sort((a,b)=>a.y-b.y||a.x-b.x);
         let [x0,x1]=box(k), y0=t.y, y1=t.y+t.h, f=t.h;
         if(fr.length){ x0=Math.min(x0,...fr.map(i=>i.x)); x1=Math.max(x1,...fr.map(i=>i.x+i.w)); y0=Math.min(...fr.map(i=>i.y)); y1=Math.max(...fr.map(i=>i.y+i.h)); f=Math.max(...fr.map(i=>i.h)); }
         const s=fr.reduce((a,i,j)=>a+(j?(Math.abs(i.y-fr[j-1].y)>i.h*.5?"\n":" "):"")+i.s.trim(),"").trim();
-        if(k==="amt"&&FM_FLAG.test(s)){ row.mode=/별도/.test(s)?"exclude":"service"; row.fl=s; }
+        if(k==="no"){ if(!fr.length) return; }   // 줄 번호: 원본 숫자 그대로 고정 (품목 내용 아님 · 줄을 옮겨도 번호는 자리 그대로)
+        else if(k==="amt"&&FM_FLAG.test(s)){ row.mode=/별도/.test(s)?"exclude":"service"; row.fl=s; }
         else if(k==="up"||k==="amt"){ const v=fmNum(s); row[k]=v===null?s:v; }
         else row[k]=s;
-        T.marks.push({id:newId(),pg,t:"text",b:`it.${n}.${k}`,v:"",x:Math.max(0,x0-1)/W,y:(y0-f*.05)/H,w:(x1-x0+2)/W,f:Math.min(f,hh*1.05)/W,h:(y1-y0+f*.12)/W,o:fr.length?1:0,bd:fr.some(i=>i.bd)?1:undefined,al:/^(desc|note)$/.test(k)?"l":"c",
+        T.marks.push({id:newId(),pg,t:"text",b:`it.${n}.${k}`,v:k==="no"?s:"",x:Math.max(0,x0-1)/W,y:(y0-f*.05)/H,w:(x1-x0+2)/W,f:Math.min(f,hh*1.05)/W,h:(y1-y0+f*.12)/W,o:fr.length?1:0,bd:fr.some(i=>i.bd)?1:undefined,al:/^(desc|note)$/.test(k)?"l":"c",
           tx0:fr.length?Math.min(...fr.map(i=>i.x))/W:undefined,tx1:fr.length?Math.max(...fr.map(i=>i.x+i.w))/W:undefined,tk:k});
       });
       if(fmRowEmpty(row)) row.bl=1;   // 원본부터 빈 줄(빈 양식): 문서에서 빼지 않음
       T.rows.push(row);
     });
+    // 표 바로 아래 합계 줄: 공급가액 · 세액 칸의 "-" · 숫자를 {금액} · {부가세}로
+    if(sumRow&&sumRow.y-(body.length?body[body.length-1].y:hr.y)<hh*5) sumRow.its.forEach(it=>{ const k=colOf(it);
+      if(!/^(amt|tax)$/.test(k)||!/^[-\d,₩￦\s원]+$/.test(String(it.s).trim())) return;
+      T.marks.push({id:newId(),pg,t:"text",b:"",v:k==="amt"?"{금액}":"{부가세}",x:Math.max(0,it.x-1)/W,y:(it.y-it.h*.1)/H,w:(it.w+2)/W,f:it.h/W,o:1,bd:it.bd?1:undefined}); T.used.add(it); });
     T.cols=T.cols||cols.map(c=>c.k);
     return;
   }
@@ -4487,6 +4507,9 @@ function fmTemplate(s,V){
     const kw=korWon(V.total); t=t.replace(new RegExp(kw+"(?=\\s*원)","g"),"{한글총액}");
     t=t.replace(/((일금|금)\s*)[영일이삼사오육칠팔구십백천만억조\s]{2,}(?=\s*원)/g,"$1{한글총액}");
     t=t.replace(/([(（]\s*[₩￦]\s*)\d[\d,]*(?=\s*(원)?\s*[)）])/g,(a,b)=>/[가-힣]/.test(t)&&/\{한글총액\}/.test(t)?b+"{총액}":a); }
+  else {   // 빈 양식(합계 0): "영 원정" · "(₩0)" · "₩0"
+    t=t.replace(/^(\s*(일금|금)?\s*)영(?=\s*원)/,"$1{한글총액}");
+    t=t.replace(/([₩￦]\s*)0(?![\d,.])/g,"$1{총액}"); }
   t=t.replace(/((계약금|착수금|선금|선급금)[^%\d\n]{0,14}?)(\d{1,3})(\s*%)/g,(m,a,_,n,b)=>+n===V.rate?a+"{계약금비율}"+b:m);
   t=t.replace(/((잔금|잔액|중도금)[^%\d\n]{0,14}?)(\d{1,3})(\s*%)/g,(m,a,_,n,b)=>+n===100-V.rate?a+"{잔금비율}"+b:m);
   if(profile.account) t=t.replace(/^(\s*(계좌번호|입금계좌|입금\s*계좌|계좌)\s*[:：]\s*).+$/,"$1{계좌}");
@@ -4512,6 +4535,7 @@ function fmVal(m,p){
     const [,n,k]=m.b.split("."), r=((p&&p.form&&p.form.rows)||[])[+n]; if(!r) return "";
     if(k==="amt"){ if(r.mode&&r.mode!=="normal") return fmFlagText(r); const a=fmRowAmt(r); return a===""?"":won(a); }
     if(k==="up"){ const u=fmNum(r.up); return u===null?String(r.up??""):won(u); }
+    if(k==="tax"){ if(r.mode&&r.mode!=="normal") return ""; const a=fmRowAmt(r); return a===""?"":won(Math.round(a*.1)); }   // 세액 = 공급가액의 10%
     return String(r[k]??"");
   }
   if(m.b==="date"){
@@ -4550,7 +4574,7 @@ function fmBox(p,i,mode){
       const val=fmVal(m,p), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
       // al: c 가운데 · l 왼쪽 (칸 너비 고정, 길면 줄바꿈) · r 오른쪽 끝 맞춤
       const al=m.al, ps=al==="r"?`right:${((1-m.x-m.w)*100).toFixed(3)}%;top:${(my*100).toFixed(3)}%;`:pos;
-      const wd=al==="c"||al==="l"?`width:${u(m.w)};text-align:${al==="c"?"center":"left"};white-space:normal;`:m.o||show?`min-width:${u(m.w)};${al==="r"?"text-align:right;":""}`:"";
+      const wd=al==="c"||al==="l"?`width:${u(m.w)};text-align:${al==="c"?"center":"left"};white-space:${m.src?"nowrap":"normal"};${m.src&&al==="c"&&!m.o?`width:${u(m.w*3)};margin-left:-${u(m.w)};`:""}`:m.o||show?`min-width:${u(m.w)};${al==="r"?"text-align:right;":""}`:"";
       return cov+`<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}${!show&&fmHl===m.id?" fm-hl":""}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.st?"text-decoration:line-through;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
     }
     const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
@@ -4898,6 +4922,7 @@ function fmAddProduct(p,client){
   p.on=true; P().push(p); profile.templates.push(Object.assign(clone(p),{on:false})); saveProfile();
   // 읽어 온 상대방 정보가 말이 되는 것만 넣음 (세로 이름표 글자 "행" · "귀하" 같은 조각은 버림)
   const ok=(k,v)=>{ v=String(v||"").trim(); if(!v||/^(귀하|귀중|님|좌하|\(인\)|인)$/.test(v)) return false;
+    if(/^(수신|수신자|참조|담당|담당자|상호|상호명|대표자|대표자성명|성명|연락처|전화번호|주소|사업자소재지|날짜|일자|공급자|공급받는자)[:：]?$/.test(v.replace(/\s/g,""))) return false;   // 이름표 글자를 값으로 읽은 것
     if(k==="phone") return (v.match(/\d/g)||[]).length>=7;
     if(k==="email") return /@/.test(v);
     if(k==="bizno") return (v.match(/\d/g)||[]).length>=8;
