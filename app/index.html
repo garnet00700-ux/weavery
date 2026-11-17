@@ -1272,7 +1272,7 @@ function totals(p){
   if(p&&p.kind==="form"&&p.form&&p.form.rows&&p.form.rows.length&&typeof fmItems==="function") p.items=fmItems(p.form.rows);   // 원본 양식 품목 표
   const supply=(p.items||[]).reduce((s,it)=>s+itemAmount(it),0);
   // 원본 양식 표에 세액 칸이 있으면: 줄마다 공급가액의 10% · 합계 = 공급가액 + 세액
-  if(p&&p.kind==="form"&&p.form&&(p.form.cols||[]).includes("tax")){
+  if(p&&p.kind==="form"&&p.form&&((p.form.cols||[]).includes("tax")||p.form.vat)){
     const v=(p.form.rows||[]).reduce((s,r)=>{ if(r.mode&&r.mode!=="normal") return s; const a=fmRowAmt(r); return s+(a===""?0:Math.round(a*.1)); },0);
     return totalsOut(supply,v,supply+v); }
   // include: 적은 금액에 10%를 더함 · inprice: 적은 금액이 이미 VAT 포함 (공급가액 = 합계 ÷ 1.1)
@@ -4225,7 +4225,7 @@ async function fmBuildB(f,kind){
     if(/^(contract|labor)/.test(kind)&&!marks.some(m=>m.t==="client")) chk.add("상대방 서명 자리를 찾지 못했습니다.\n전자서명을 받으려면 [+ 상대방 서명]으로 넣어 주세요.");
   }
   const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s}); }));
-  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,cn:T.cn||null,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt,chk:[...chk]};
+  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,cn:T.cn||null,vat:T.vat?1:0,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt,chk:[...chk]};
 }
 // 한 글자씩 쪼개진 PDF 글자를 같은 줄 · 가까운 것끼리 이어 붙임 (글자마다 x 위치는 xs에 보관)
 function fmMerge(items){
@@ -4304,7 +4304,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     [/^(합계금액|총합계|총금액|견적금액|견적합계|견적총액|총액|합계)$/,"total"],
     [/^(연락처|전화|전화번호|휴대폰|휴대전화|핸드폰|tel|연락처휴대폰)$/i,"phone"],[/^(이메일|e-?mail|메일)$/i,"email"],
     [/^(사업자등록번호|사업자번호|등록번호)$/,"bizno"],[/^(작성일|작성일자|발급일|발급일자|계약일|계약일자|일자|날짜|거래일|거래일자|견적일|견적일자|발행일)$/,"date"],
-    [/^(서명|날인|서명또는날인|서명인|사인|서명란)$/,"sign"],
+    [/^(서명|날인|서명또는날인|서명인|사인|서명란)$/,"sign"],[/^(fax|팩스|팩스번호|휴대폰번호|hp|mobile)$/i,"etc"],
     [/^(생년월일|주민등록번호|부서|소속|직위|직급|직책|재직기간|근무기간|입사일|입사일자|퇴사일|퇴직일|담당업무|업무내용|용도|제출처|퇴직사유|업태|종목|품명|비고|계좌번호|입금계좌)$/,"etc"]];
   const keyOf=s=>{ const n=nm(String(s).replace(/[(（][^)）]{0,10}[)）]/g,"")); const r=FL.find(([re])=>re.test(n)); return r&&r[1]; };
   const labOf=s=>{ const t=String(s).replace(/^\s*[(（][^)）]{1,6}[)）]\s*/,"").split(/[:：]/); if(t.length>2||(t[1]&&t[1].trim())) return null; return keyOf(t[0]); };
@@ -4440,6 +4440,8 @@ function fmGrid(marks,pp,T){
       const y=((c.T+c.B)/2/s-f*.62)/P0.H;
       marks.push({id:newId(),pg,t:"text",b:"",v:"",fld:1,lb:lb.slice(0,24),x:(c.L/s+pad)/P0.W,y,w:Math.max(.01,((c.R-c.L)/s-pad*2)/P0.W),f:f/P0.W,o:0,ga:1,al}); total++; };
     const lab=it=>{ const t=String(it.s).trim().replace(/\s*[:：]\s*$/,""); if(T.cols&&fmColWords(t)) return "";   // 품목 표 머리글은 품목 카드에서
+      if(/^[가-힣]$/.test(t)) return "";   // 한 글자("총 계"의 "총" · "개")는 이름표가 아님
+      if(/^(공급가액|공급가|부가세|부가가치세|세액|총계|총합계|합계|소계)$/.test(t.replace(/\s/g,""))) return "";   // 합계 줄 이름표 (값은 자동 금액)
       return t.length>=1&&t.length<=24&&/[가-힣A-Za-z]/.test(t)&&!/[(（]\s*(인|서명)\s*[)）]/.test(t)?t.replace(/(?<=[가-힣])\s+(?=[가-힣](\s|$))/g,""):""; };
     items.forEach(it=>{ if(total>240||T.used.has(it)) return; const lb=lab(it); if(!lb) return;
       const c=cellAt((it.x+it.w/2)*s,(it.y+it.h/2)*s); if(!c) return;
@@ -4533,14 +4535,23 @@ function fmTable(items,W,H,pg,T){
       seg.forEach(([w,a,b])=>addC(hit(w)[0],xA(a),b<it.s.length?xA(b):it.x+it.w,w)); });
     if(cols.length<3||!cols.some(c=>c.k==="amt"||c.k==="up")) continue;
     cols.sort((a,b)=>a.cx-b.cx);
-    const hh=Math.max(...hr.its.map(i=>i.h)), body=[]; let sumRow=null;
+    const hh=Math.max(...hr.its.map(i=>i.h)), body=[]; let sumRow=null, jEnd=rows.length;
+    // 표 아래 합계 줄 이름표 (글자 사이 띄어 쓴 "공 급 가 액" · "부 가 세" · "총 계"도)
+    const SUML=/^(공급가액|공급가|부가세|부가가치세|세액|VAT|총계|총합계|총액|총금액|합계금액|견적금액|합계|소계)/i;
     for(let j=hi+1;j<rows.length;j++){
-      const s=rows[j].its.map(i=>i.s).join(" ");
+      const s=rows[j].its.map(i=>i.s).join(" "), s0=s.replace(/\s/g,"");
       if(/(합\s*계|소\s*계)/.test(s)&&!sumRow) sumRow=rows[j];
-      if(/(합\s*계|소\s*계|총\s*액|총\s*금\s*액|대\s*금|계약금|부가세|vat)/i.test(s)||/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(s)||/^\s*제\s*\d+\s*조/.test(s)) break;
-      if(rows[j].y-(body.length?body[body.length-1].y:hr.y)>hh*5) break;
+      if(/(합계|소계|총액|총금액|대금|계약금|부가세|vat)/i.test(s0)||SUML.test(s0)||/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(s)||/^\s*제\s*\d+\s*조/.test(s)){ jEnd=j; break; }
+      if(rows[j].y-(body.length?body[body.length-1].y:hr.y)>hh*5){ jEnd=j; break; }
       body.push(rows[j]);
     }
+    // 이름표로 된 합계 줄들 (공급가액 · 부가세 · 총계 줄마다 숫자 칸 하나): 그 줄 숫자 → {금액} · {부가세} · {총액}
+    const sumL=[]; for(let j=jEnd,prev=body.length?body[body.length-1].y:hr.y;j<rows.length&&sumL.length<5;j++){
+      const r=rows[j], s0=r.its.map(i=>i.s).join("").replace(/\s/g,""), m=s0.match(SUML);
+      if(!m||r.y-prev>hh*4) break; prev=r.y;
+      if(/^(합계|소계)$/.test(m[1])&&r===sumRow) continue;   // 칸별 합계 줄(공급가액 · 세액 칸 아래): 아래에서 칸 기준으로
+      sumL.push([r,/^(공급가|소계)/.test(m[1])?"{금액}":/^(부가|세액|VAT)/i.test(m[1])?"{부가세}":"{총액}"]); }
+    if(sumL.some(x=>x[1]==="{부가세}")) T.vat=1;
     if(!body.length) continue;
     const C=k=>cols.find(c=>c.k===k);
     const colOf=it=>{ const cx=it.x+it.w/2; let best=cols[0], bd=1e9; cols.forEach(c=>{ const d=cx>=c.x0-2&&cx<=c.x1+2?0:Math.abs(c.cx-cx); if(d<bd){ bd=d; best=c; } }); return best.k; };
@@ -4595,6 +4606,8 @@ function fmTable(items,W,H,pg,T){
     if(sumRow&&sumRow.y-(body.length?body[body.length-1].y:hr.y)<hh*5) sumRow.its.forEach(it=>{ const k=colOf(it);
       if(!/^(amt|tax)$/.test(k)||!/^[-\d,₩￦\s원]+$/.test(String(it.s).trim())) return;
       T.marks.push({id:newId(),pg,t:"text",b:"",v:k==="amt"?"{금액}":"{부가세}",x:Math.max(0,it.x-1)/W,y:(it.y-it.h*.1)/H,w:(it.w+2)/W,f:it.h/W,o:1,bd:it.bd?1:undefined}); T.used.add(it); });
+    sumL.forEach(([r,tok])=>r.its.forEach(it=>{ if(!/^[-\d,₩￦\s원]+$/.test(String(it.s).trim())) return;
+      T.marks.push({id:newId(),pg,t:"text",b:"",v:tok,x:Math.max(0,it.x-1)/W,y:(it.y-it.h*.1)/H,w:(it.w+2)/W,f:it.h/W,o:1,bd:it.bd?1:undefined}); T.used.add(it); }));
     T.cols=T.cols||cols.map(c=>c.k);
     T.cn=T.cn||Object.fromEntries(cols.map(c=>[c.k,String(c.n||"").replace(/[\s:：]/g,"")]));   // 원본 머리글 이름 (품목 카드 이름표로)
     return;
@@ -5050,7 +5063,7 @@ $("#fmOkB").onclick=()=>{
   const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
   const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
   const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
-    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,chk:(B.chk||[]).slice()}});
+    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice()}});
   if(B.rate) state.depositRate=B.rate;
   if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
     return alert("양식 그림이 커서 이 브라우저에 저장할 공간이 부족합니다.\n쪽수가 적은 PDF로 나눠 올리거나, 문서 목록에서 오래된 문서를 지운 뒤 다시 해 주세요."); }
