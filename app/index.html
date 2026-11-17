@@ -506,6 +506,23 @@ textarea{resize:vertical;line-height:1.5}
 .fm-row1 .f{margin:0;font-size:12px;min-width:0}
 .fm-row1 .f input{width:100%;min-width:0;padding-left:8px;padding-right:6px}
 @media (max-width:640px){.fm-row1{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+/* 원본 표 (PDF 선으로 나눈 칸 · 칸마다 입력) */
+.fm-tw{overflow-x:auto;margin:6px 0 12px;border:1px solid var(--ui-border);border-radius:10px;background:#fff}
+.fm-tb{border-collapse:collapse;width:100%;table-layout:fixed;font-size:12px}
+.fm-tb td{border:1px solid #8f959c;padding:1px 2px;vertical-align:middle;min-width:0}
+.fm-tb td.x{border:none;background:transparent}
+.fm-tb .fm-tl{display:flex;gap:2px;align-items:center;min-width:0}
+.fm-tb .fm-tl+.fm-tl{margin-top:1px}
+.fm-tb .fm-v{flex:1 1 0;width:100%;min-width:0;box-sizing:border-box;font-size:12px;padding:3px 4px;border:1px solid transparent;border-radius:4px;background:transparent;color:inherit}
+.fm-tb .fm-v.src{text-align:center;color:#333}
+.fm-tb .fm-v.bd{font-weight:700}
+.fm-tb .fm-v.in{background:rgba(255,251,234,.85);border-color:#e3d7a6}
+.fm-tb .fm-v:focus{border-color:#1565c0;background:#fff;outline:none}
+.fm-tb .fm-cb{flex:none;padding:0 3px;font-size:11px}
+.fm-tb .fm-tg{font-size:11px;white-space:nowrap}
+.fm-tb .fm-tno{color:#c0392b;font-size:11px;display:block;text-align:center}
+.fm-cov{font-size:12.5px;padding:6px 10px;border-radius:8px;background:#eef7ee;color:#1e5b2a;margin:4px 0 6px}
+.fm-cov.warn{background:#fff4e5;color:#8a4b00}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -4077,17 +4094,31 @@ async function fmBuildB(f,kind){
     x.strokeText=function(t,a,b){ const [px,py]=tp(a,b); gl.push({x:px,y:py,bd:true,st:1,c:col(x.strokeStyle)}); };
     // 글자를 선(모양)으로 그리는 PDF: 원점이 글자 자리에 있고 크기가 글자만 한 fill/stroke는 글자로 봄
     const pa=[], f0=x.fill.bind(x), s0=x.stroke.bind(x), ib=x.beginPath.bind(x), mv=x.moveTo.bind(x), ln=x.lineTo.bind(x), bz=x.bezierCurveTo.bind(x), qc=x.quadraticCurveTo.bind(x), rc=x.rect.bind(x);
-    let pts=[];
-    x.beginPath=function(){ pts=[]; return ib(); };
-    const note=(a,b)=>{ const [px,py]=tp(a,b); pts.push([px,py]); };
-    x.moveTo=function(a,b){ note(a,b); return mv(a,b); }; x.lineTo=function(a,b){ note(a,b); return ln(a,b); };
-    x.bezierCurveTo=function(a,b,c,d,e,f){ note(e,f); return bz(a,b,c,d,e,f); }; x.quadraticCurveTo=function(a,b,c,d){ note(c,d); return qc(a,b,c,d); };
-    x.rect=function(a,b,c,d){ note(a,b); note(a+c,b+d); return rc(a,b,c,d); };
+    let pts=[], sg=[], last=null, first=null; const sgNow=()=>sg;   // sg: 지금 그리는 모양의 곧은 선분 (pt) — 표의 선을 그림이 아니라 좌표로 얻음
+    const segs=[];                                 // 이 쪽에 실제로 그어진 선 · 칠한 네모 변 (표 칸 나누기에 씀)
+    x.beginPath=function(){ pts=[]; sg=[]; last=first=null; return ib(); };
+    const note=(a,b)=>{ const [px,py]=tp(a,b); pts.push([px,py]); return [px,py]; };
+    x.moveTo=function(a,b){ last=first=note(a,b); return mv(a,b); };
+    x.lineTo=function(a,b){ const p=note(a,b); if(last) sg.push([last[0],last[1],p[0],p[1]]); last=p; return ln(a,b); };
+    const cp=x.closePath.bind(x); x.closePath=function(){ if(last&&first) sg.push([last[0],last[1],first[0],first[1]]); last=first; return cp(); };
+    x.bezierCurveTo=function(a,b,c,d,e,f){ last=note(e,f); sg.push(null); return bz(a,b,c,d,e,f); }; x.quadraticCurveTo=function(a,b,c,d){ last=note(c,d); sg.push(null); return qc(a,b,c,d); };
+    x.rect=function(a,b,c,d){ const p=[[a,b],[a+c,b],[a+c,b+d],[a,b+d]].map(([u,v])=>note(u,v)); for(let i=0;i<4;i++) sg.push([...p[i],...p[(i+1)%4]]); last=first=p[0]; return rc(a,b,c,d); };
+    const white=s=>/^#f[0-9a-f]f[0-9a-f]f[0-9a-f]$|^#fffff[0-9a-f]$|^rgba?\(25[0-5],\s*25[0-5],\s*25[0-5]/i.test(String(s||""));
+    // 곧은 선분만 (곡선이 섞인 모양 = 그림 · 글자는 뺌). 칠한 가는 네모(굵은 선)는 가운데 한 줄로
+    const keep=(filled,sg0)=>{ const sg=sg0||sgNow(); if(sg.some(s=>!s)) return; const ok=sg.filter(s=>Math.abs(s[0]-s[2])<.6||Math.abs(s[1]-s[3])<.6); if(!ok.length||ok.length!==sg.length) return;
+      if(filled&&white(x.fillStyle)) return;
+      if(filled&&ok.length===4){ const xs=ok.flatMap(s=>[s[0],s[2]]), ys=ok.flatMap(s=>[s[1],s[3]]), L=Math.min(...xs), R=Math.max(...xs), T=Math.min(...ys), B=Math.max(...ys);
+        if(B-T<2.6){ segs.push([L,(T+B)/2,R,(T+B)/2]); return; } if(R-L<2.6){ segs.push([(L+R)/2,T,(L+R)/2,B]); return; } }
+      ok.forEach(s=>segs.push(s)); };
     const glyph=()=>{ if(!pts.length) return null; let L=1e9,R=-1e9,T=1e9,Bt=-1e9; pts.forEach(([u,v])=>{ L=Math.min(L,u); R=Math.max(R,u); T=Math.min(T,v); Bt=Math.max(Bt,v); });
       const it=items.find(it=>L>=it.x-it.h*.5&&R<=it.x+it.w+it.h*.5&&T>=it.y-it.h*.4&&Bt<=it.y+it.h*1.4&&(R-L)<it.h*2.2&&(Bt-T)<it.h*1.8);
       return it?{x:(L+R)/2,y:Bt}:null; };
-    x.fill=function(...a){ const g=glyph(); if(g){ gl.push({x:g.x,y:g.y,c:col(x.fillStyle)}); return; } return f0(...a); };
-    x.stroke=function(...a){ const g=glyph(); if(g){ gl.push({x:g.x,y:g.y,st:1,c:col(x.strokeStyle)}); return; } return s0(...a); };
+    x.fill=function(...a){ const g=glyph(); if(g){ gl.push({x:g.x,y:g.y,c:col(x.fillStyle)}); return; } keep(true); return f0(...a); };
+    x.stroke=function(...a){ const g=glyph(); if(g){ gl.push({x:g.x,y:g.y,st:1,c:col(x.strokeStyle)}); return; } keep(false); return s0(...a); };
+    const fr0=x.fillRect.bind(x), sr0=x.strokeRect.bind(x);
+    const rs=(a,b,c,d)=>{ const p=[[a,b],[a+c,b],[a+c,b+d],[a,b+d]].map(([u,v])=>tp(u,v)); return [0,1,2,3].map(i=>[p[i][0],p[i][1],p[(i+1)%4][0],p[(i+1)%4][1]]); };
+    x.fillRect=function(a,b,c,d){ keep(true,rs(a,b,c,d)); return fr0(a,b,c,d); };
+    x.strokeRect=function(a,b,c,d){ keep(false,rs(a,b,c,d)); return sr0(a,b,c,d); };
     // 서명 · 도장 그림: "(인)" "(서명)" 근처의 작은 그림은 걷어냄
     const sp=items.filter(it=>/[(（]\s*(인|印|서\s*명|날\s*인|사\s*인)\s*[)）]|서명|날인/.test(it.s)).map(it=>({x0:it.x,x1:it.x+it.w,y:it.y+it.h/2,h:it.h}));
     const di=x.drawImage.bind(x);
@@ -4132,7 +4163,7 @@ async function fmBuildB(f,kind){
       Object.values(g).forEach(a=>{ if(a.length>=2&&a.filter(it=>it.bd).length*2>=a.length) a.forEach(it=>{ it.bd=true; }); });
     });
     pages.push(fmJpeg(cv));
-    txt+=items.length; pp.push({items,W:vp.width,H:vp.height,cv,sc,gl});
+    txt+=items.length; pp.push({items,W:vp.width,H:vp.height,cv,sc,gl,vc:fmVecCells(segs,vp.width,vp.height)});
   }
   return fmAnalyze(pp,pages,r,txt,pdf.numPages>N?pdf.numPages:0,kind);
 }
@@ -4184,7 +4215,27 @@ function fmAnalyze(pp,pages,r,txt,more,kind){
   const fam=getComputedStyle(document.querySelector("#pages .page")||document.body).fontFamily, mc=document.createElement("canvas").getContext("2d");
   const fit=(m,str,wpt,hpt,bd)=>{ mc.font=`${bd?700:500} ${(hpt*.92).toFixed(2)}px ${fam}`; const n=[...str].length; if(n<2) return;
     const ls=(wpt-mc.measureText(str).width)/(n-1); m.ls=+(Math.max(-hpt*.12,Math.min(hpt*.3,ls))/pp[m.pg].W).toFixed(5); };
-  pp.forEach((p,pg)=>p.items.forEach(it=>{
+  // 표 칸 안에서 한 글자씩 따로 찍힌 글자("품   명")는 그 칸의 한 낱말로 (칸이 같을 때만 · 글자 간격은 ls로 그대로)
+  const cellOf=(p,it)=>{ const cx=it.x+it.w/2, cy=it.y+it.h/2; return (p.vc||[]).findIndex(c=>cx>c.x0&&cx<c.x1&&cy>c.y0&&cy<c.y1); };
+  const srcIts=p=>{ const its=p.items.filter(it=>!T.used.has(it)&&String(it.s).trim()); if(!(p.vc&&p.vc.length)) return its;
+    // 두 칸 이상에 걸친 글자 덩어리("품 번 품 명")는 칸마다 나눔 · 같은 칸 안의 한 글자들은 한 낱말로
+    const join=run=>run.length<2?run[0]:{s:run.map(q=>String(q.s).trim()).join(""),x:run[0].x,y:Math.min(...run.map(q=>q.y)),w:run[run.length-1].x+run[run.length-1].w-run[0].x,h:Math.max(...run.map(q=>q.h)),xs:run.map(q=>q.x),bd:run.every(q=>q.bd)||undefined,c:run[0].c,st:run.every(q=>q.st)||undefined,parts:run};
+    const out=[]; fmJoinSpaced(its).forEach(j=>{
+      if(j.parts){ const ks=j.parts.map(q=>cellOf(p,q));
+        if(ks.every(k=>k===ks[0])){ out.push(ks[0]>=0?Object.assign(j,{c:j.parts[0].c,st:j.parts.every(q=>q.st)||undefined}):j); return; }   // 표 밖이면 예전처럼 그대로
+        if(ks.some(k=>k<0)){ out.push(...j.parts); return; }
+        let run=[j.parts[0]]; for(let i=1;i<j.parts.length;i++){ if(ks[i]===ks[i-1]) run.push(j.parts[i]); else { out.push(join(run)); run=[j.parts[i]]; } } out.push(join(run)); return; }
+      const str=String(j.s), n=str.length; if(n<2){ out.push(j); return; }
+      const xAt=i=>j.xs?(i<j.xs.length?j.xs[i]:j.x+j.w):j.x+j.w*i/n;
+      const ks=[...str].map((ch,i)=>ch.trim()?cellOf(p,{x:xAt(i),w:xAt(i+1)-xAt(i),y:j.y,h:j.h}):null), kk=ks.filter(k=>k!=null);
+      if(kk.every(k=>k===kk[0])||kk.some(k=>k<0)){ out.push(j); return; }
+      let a=0; for(let i=1;i<=n;i++){ if(ks[i]==null&&i<n) continue; const prev=ks.slice(a,i).filter(k=>k!=null)[0];
+        if(i===n||(ks[i]!=null&&ks[i]!==prev)){ const sub=str.slice(a,i), lead=sub.search(/\S/);
+          if(lead>=0){ const t=sub.trim(), b=a+lead; out.push(Object.assign({},j,{s:t,x:xAt(b),w:xAt(b+t.length)-xAt(b),xs:j.xs?j.xs.slice(b,b+t.length):undefined,parts:undefined})); }
+          a=i; } }
+    });
+    return out; };
+  pp.forEach((p,pg)=>srcIts(p).forEach(it=>{
     if(T.used.has(it)) return;
     const xAt=i=>it.xs?(i<it.xs.length?it.xs[i]:it.x+it.w):it.x+it.w*i/Math.max(1,it.s.length);
     const near=marks.filter(m=>m.t==="text"&&m.pg===pg&&hit(m,{pg,x:it.x/p.W,y:it.y/p.H,w:it.w/p.W,f:it.h/p.W}));
@@ -4220,6 +4271,20 @@ function fmAnalyze(pp,pages,r,txt,more,kind){
   // 표의 빈칸: 이름표를 몰라도 테두리로 둘러싸인 빈칸은 모두 입력 칸으로 (가로: 이름표 오른쪽 · 세로: 머리줄 아래)
   safe(()=>fmGrid(marks,pp,T),"표 칸");
   if(T.left) chk.add(`표의 빈칸 ${T.left}곳은 입력 칸으로 만들지 못했습니다 (칸이 너무 많음).\n필요한 자리에 [+ 글자 칸]을 넣어 주세요.`);
+  // 프로그램 안 검증: 표(PDF 선으로 나눈 칸)의 모든 칸이 글자 또는 입력 칸과 이어졌는지 하나씩 셈
+  const cov={cells:0,text:0,input:0,small:0,left:0};
+  pp.forEach((p,pg)=>{ const hs=p.items.map(it=>it.h).sort((a,b)=>a-b), th=hs.length?hs[hs.length>>1]:9, tn={};
+    (p.vc||[]).forEach(c=>tn[c.t]=(tn[c.t]||0)+1);
+    (p.vc||[]).forEach(c=>{ if(tn[c.t]<2) return; cov.cells++;
+      if(p.items.some(it=>String(it.s).trim()&&Math.min(c.y1,it.y+it.h)-Math.max(c.y0,it.y)>it.h*.25&&Math.min(c.x1,it.x+it.w)-Math.max(c.x0,it.x)>Math.min(2,it.w*.5))){ cov.text++; return; }
+      if(marks.some(m=>{ if(m.pg!==pg) return false; const cx=m.t==="text"?(m.x+m.w/2)*p.W:m.x*p.W, cy=m.t==="text"?m.y*p.H+m.f*p.W*.6:m.y*p.H; return cx>c.x0&&cx<c.x1&&cy>c.y0&&cy<c.y1; })){ cov.input++; return; }
+      if(c.x1-c.x0<th*1.6||c.y1-c.y0<th*.9) cov.small++; else cov.left++; }); });
+  if(cov.left) chk.add(`표 칸 ${cov.left}곳이 입력 칸과 이어지지 않았습니다.\n필요한 자리에 [+ 글자 칸]을 넣어 주세요.`);
+  // 칸 바탕색 (글자를 뺀 디자인 그림의 칸 안쪽 여러 점 중 가장 많은 색)
+  const vcBg=(p,c)=>{ if(!p.cv) return 0; const g=p.cv.getContext("2d"), s=p.sc, Wc=p.cv.width, Hc=p.cv.height, cnt={};
+    [[.12,.3],[.88,.3],[.5,.5],[.12,.75],[.88,.75],[.3,.2],[.7,.8]].forEach(([a,b])=>{ const d=g.getImageData(Math.min(Wc-1,Math.max(0,Math.round((c.x0+(c.x1-c.x0)*a)*s))),Math.min(Hc-1,Math.max(0,Math.round((c.y0+(c.y1-c.y0)*b)*s))),1,1).data;
+      const k=[d[0],d[1],d[2]].map(v=>Math.round(v/8)).join(); (cnt[k]=cnt[k]||[]).push([d[0],d[1],d[2]]); });
+    const top=Object.values(cnt).sort((a,b)=>b.length-a.length)[0][0]; return top.every(v=>v>=244)?0:"#"+top.map(v=>v.toString(16).padStart(2,"0")).join(""); };
   // 원본 글자 줄 (글자 고치기용): 쪽 · 위치 · 크기 · 내용 (비율)
   if(!txt) chk.add("글자가 없는 그림 PDF(스캔본)입니다.\n칸을 자동으로 찾지 못하니 [+ 글자 칸]으로 직접 넣어 주세요.");
   else {
@@ -4231,7 +4296,7 @@ function fmAnalyze(pp,pages,r,txt,more,kind){
   }
   // 굵기 · 색 · 취소선도 함께 남김 (나중에 최신 인식으로 다시 검토할 때 씀)
   const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push(Object.assign({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s},it.bd?{bd:1}:{},it.st?{st:1}:{},it.c?{c:it.c}:{})); }));
-  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,cn:T.cn||null,vat:T.vat?1:0,rate:rm?rate:0,lines,more,scan:!txt,chk:[...chk],pw:pp.map(p=>+p.W.toFixed(2)),kd:kind,ver:FM_VER};
+  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,cn:T.cn||null,vat:T.vat?1:0,rate:rm?rate:0,lines,more,scan:!txt,chk:[...chk],pw:pp.map(p=>+p.W.toFixed(2)),kd:kind,ver:FM_VER,cov,vc:pp.map(p=>(p.vc||[]).map(c=>[+(c.x0/p.W).toFixed(4),+(c.y0/p.H).toFixed(4),+(c.x1/p.W).toFixed(4),+(c.y1/p.H).toFixed(4),c.c0,c.c1,c.r0,c.r1,c.t,c.bg!=null?c.bg:vcBg(p,c)]))};
 }
 // 한 글자씩 쪼개진 PDF 글자를 같은 줄 · 가까운 것끼리 이어 붙임 (글자마다 x 위치는 xs에 보관)
 function fmMerge(items){
@@ -4477,6 +4542,16 @@ function fmGrid(marks,pp,T){
       const lf=items.filter(it=>{ const cy=it.y+it.h/2; return cy>T0&&cy<B0&&it.x+it.w<=L+2; }).sort((a,b)=>b.x-a.x)[0];
       const u=up&&T0-(up.y+up.h)<(B0-T0)*25?clean(up.s):"", l=lf&&L-(lf.x+lf.w)<P0.W*.3?clean(lf.s):"";
       return (l&&/[가-힣A-Za-z]/.test(l)?l:"")||(u&&/[가-힣A-Za-z]/.test(u)?u:"")||"빈 칸"; };   // 같은 줄 왼쪽 이름표 먼저, 없으면 위 머리글
+    // PDF 선으로 나눈 표 칸(P0.vc)부터: 칸 2개 이상인 표의 빈칸은 모두 입력 칸 (선 그림 그대로라 번짐 · 색에 흔들리지 않음)
+    let left=0; const tn={}; (P0.vc||[]).forEach(v=>tn[v.t]=(tn[v.t]||0)+1);
+    (P0.vc||[]).forEach(v=>{ if(tn[v.t]<2) return; const c={L:Math.round(v.x0*s)+1,R:Math.round(v.x1*s)-1,T:Math.round(v.y0*s)+1,B:Math.round(v.y1*s)-1}, w=v.x1-v.x0, h=v.y1-v.y0;
+      seen.push(c);
+      if(w<th*1.6||h<th*.9) return;                                          // 체크 칸처럼 작은 네모
+      // 글자가 조금이라도 걸친 칸(글자 밑 꾸밈 띠 · 두 칸에 걸친 제목)은 빈칸이 아님
+      if(items.some(it=>Math.min(c.R,(it.x+it.w)*s)-Math.max(c.L,it.x*s)>2*s&&Math.min(c.B,(it.y+it.h)*s)-Math.max(c.T,it.y*s)>it.h*s*.25)) return;
+      if(!empty(c)) return;
+      if(total>=500){ left++; return; }
+      add(c,{h:th},nameOf(c),w>P0.W*.25?"l":"c"); });
     const step=Math.max(5,Math.round(th*s*.55));
     // 빠르게: 훑는 가로줄 · 세로줄마다 같은 색 구간을 한 번만 구해 두고, 점마다 그 구간으로 칸을 정함
     const segs=(n,get)=>{ const out=[]; let a=0, base=get(0); for(let k=1;k<n;k++){ const c=get(k); if(df(c,base)>40){ out.push([a,k-1]); a=k; base=c; } } out.push([a,n-1]); return out; };
@@ -4498,7 +4573,6 @@ function fmGrid(marks,pp,T){
       const ok=(pts,dx,dy)=>pts.filter(([x,y])=>side(x,y,dx,dy)).length>=2;
       const xs=[.25,.5,.75].map(f=>Math.round(c.L+(c.R-c.L)*f)), ys=[.25,.5,.75].map(f=>Math.round(c.T+(c.B-c.T)*f));
       return ok(xs.map(x=>[x,c.T]),0,-1)&&ok(xs.map(x=>[x,c.B]),0,1)&&ok(ys.map(y=>[c.L,y]),-1,0)&&ok(ys.map(y=>[c.R,y]),1,0); };
-    let left=0;
     for(let y=step;y<Hc-step;y+=step) for(let x=step;x<Wc-step;x+=step){
       if(inSeen(x,y)) continue; const p0=px(x,y); if(p0[0]+p0[1]+p0[2]<450) continue;   // 선 위는 건너뜀
       const c=fastCell(x,y); if(!c) continue; seen.push(c);
@@ -4569,6 +4643,41 @@ function fmFlagText(r){ const f=r.fl||""; return r.mode==="service"?(/서비스|
 function fmItems(rows){
   return (rows||[]).filter(r=>r.cat||r.desc||fmRowAmt(r)!=="").map(r=>{ const a=fmRowAmt(r);
     return {cat:r.cat||"",desc:r.desc||"",sub:"",qty:[r.qty,r.unit].filter(Boolean).join(""),price:a===""?"":a,amount:null,note:"",mode:r.mode||"normal"}; });
+}
+/* --- 표 구조: PDF에 그어진 선(좌표)으로 칸을 나눔 ---
+   가로선 높이들 · 세로선 위치들로 바둑판을 만들고, 사이에 선이 없는 이웃 조각끼리 합쳐 합친 칸(병합 셀)까지 그대로.
+   돌려주는 칸: {x0,y0,x1,y1}(pt) · 표 번호 t · 표 안의 줄 r0~r1 · 열 c0~c1 */
+function fmVecCells(segs,W,H){
+  const hz=[], vt=[];
+  (segs||[]).forEach(([a,b,c,d])=>{ if(Math.abs(b-d)<.8&&Math.abs(a-c)>1.5) hz.push([Math.min(a,c),Math.max(a,c),(b+d)/2]); else if(Math.abs(a-c)<.8&&Math.abs(b-d)>1.5) vt.push([Math.min(b,d),Math.max(b,d),(a+c)/2]); });
+  if(hz.length<2||vt.length<2||hz.length>4000||vt.length>4000) return [];
+  const lev=v=>{ const s=v.slice().sort((a,b)=>a-b), out=[]; s.forEach(x=>{ if(out.length&&x-out[out.length-1].m<2.2){ const o=out[out.length-1]; o.n++; o.s+=x; o.m=o.s/o.n; } else out.push({s:x,n:1,m:x}); }); return out.map(o=>o.m); };
+  const Y=lev(hz.map(h=>h[2])), X=lev(vt.map(v=>v[2]));
+  if(Y.length>400||X.length>200) return [];
+  const near=(arr,v)=>{ let bi=0,bd=1e9; arr.forEach((a,i)=>{ const d=Math.abs(a-v); if(d<bd){ bd=d; bi=i; } }); return bi; };
+  // 선마다 어느 높이(열 위치)에 속하는지 · 그 선이 덮는 구간
+  const HL=Y.map(()=>[]), VL=X.map(()=>[]);
+  hz.forEach(([a,b,y])=>HL[near(Y,y)].push([a,b])); vt.forEach(([a,b,x])=>VL[near(X,x)].push([a,b]));
+  const cov=(list,a,b)=>{ const L=b-a; if(L<=0) return false; let got=0; const iv=list.map(([p,q])=>[Math.max(a,p-1.2),Math.min(b,q+1.2)]).filter(([p,q])=>q>p).sort((u,v)=>u[0]-v[0]);
+    let cur=a; iv.forEach(([p,q])=>{ if(q<=cur) return; got+=q-Math.max(p,cur); cur=q; }); return got>=L*.85; };
+  const nx=X.length-1, ny=Y.length-1; if(nx<1||ny<1) return [];
+  const id=(i,j)=>j*nx+i, par=[...Array(nx*ny).keys()], f=k=>{ while(par[k]!==k){ par[k]=par[par[k]]; k=par[k]; } return k; }, un=(a,b)=>{ a=f(a); b=f(b); if(a!==b) par[b]=a; };
+  for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){
+    if(i+1<nx&&!cov(VL[i+1],Y[j],Y[j+1])) un(id(i,j),id(i+1,j));   // 오른쪽과 사이에 세로선 없음 → 같은 칸
+    if(j+1<ny&&!cov(HL[j+1],X[i],X[i+1])) un(id(i,j),id(i,j+1)); } // 아래와 사이에 가로선 없음 → 같은 칸
+  const comp=new Map(); for(let j=0;j<ny;j++) for(let i=0;i<nx;i++){ const r=f(id(i,j)); if(!comp.has(r)) comp.set(r,{i0:i,i1:i,j0:j,j1:j,n:0}); const c=comp.get(r); c.i0=Math.min(c.i0,i); c.i1=Math.max(c.i1,i); c.j0=Math.min(c.j0,j); c.j1=Math.max(c.j1,j); c.n++; }
+  const cells=[];
+  comp.forEach(c=>{ if(c.n!==(c.i1-c.i0+1)*(c.j1-c.j0+1)) return;   // 네모가 아닌 조각 = 표 바깥
+    const x0=X[c.i0], x1=X[c.i1+1], y0=Y[c.j0], y1=Y[c.j1+1];
+    if(!cov(HL[c.j0],x0,x1)||!cov(HL[c.j1+1],x0,x1)||!cov(VL[c.i0],y0,y1)||!cov(VL[c.i1+1],y0,y1)) return;   // 네 변이 모두 선
+    if(x1-x0<4||y1-y0<4||x1-x0>W*.97||y1-y0>H*.6) return;
+    cells.push({x0,y0,x1,y1,c0:c.i0,c1:c.i1,r0:c.j0,r1:c.j1}); });
+  // 서로 맞닿은 칸끼리 한 표로 묶음
+  const tp=[...cells.keys()], tf=k=>{ while(tp[k]!==k){ tp[k]=tp[tp[k]]; k=tp[k]; } return k; };
+  for(let a=0;a<cells.length;a++) for(let b=a+1;b<cells.length;b++){ const A=cells[a], B=cells[b];
+    if(A.x0<=B.x1+1.5&&B.x0<=A.x1+1.5&&A.y0<=B.y1+1.5&&B.y0<=A.y1+1.5){ const ra=tf(a), rb=tf(b); if(ra!==rb) tp[rb]=ra; } }
+  const tid=new Map(); cells.forEach((c,k)=>{ const r=tf(k); if(!tid.has(r)) tid.set(r,tid.size); c.t=tid.get(r); });
+  return cells.sort((a,b)=>a.t-b.t||a.r0-b.r0||a.c0-b.c0);
 }
 // 한 글자씩 따로 찍힌 이름표("품   명" · "합 계 금 액")를 한 낱말로: 같은 줄에서 가까이 이어진 한 글자 덩어리들을 합친 새 덩어리 (xs: 글자마다 위치)
 function fmJoinSpaced(its){
@@ -4841,11 +4950,56 @@ var fmSel=null, fmAddT=null, fmDrag=null;
 function fmBinds(){ return [["","직접 입력"],["client.name","상대방 업체명 · 성명"],["client.ceo","상대방 대표자"],["client.phone","상대방 연락처"],["client.addr","상대방 주소"],["client.email","상대방 이메일"],["client.bizno","상대방 사업자번호"],
   ["date","작성일"],["co.name","우리 상호"],["co.name co.ceo","우리 상호 + 대표자"],["client.name client.ceo","상대방 업체명 + 대표자"],["co.ceo","우리 대표자"],["co.bizno","우리 사업자등록번호"],["co.address","우리 주소"],["co.phone","우리 연락처"],["co.email","우리 이메일"]]; }
 function fmBindName(b){ const r=fmBinds().find(x=>x[0]===(b||"")); return b&&r?r[1]:""; }
+// 원본 표를 진짜 표로: PDF 선으로 나눈 칸(F.vc)을 합친 칸(colspan · rowspan) · 칸 바탕색 그대로 그리고, 칸마다 그 자리의 글자 · 입력 칸을 넣음
+function fmTblHtml(p,pi){
+  const F=p.form, used=new Set(), cfg=[]; let n=0, cells=0, items=0;
+  if(!F||!F.vc) return {html:"",used,cfg,n,cells,items};
+  const M=F.marks, out=[];
+  const inp=i=>{ const m=M[i];
+    if(m.t!=="text"){ cfg.push(i); return `<span class="fm-tg" data-mrow="${m.id}">${m.t==="client"?"✍ 상대방 서명":"🔴 회사 직인"}<button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></span>`; }
+    const it=/^it\.(\d+)\.(\w+)$/.exec(m.b||"");
+    if(it&&F.rows&&F.rows[+it[1]]){ items++; const r=F.rows[+it[1]], k=it[2], b=`prods.${pi}.form.rows.${it[1]}.${k}`, nm=(F.cn&&F.cn[k])||fmColN()[k]||"";
+      const ph=k==="amt"?(()=>{ const a=fmRowAmt(Object.assign({},r,{amt:""})); return r.mode&&r.mode!=="normal"?fmFlagText(r):a===""?"":"자동 "+won(a); })():nm;
+      return `<input class="fm-v in" data-p="${b}" data-fmrow${/^(qty|up|amt)$/.test(k)?' inputmode="numeric"':""} placeholder="${esc(ph)}" aria-label="품목 ${+it[1]+1}줄 ${esc(nm)}">`; }
+    const b=`prods.${pi}.form.marks.${i}.v`, auto=m.b?fmVal(Object.assign({},m,{v:""}),p):"", isIn=m.fld||m.b||!m.src;
+    if(m.b) cfg.push(i);
+    return `<input class="fm-v${isIn?" in":" src"}${m.bd?" bd":""}" data-p="${b}" data-mrow="${m.id}"${m.fc&&!isIn?` style="color:${esc(m.fc)}"`:""} placeholder="${esc(m.b?(auto||"(비어 있음)"):m.lb||"")}" title="${esc(m.b?(fmBindName(m.b)||"자동")+" — 비워 두면 자동으로 들어갑니다":m.src?"원본 글자 (고칠 수 있음)":(m.lb||"입력 칸"))}" aria-label="${esc(m.lb||m.v||"칸")}">${m.b?`<button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button>`:""}`; };
+  F.vc.forEach((L,pg)=>{
+    const by={}; (L||[]).forEach(a=>(by[a[8]]=by[a[8]]||[]).push({x0:a[0],y0:a[1],x1:a[2],y1:a[3],c0:a[4],c1:a[5],r0:a[6],r1:a[7],bg:a[9]||"",ids:[]}));
+    const tabs=Object.values(by).filter(cs=>cs.length>=2).sort((a,b)=>Math.min(...a.map(c=>c.y0))-Math.min(...b.map(c=>c.y0)));
+    if(!tabs.length) return;
+    const ar=F.r[pg]||1.4142, all=tabs.flat();
+    // 칸(마크)마다 그 가운데가 든 표 칸 (겹치면 가장 작은 칸)
+    M.forEach((m,i)=>{ if(m.pg!==pg) return; const cx=m.t==="text"?m.x+m.w/2:m.x, cy=m.t==="text"?m.y+m.f*.6/ar:m.y;
+      let best=null; all.forEach(c=>{ if(cx>c.x0&&cx<c.x1&&cy>c.y0&&cy<c.y1&&(!best||(c.x1-c.x0)*(c.y1-c.y0)<(best.x1-best.x0)*(best.y1-best.y0))) best=c; });
+      if(best){ best.ids.push(i); used.add(i); } });
+    if(F.r.length>1) out.push(`<div class="fm-pgh">${pg+1}쪽</div>`);
+    tabs.forEach(cs=>{ n++;
+      const cb=[...new Set(cs.flatMap(c=>[c.c0,c.c1+1]))].sort((a,b)=>a-b), rb=[...new Set(cs.flatMap(c=>[c.r0,c.r1+1]))].sort((a,b)=>a-b);
+      const xb=cb.map(v=>{ const c=cs.find(c=>c.c0===v); return c?c.x0:cs.find(c=>c.c1+1===v).x1; }), tw=xb[xb.length-1]-xb[0]||1;
+      const yb=rb.map(v=>{ const c=cs.find(c=>c.r0===v); return c?c.y0:cs.find(c=>c.r1+1===v).y1; }), bw=Math.min(210,297/ar), mm=v=>Math.round(v*10)/10;   // 칸 크기 · 위치 (mm)
+      const nr=rb.length-1, nc=cb.length-1, occ=[...Array(nr)].map(()=>Array(nc).fill(null));
+      cs.forEach(c=>{ c.R=rb.indexOf(c.r0); c.C=cb.indexOf(c.c0); c.rs=rb.indexOf(c.r1+1)-c.R; c.cs=cb.indexOf(c.c1+1)-c.C; for(let r=c.R;r<c.R+c.rs;r++) for(let k=c.C;k<c.C+c.cs;k++) occ[r][k]=c; });
+      const td=c=>{ cells++;
+        const ids=c.ids.sort((a,b)=>M[a].y-M[b].y||M[a].x-M[b].x), lines=[];   // 같은 높이의 칸은 한 줄에 나란히
+        ids.forEach(i=>{ const m=M[i], y=m.t==="text"?m.y+m.f*.6/ar:m.y, L=lines[lines.length-1]; if(L&&Math.abs(L.y-y)<(m.f||.01)*.5/ar) L.ids.push(i); else lines.push({y,ids:[i]}); });
+        const body=lines.map(L=>`<div class="fm-tl">${L.ids.sort((a,b)=>M[a].x-M[b].x).map(inp).join("")}</div>`).join("")||`<span class="fm-tno" title="이 칸에는 글자도 입력 칸도 없습니다">—</span>`;
+        const info=`${c.R+1}행 ${c.C+1}열${c.cs>1||c.rs>1?` (${c.rs}줄 × ${c.cs}칸 합침)`:""} · 가로 ${mm((c.x1-c.x0)*bw)} × 세로 ${mm((c.y1-c.y0)*bw*ar)} mm · 위치 왼쪽 ${mm(c.x0*bw)} 위 ${mm(c.y0*bw*ar)} mm`;
+        return `<td title="${info}" data-cell="${pg}.${c.R}.${c.C}"${c.cs>1?` colspan="${c.cs}"`:""}${c.rs>1?` rowspan="${c.rs}"`:""}${c.bg?` style="background:${c.bg}"`:""}>${body}</td>`; };
+      const rows=occ.map((row,r)=>`<tr style="height:${Math.max(26,Math.round((yb[r+1]-yb[r])*bw*ar*3.4))}px">${row.map((c,k)=>!c?`<td class="x"></td>`:c.R===r&&c.C===k?td(c):"").join("")}</tr>`).join("");
+      out.push(`<div class="fm-tw"><table class="fm-tb" style="min-width:${Math.max(200,nc*56)}px"><colgroup>${xb.slice(1).map((x,k)=>`<col style="width:${((x-xb[k])/tw*100).toFixed(2)}%">`).join("")}</colgroup><tbody>${rows}</tbody></table></div>`); });
+  });
+  return {html:out.join(""),used,cfg,n,cells,items};
+}
+// 프로그램 안 표 칸 검증 결과 (불러올 때 셈: 칸마다 글자 · 입력 칸과 이어졌는지)
+function fmCovHtml(F){ const c=F&&F.cov; if(!c||!c.cells) return "";
+  return `<div class="fm-cov${c.left?" warn":""}">${c.left?"⚠":"✔"} 표 칸 ${c.cells}개 검사 — 글자 ${c.text} · 입력 칸 ${c.input}${c.small?` · 작은 네모(체크 칸) ${c.small}`:""}${c.left?` · <b>이어지지 않은 칸 ${c.left}</b>`:" · 모든 칸이 이어졌습니다"}</div>`; }
 function formCardHtml(p,pi){
   if(p.form&&p.form.ver!==FM_VER) setTimeout(()=>fmReview(p),0);   // 예전에 등록한 양식: 최신 인식으로 다시 검토 (뒤에서)
   const k=`p${p.pid}`, F=p.form, B=fmBinds(), TY={text:"글자 칸",client:"상대방 서명",company:"회사 직인"};
   // 문서 순서(쪽 → 위 → 왼쪽)로 보여 줌. 품목 표 칸은 아래 품목 표에서 고침
-  const order=F.marks.map((m,i)=>i).filter(i=>!(F.marks[i].b||"").startsWith("it.")).sort((a,b)=>{ const A=F.marks[a], B2=F.marks[b]; return A.pg-B2.pg||Math.round((A.y-B2.y)*400)||A.x-B2.x; });
+  const TB=fmTblHtml(p,pi);   // 원본 표 (칸마다 입력) — 표 안의 칸은 아래 글자 목록에서 뺌
+  const order=F.marks.map((m,i)=>i).filter(i=>!(F.marks[i].b||"").startsWith("it.")&&!TB.used.has(i)).sort((a,b)=>{ const A=F.marks[a], B2=F.marks[b]; return A.pg-B2.pg||Math.round((A.y-B2.y)*400)||A.x-B2.x; });
   // 칸 하나의 자세한 설정 (종류 · 채울 내용 · 글자 크기)
   const fullRow=i=>{ const m=F.marks[i], b=`prods.${pi}.form.marks.${i}`;
     const typeSel=`<select data-p="${b}.t" data-struct aria-label="칸 종류">${Object.entries(TY).map(([v,t])=>`<option value="${v}"${m.t===v?" selected":""}>${t}</option>`).join("")}</select>`;
@@ -4935,8 +5089,9 @@ function formCardHtml(p,pi){
         <span class="hint" style="margin:0">${fmAddT==="fix"?`<b>고칠 글자를 양식 그림에서 누르세요</b> (여러 줄 계속 가능 · 다 했으면 버튼을 다시 누름)`:fmAddT?`<b>양식 그림에서 넣을 곳을 누르세요</b>`:"칸은 끌어서 옮길 수 있습니다"}</span>
       </div>
       <div class="fm-thumbs">${F.r.map((_,i)=>`<div class="fm-thumb${fmAddT?" adding":""}" data-fpi="${pi}" data-fpg="${i}">${fmBox(p,i,true)}${F.r.length>1?`<div class="fm-tn">${i+1}쪽</div>`:""}</div>`).join("")}</div>
-      ${fmItemsHtml(p,pi)}
-      <div class="sub" style="margin-top:10px">문서 글자 · 칸 ${order.length}개 <span class="hint" style="margin:0;font-weight:400">— 문서에 있는 글자를 위에서부터 차례로 모두 고칠 수 있습니다. 상대방 정보 · 날짜 · 우리 회사 정보는 자동으로 들어갑니다</span></div>
+      ${TB.html?`<div class="sub" style="margin-top:10px">원본 표 ${TB.n}개 · 칸 ${TB.cells}개 <span class="hint" style="margin:0;font-weight:400">— 원본 표 모양 그대로입니다. 칸에 바로 적으면 문서의 같은 자리에 들어갑니다</span></div>${fmCovHtml(F)}${TB.html}${TB.cfg.map(fullRow).join("")}`:""}
+      ${TB.items&&F.rows&&F.rows.length?`<details class="prodcfg" data-k="${k}-items" ${isOpen(k+"-items")}><summary>품목 줄 정리 (순서 바꾸기 · 비우기 · 합계 반영)</summary>${fmItemsHtml(p,pi)}</details>`:fmItemsHtml(p,pi)}
+      <div class="sub" style="margin-top:10px">${TB.html?"표 밖 ":""}문서 글자 · 칸 ${order.length}개 <span class="hint" style="margin:0;font-weight:400">— 문서에 있는 글자를 위에서부터 차례로 모두 고칠 수 있습니다. 상대방 정보 · 날짜 · 우리 회사 정보는 자동으로 들어갑니다</span></div>
       ${order.length>8?`<input class="fm-find" data-fmfind="${pi}" type="search" placeholder="🔍 고칠 글자 찾기 (예: 제5조, 계좌)" aria-label="고칠 글자 찾기">`:""}
       <div class="fm-rows">${rows||`<p class="hint">찾은 칸이 없습니다. 위 [+ 글자 칸] [+ 상대방 서명] [+ 회사 직인]을 누르고 양식 그림에서 자리를 눌러 넣으세요.</p>`}</div>
       <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>이름 · 제목</summary>
@@ -4984,13 +5139,17 @@ function fmItemsHtml(p,pi){
     <div class="hint fm-sum" data-fmsum="${pi}">${fmSumText(p)}</div>`;
 }
 function fmSumText(p){ const t=totals(p); return `합계 <b>${won(t.total)}원</b> · 계약금 ${t.rate}% ${won(t.dep)}원 · 잔금 ${100-t.rate}% ${won(t.bal)}원 <span style="opacity:.75">(계약금 비율은 위 금액 · 조건 칸에서 바꿉니다)</span>`; }
+$("#editor").addEventListener("input",e=>{   // 같은 값을 가리키는 칸(원본 표 · 품목 카드 · 글자 목록)끼리 바로 맞춤
+  const el=e.target, dp=el&&el.dataset&&el.dataset.p; if(!dp||!el.closest||!el.closest("#prodCards")||el.type==="checkbox") return;
+  $$("#prodCards [data-p]").forEach(o=>{ if(o!==el&&o.dataset.p===dp&&o.value!==el.value) o.value=el.value; });
+});
 $("#editor").addEventListener("input",e=>{
   const el=e.target; if(!el.hasAttribute||!el.hasAttribute("data-fmrow")) return;
   const m=el.dataset.p.match(/^prods\.(\d+)\.form\.rows\.(\d+)\.(\w+)$/); if(!m) return;
   const p=P()[+m[1]], r=p.form.rows[+m[2]];
-  if(m[3]==="qty"||m[3]==="up"){ r.amt=""; const a=$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`); if(a){ a.value=""; const v=fmRowAmt(r); a.placeholder=v===""?"":"자동 "+won(v); } }
-  if(m[3]==="mode"){ const a=$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`); if(a){ const v=fmRowAmt(Object.assign({},r,{amt:""})); a.placeholder=r.mode!=="normal"?fmFlagText(r):v===""?"":"자동 "+won(v); } }
-  const s=$(`#prodCards [data-fmsum="${m[1]}"]`); if(s) s.innerHTML=fmSumText(p);
+  if(m[3]==="qty"||m[3]==="up"){ r.amt=""; $$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`).forEach(a=>{ a.value=""; const v=fmRowAmt(r); a.placeholder=v===""?"":"자동 "+won(v); }); }
+  if(m[3]==="mode"){ $$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`).forEach(a=>{ const v=fmRowAmt(Object.assign({},r,{amt:""})); a.placeholder=r.mode!=="normal"?fmFlagText(r):v===""?"":"자동 "+won(v); }); }
+  $$(`#prodCards [data-fmsum="${m[1]}"]`).forEach(s=>s.innerHTML=fmSumText(p));
   const ih=$(`#prodCards [data-ih="${m[1]}.${m[2]}"]`); if(ih) ih.innerHTML=fmRowHead(r);
   const th=$$(`#prodCards [data-fpi="${m[1]}"]`); th.forEach(x=>{ const pg=+x.dataset.fpg; x.innerHTML=fmBox(p,pg,true)+(p.form.r.length>1?`<div class="fm-tn">${pg+1}쪽</div>`:""); });
   updateSums(); esMarkStale(); save(); schedule();
@@ -5092,7 +5251,7 @@ function fmShowB(){
   try{ el.innerHTML=`<div class="fm-z">${B.r.map((_,i)=>`<div class="page fm-page">${fmBox(p,i,"pv")}</div>`).join("")}</div>`; }
   finally{ delete profile.forms._prev; }
   if(B.more) el.insertAdjacentHTML("afterbegin",`<div class="fm-msg warn">${B.more}쪽 중 앞 ${B.r.length}쪽만 넣습니다.</div>`);
-  el.insertAdjacentHTML("afterbegin",fmChkHtml(B.chk,false));
+  el.insertAdjacentHTML("afterbegin",fmChkHtml(B.chk,false)+fmCovHtml(B));
   fmZoom(el);
 }
 function openFormImport(){
@@ -5147,7 +5306,7 @@ $("#fmOkB").onclick=()=>{
   const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
   const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
   const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
-    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),pw:B.pw,kd:B.kd,ver:B.ver}});
+    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),pw:B.pw,kd:B.kd,ver:B.ver,vc:B.vc,cov:B.cov}});
   p.form.ms=fmSig(p.form.marks);
   if(B.rate) state.depositRate=B.rate;
   if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
@@ -5289,7 +5448,7 @@ new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")
 /* --- 등록된 양식 다시 검토: 인식 방식이 좋아지면, 예전에 등록한 양식도 저장해 둔 글자 · 디자인 그림으로 최신 방식으로 다시 읽음 ---
    원본 파일이 없어도 됨 (등록할 때 글자 위치(lines)와 글자 뺀 그림을 저장해 둠).
    더 많이 찾으면(품목 칸 · 연결 칸 · 입력 칸) 바로 바꾸고, 바꾼 내용과 [되돌리기]를 카드 위에 알림. 입력해 둔 품목 내용은 그대로 옮김. */
-var FM_VER="2026-11-17e";
+var FM_VER="2026-11-17f";
 function fmSig(marks){ let h=0; const s=JSON.stringify((marks||[]).map(m=>[m.t,m.b,m.v,m.x,m.y,m.w,m.f,m.al,m.fld])); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return h; }
 function fmScore(F){ const M=F.marks||[];
   return {rows:(F.rows||[]).length, cells:M.filter(m=>/^it\./.test(m.b||"")).length, binds:M.filter(m=>m.t!=="text"||(m.b&&!/^it\./.test(m.b))||/\{[^{}]+\}/.test(m.v||"")).length, fields:M.filter(m=>m.fld).length, chk:(F.chk||[]).length}; }
@@ -5306,7 +5465,8 @@ async function fmRebuild(F){
     const old=(F.marks||[]).filter(m=>m.pg===i&&m.t==="text"&&m.bd);
     const items=F.lines.filter(l=>l.pg===i&&String(l.s).trim()).map(l=>({s:l.s,x:l.x*W,y:l.y*H,w:l.w*W,h:l.f*W,
       bd:l.bd||old.some(m=>m.x<l.x+l.w&&l.x<m.x+m.w&&Math.abs(m.y-l.y)<l.f*.8/(r[i]||1.4142))||undefined,st:l.st||undefined,c:l.c||undefined}));
-    pp.push({items,W,H,cv,sc,gl:[]});
+    const vc=((F.vc||[])[i]||[]).map(([a,b,c,d,c0,c1,r0,r1,t,bg])=>({x0:a*W,y0:b*H,x1:c*W,y1:d*H,c0,c1,r0,r1,t,bg}));
+    pp.push({items,W,H,cv,sc,gl:[],vc});
   }
   const kind=F.kd||fmDetect(F.lines.map(l=>l.s).join("\n"));
   return fmAnalyze(pp,imgs.slice(),r,F.lines.length,0,kind);
@@ -5321,7 +5481,7 @@ async function fmReview(p){
     if(better){
       G.prev={marks:G.marks,rows:G.rows,cols:G.cols,cn:G.cn,vat:G.vat,chk:G.chk,chkOk:G.chkOk};
       const rows=clone(B.rows||[]); (G.rows||[]).forEach((o,n)=>{ if(rows[n]&&(!fmRowEmpty(o)||o.on)) ["cat","desc","qty","unit","up","amt","note","mode","fl","on"].forEach(k=>{ if(o[k]!=null&&o[k]!=="") rows[n][k]=o[k]; }); });
-      Object.assign(G,{marks:clone(B.marks),rows,cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),chkOk:0,pw:B.pw,kd:B.kd});
+      Object.assign(G,{marks:clone(B.marks),rows,cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),chkOk:0,pw:B.pw,kd:B.kd,vc:B.vc,cov:B.cov});
       delete G.rb; G.ms=fmSig(G.marks);
       G.rev={at:Date.now(),a,b};
     }
