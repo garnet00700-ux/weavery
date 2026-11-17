@@ -1054,6 +1054,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <label class="f"><span data-ll="성명">업체명</span><input data-p="client.name"></label>
           <label class="f" data-only="quote">대표자<input data-p="client.ceo"></label>
           <label class="f">연락처<input data-p="client.phone"></label>
+          <label class="f" id="cBizno" hidden>사업자 번호<input data-p="client.bizno"></label>
           <label class="f">이메일 <span style="font-weight:400" data-only="quote labor">(최종 계약서 받을 주소)</span><span style="font-weight:400" data-only="cert">(증명서 PDF 받을 주소 · 원할 때만 발송)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
           <label class="f" data-only="labor cert" style="grid-column:1/-1">주소<input data-p="client.addr" data-addr></label>
           <label class="f"><span data-ll="작성일" data-lc="발급일">견적일</span><input type="date" data-p="quoteDate"></label>
@@ -1602,7 +1603,7 @@ function updateSums(){ $$("[data-sum]").forEach(s=>{ const p=P()[+s.dataset.sum]
 function renderImages(){
   $("#cSignPrev").innerHTML=state.clientSign?`<img src="${state.clientSign}" alt="고객 사인">`:"고객 사인 없음";
 }
-function renderEditor(){ bindSimple(); renderProds(); renderImages(); renderEsign(); }
+function renderEditor(){ bindSimple(); renderProds(); renderImages(); renderEsign(); if(typeof fmClientExtra==="function") fmClientExtra(); }
 
 $("#editor").addEventListener("input",e=>{
   const el=e.target; if(!el.dataset.p) return;
@@ -4492,11 +4493,14 @@ function formCardHtml(p,pi){
     if(cur&&plain(L)&&!isSect(L)&&L.pg===cur.pg&&Math.abs(F.marks[L.ids[0]].x-F.marks[cur.head.ids[0]].x)<.06){ cur.body.push(L); return; }
     cur=null; blocks.push({line:L,pg:L.pg,sect:isSect(L)}); });
   // 카드 안 한 칸: 고정 이름표 + 고칠 내용
-  const kf=(P)=>{ const lm=F.marks[P.l], i=P.v, m=F.marks[i], b=`prods.${pi}.form.marks.${i}`, auto=fmVal(Object.assign({},m,{v:""}),p);
+  const kf=(P)=>{ const lm=F.marks[P.l], i=P.v, m=F.marks[i], ck=/^client\.\w+$/.test(m.b||"")?m.b:"";
+    // 상대방 칸은 위 '의뢰자 정보'와 같은 값: 어느 쪽에 적어도 양쪽 · 문서에 같이 들어감
+    if(ck&&m.v){ const k0=ck.split(".")[1]; if(!state.client[k0]) state.client[k0]=m.v; m.v=""; }
+    const b=ck||`prods.${pi}.form.marks.${i}.v`, auto=ck?"":fmVal(Object.assign({},m,{v:""}),p);
     const suf=P.suf.map(j=>{ const s=F.marks[j]; return s.t==="text"?`<span class="fm-kx">${esc(s.v)}</span>`:`<span class="fm-kx">${s.t==="client"?"✍ 서명":"🔴 직인"}</span>`; }).join("");
     return `<div class="fm-kf${fmSel===m.id?" sel":""}" data-mrow="${m.id}">
-      <div class="fm-kl"><span title="원본 양식의 이름표 (고정)">${esc(String(lm.v).replace(/\s*[:：]\s*$/,""))}</span><i class="fm-tag" title="${esc(fmBindName(m.b)||"자동")} — 비워 두면 자동으로 들어갑니다">자동</i><button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></div>
-      <div class="fm-kin"><input class="fm-v" data-p="${b}.v" placeholder="${esc(auto||"(비어 있음)")}" aria-label="${esc(lm.v)}">${suf}</div></div>`; };
+      <div class="fm-kl"><span title="원본 양식의 이름표 (고정)">${esc(String(lm.v).replace(/\s*[:：]\s*$/,""))}</span><i class="fm-tag" title="${ck?"위 '의뢰자 정보'와 연결된 칸입니다 — 어느 쪽에 적어도 같이 바뀝니다":esc(fmBindName(m.b)||"자동")+" — 비워 두면 자동으로 들어갑니다"}">${ck?"의뢰자 정보":"자동"}</i><button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></div>
+      <div class="fm-kin"><input class="fm-v" data-p="${b}" placeholder="${esc(ck?"(비어 있음)":auto||"(비어 있음)")}" aria-label="${esc(lm.v)}">${suf}</div></div>`; };
   let cn=0;
   const rows=blocks.map(B0=>{
     const ph=F.r.length>1&&B0.pg!==lastPg?`<div class="fm-pgh">${B0.pg+1}쪽</div>`:""; lastPg=B0.pg;
@@ -4878,6 +4882,20 @@ document.getElementById("editor").addEventListener("click",e=>{
   else if(act==="add"){ const k=R.findIndex((r,i)=>fmRowEmpty(r)&&!r.on); if(k<0) return alert("원본 표에 남은 빈 줄이 없습니다.\n필요 없는 줄을 비우거나 다른 줄 내용을 고쳐 써 주세요."); R[k].on=1; R[k].mode="normal"; openSet.add(`prods.${b.dataset.pi}.form.rows.${k}`);
     setTimeout(()=>{ const i=$(`#prodCards [data-p="prods.${b.dataset.pi}.form.rows.${k}.desc"]`); if(i){ i.scrollIntoView({block:"center"}); i.focus(); } },50); }
   renderProds(); updateSums(); esMarkStale(); save(); schedule();
+});
+
+/* --- 원본 양식의 상대방 칸 ↔ 위 '의뢰자 정보' 연결 --- */
+// 원본 양식에 상대방 사업자번호 칸이 있으면 의뢰자 정보에도 그 칸을 보여 줌
+function fmClientExtra(){ const el=document.getElementById("cBizno"); if(!el) return;
+  el.hidden=!P().some(p=>p.on&&p.kind==="form"&&p.form&&(p.form.marks||[]).some(m=>m.b==="client.bizno")); }
+// 한쪽에 적으면 같은 칸(위 의뢰자 정보 · 아래 카드)과 자동 칸의 안내 글자를 바로 맞춤
+$("#editor").addEventListener("input",e=>{
+  const el=e.target, path=el.dataset&&el.dataset.p; if(!path) return;
+  if(/^client\.\w+$/.test(path)) document.querySelectorAll(`#editor [data-p="${path}"]`).forEach(x=>{ if(x!==el&&x.value!==el.value) x.value=el.value; });
+  if(!/^client\./.test(path)) return;
+  document.querySelectorAll("#prodCards input[data-p]").forEach(x=>{ const mm=x.dataset.p.match(/^prods\.(\d+)\.form\.marks\.(\d+)\.v$/); if(!mm) return;
+    const p=P()[+mm[1]], m=p&&p.form&&p.form.marks[+mm[2]]; if(!m||!m.b||m.b.startsWith("it.")) return;
+    x.placeholder=fmVal(Object.assign({},m,{v:""}),p)||"(비어 있음)"; });
 });
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
