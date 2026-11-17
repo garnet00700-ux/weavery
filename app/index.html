@@ -435,6 +435,22 @@ textarea{resize:vertical;line-height:1.5}
 .fm-pgh[hidden]{display:none}
 .fm-find{width:100%;box-sizing:border-box;margin:6px 0 8px;padding:8px 10px;border:1px solid var(--ui-border);border-radius:8px;font-size:13px}
 .fm-rows{max-height:560px;overflow-y:auto;padding-right:2px}
+
+.fm-line{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid var(--ui-border);border-radius:8px;margin-bottom:5px;background:#fff}
+.fm-line[hidden]{display:none}
+.fm-cells{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+.fm-c{display:flex;align-items:center;gap:3px;min-width:96px;border:1px solid var(--ui-border);border-radius:7px;padding:2px 3px 2px 6px;background:#fbfbf8}
+.fm-c.sel{border-color:#1565c0;background:#f1f6fd}
+.fm-c.bound{background:#f3f8ec;border-color:#cfe3b8}
+.fm-c.sign{flex:0 0 auto;background:#fff6f0;border-color:#f3d2bd}
+.fm-c .fm-v{flex:1;min-width:0;border:0;background:transparent;padding:5px 2px;font-size:13px;outline:none}
+.fm-c:focus-within{border-color:#7aa64a;box-shadow:0 0 0 2px #e3f1d1}
+.fm-tag{font-style:normal;font-size:10.5px;font-weight:700;color:#2f7d32;background:#e5f2d6;border-radius:5px;padding:1px 5px;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.fm-c.sign .fm-tag{color:#a4471b;background:#fbe4d6}
+.fm-cb{border:0;background:none;cursor:pointer;color:#888;font-size:12px;padding:2px 4px;border-radius:5px}
+.fm-cb:hover,.fm-cb.on{background:#eee;color:#333}
+.fm-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-2px 0 6px 30px;padding:6px 8px;border:1px dashed #cfe3b8;border-radius:8px;background:#f8fbf3;font-size:12.5px}
+.fm-set[hidden]{display:none}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -4223,9 +4239,9 @@ function fmFind(items,W,H,pg,kind,ctx,final){
 }
 
 /* --- 4-2. 원본 모양: 품목 표 · 합계 · 약관 문장 인식 --- */
-const FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
+var FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
   ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/]];
-const FM_FLAG=/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/;
+var FM_FLAG=/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/;
 function fmNum(s){ if(typeof s==="number") return s; const t=String(s??"").replace(/[₩\s원]/g,""); return /^-?\d[\d,]*(\.\d+)?$/.test(t)?Number(t.replace(/,/g,"")):null; }
 // 한 줄의 공급가액: 직접 적은 금액 → 없으면 수량 × 단가
 function fmRowAmt(r){ const a=fmNum(r.amt); if(a!==null) return a; const q=fmNum(r.qty), u=fmNum(r.up); return q!==null&&u!==null?q*u:""; }
@@ -4378,23 +4394,32 @@ function formCardHtml(p,pi){
   const k=`p${p.pid}`, F=p.form, B=fmBinds(), TY={text:"글자 칸",client:"상대방 서명",company:"회사 직인"};
   // 문서 순서(쪽 → 위 → 왼쪽)로 보여 줌. 품목 표 칸은 아래 품목 표에서 고침
   const order=F.marks.map((m,i)=>i).filter(i=>!(F.marks[i].b||"").startsWith("it.")).sort((a,b)=>{ const A=F.marks[a], B2=F.marks[b]; return A.pg-B2.pg||Math.round((A.y-B2.y)*400)||A.x-B2.x; });
-  let lastPg=-1;
-  const rows=order.map(i=>{ const m=F.marks[i], b=`prods.${pi}.form.marks.${i}`;
-    const ph=F.r.length>1&&m.pg!==lastPg?`<div class="fm-pgh">${m.pg+1}쪽</div>`:""; lastPg=m.pg;
-    if(m.t==="text"&&!m.b){   // 원본 글자 한 줄: 바로 고쳐 쓰는 칸
-      const tp=/\{[^{}]+\}/.test(m.v||"");
-      return `${ph}<div class="fm-row slim${fmSel===m.id?" sel":""}" data-mrow="${m.id}" data-ftxt="${esc((m.v||"").toLowerCase())}"><span class="fm-no">${i+1}</span>
-        <input class="fm-v" data-p="${b}.v" placeholder="(빈 칸 — 지우려면 ✕)" aria-label="${i+1}번 글자"${tp?` title="{총액} {의뢰인}처럼 중괄호 부분은 금액 · 이름으로 자동으로 바뀝니다"`:""}>${tp?`<span class="fm-auto" title="자동으로 바뀌는 부분이 있습니다">자동</span>`:""}
-        <button class="btn" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 글자 지우기" aria-label="이 글자 지우기">✕</button></div>`; }
+  // 칸 하나의 자세한 설정 (종류 · 채울 내용 · 글자 크기)
+  const fullRow=i=>{ const m=F.marks[i], b=`prods.${pi}.form.marks.${i}`;
     const typeSel=`<select data-p="${b}.t" data-struct aria-label="칸 종류">${Object.entries(TY).map(([v,t])=>`<option value="${v}"${m.t===v?" selected":""}>${t}</option>`).join("")}</select>`;
     const size=m.t==="text"?`<label class="fm-sz">글자<input type="number" min="5" max="30" step=".5" data-fmsz="${i}" data-pi="${pi}" value="${Math.round(m.f*595*2)/2}">pt</label>`
       :`<label class="fm-sz">크기<input type="number" min="8" max="50" step="1" data-fmsz="${i}" data-pi="${pi}" value="${Math.round(m.w*210)}">mm</label>`;
-    const body=m.t==="text"?`<select data-p="${b}.b" data-struct aria-label="채울 내용">${B.map(([v,t])=>`<option value="${v}"${(m.b||"")===v?" selected":""}>${t}</option>`).join("")}</select>
-        <input data-p="${b}.v" placeholder="${esc(m.b?(fmVal(Object.assign({},m,{v:""}),p)||"(비어 있음)")+" — 다르게 쓰려면 입력":"넣을 내용")}">
-        <label class="chk" title="원본 글자 위를 흰 바탕으로 덮습니다"><input type="checkbox" data-p="${b}.o" data-bool data-struct ${m.o?"checked":""}>흰 바탕</label>`
+    const body=m.t==="text"?`<select data-p="${b}.b" data-struct aria-label="채울 내용">${B.map(([v,t])=>`<option value="${v}"${(m.b||"")===v?" selected":""}>${t}</option>`).join("")}</select>`
       :`<span class="hint" style="margin:0">${m.t==="client"?"전자서명 · 고객 사인이 들어갑니다":profile.seal?"회사 직인이 찍힙니다":profile.sign?"대표 사인이 들어갑니다 (직인 없음)":"회사 설정에 직인이나 사인을 올려 주세요"}</span>`;
-    return `${ph}<div class="fm-row${fmSel===m.id?" sel":""}" data-mrow="${m.id}" data-ftxt="${esc(String(fmVal(m,p)||"").toLowerCase())}"><span class="fm-no">${i+1}</span><span class="fm-pg">${F.r.length>1?`${m.pg+1}쪽`:""}</span>${typeSel}${body}${size}
-      <button class="btn" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 칸 지우기" aria-label="이 칸 지우기">✕</button></div>`; }).join("");
+    return `<div class="fm-set" data-fmset="${m.id}" hidden>${typeSel}${body}${size}<button class="btn" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 칸 지우기">✕ 칸 지우기</button></div>`; };
+  // 한 칸 (같은 줄 글자는 나란히)
+  const cell=i=>{ const m=F.marks[i], b=`prods.${pi}.form.marks.${i}`, sel=fmSel===m.id?" sel":"";
+    if(m.t!=="text") return `<span class="fm-c sign${sel}" data-mrow="${m.id}"><i class="fm-tag">${m.t==="client"?"✍ 상대방 서명":"🔴 회사 직인"}</i><button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></span>`;
+    const auto=m.b?fmVal(Object.assign({},m,{v:""}),p):"", tp=/\{[^{}]+\}/.test(m.v||""), len=String(m.v||auto||"").length;
+    return `<span class="fm-c${m.b?" bound":""}${sel}" data-mrow="${m.id}" style="flex:${Math.max(3,Math.min(60,len))} 1 0">
+      ${m.b?`<i class="fm-tag" title="${esc(fmBindName(m.b)||"자동")} — 자동으로 들어갑니다">자동</i>`:tp?`<i class="fm-tag" title="중괄호 부분은 금액 · 이름으로 자동으로 바뀝니다">자동</i>`:""}
+      <input class="fm-v" data-p="${b}.v" placeholder="${esc(m.b?(auto||"(비어 있음)"):"(빈 칸)")}" aria-label="${i+1}번 글자"${m.b?` title="비워 두면 '${esc(auto)}'(이)가 자동으로 들어갑니다"`:""}>
+      ${m.b?`<button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button>`:`<button class="fm-cb" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 글자 지우기" aria-label="이 글자 지우기">✕</button>`}</span>`; };
+  // 같은 쪽 · 같은 높이의 칸을 한 줄로 묶음
+  const lines=[]; order.forEach(i=>{ const m=F.marks[i], L=lines[lines.length-1], my=m.t==="text"?m.y+m.f*.5:m.y;
+    if(L&&L.pg===m.pg&&Math.abs(L.y-my)<.007) L.ids.push(i); else lines.push({pg:m.pg,y:my,ids:[i]}); });
+  let lastPg=-1;
+  const rows=lines.map(L=>{
+    const ph=F.r.length>1&&L.pg!==lastPg?`<div class="fm-pgh">${L.pg+1}쪽</div>`:""; lastPg=L.pg;
+    L.ids.sort((a,b)=>F.marks[a].x-F.marks[b].x);
+    const txt=L.ids.map(i=>{ const m=F.marks[i]; return m.v||(m.b?fmVal(m,p):""); }).join(" ").toLowerCase();
+    return `${ph}<div class="fm-line" data-line data-ftxt="${esc(txt)}"><span class="fm-no">${L.ids[0]+1}</span><div class="fm-cells">${L.ids.map(cell).join("")}</div></div>${L.ids.filter(i=>F.marks[i].b||F.marks[i].t!=="text").map(fullRow).join("")}`;
+  }).join("");
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
     <summary>${esc(p.name||"(이름 없는 양식)")} — 원본 양식</summary>
     <div class="in">
@@ -4423,15 +4448,15 @@ function formCardHtml(p,pi){
   </details>`;
 }
 // 원본 품목 표 편집: 줄마다 품목 · 세부내용 · 수량 · 단위 · 단가 · 공급가액 · 구분
-const FM_COLN={cat:"품목",desc:"세부내용",qty:"수량",unit:"단위",up:"단가",amt:"공급가액",note:"비고"};
+function fmColN(){ return {cat:"품목",desc:"세부내용",qty:"수량",unit:"단위",up:"단가",amt:"공급가액",note:"비고"}; }   // 함수로: 시작할 때(이 줄보다 먼저) 불려도 됨
 function fmItemsHtml(p,pi){
   const F=p.form; if(!F.rows||!F.rows.length) return "";
-  const cols=(F.cols||Object.keys(FM_COLN)).filter(k=>FM_COLN[k]), t=totals(p);
-  const head=cols.map(k=>`<th>${FM_COLN[k]}</th>`).join("")+"<th>구분</th>";
+  const cols=(F.cols||Object.keys(fmColN())).filter(k=>fmColN()[k]), t=totals(p);
+  const head=cols.map(k=>`<th>${fmColN()[k]}</th>`).join("")+"<th>구분</th>";
   const body=F.rows.map((r,n)=>{ const b=`prods.${pi}.form.rows.${n}`;
     return `<tr>${cols.map(k=>{
       if(k==="amt"){ const a=fmRowAmt(Object.assign({},r,{amt:""})); return `<td><input data-p="${b}.amt" data-fmrow inputmode="numeric" placeholder="${r.mode!=="normal"?esc(fmFlagText(r)):a===""?"":"자동 "+won(a)}" aria-label="공급가액"></td>`; }
-      return `<td><input data-p="${b}.${k}" data-fmrow${/^(qty|up)$/.test(k)?' inputmode="numeric"':""} aria-label="${FM_COLN[k]}"></td>`; }).join("")}
+      return `<td><input data-p="${b}.${k}" data-fmrow${/^(qty|up)$/.test(k)?' inputmode="numeric"':""} aria-label="${fmColN()[k]}"></td>`; }).join("")}
       <td><select data-p="${b}.mode" data-fmrow aria-label="구분">${[["normal","금액"],["service","서비스 제공"],["exclude","별도"]].map(([v,l])=>`<option value="${v}"${(r.mode||"normal")===v?" selected":""}>${l}</option>`).join("")}</select></td></tr>`; }).join("");
   return `<div class="sub" style="margin-top:12px">품목 표 <span class="hint" style="margin:0;font-weight:400">— 원본 표의 같은 칸에 그대로 들어갑니다. 수량 · 단가를 고치면 공급가액이 자동 계산됩니다</span></div>
     <div class="fm-items"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
@@ -4460,6 +4485,8 @@ function fmSelect(id){
 $("#editor").addEventListener("click",e=>{
   const a=e.target.closest("[data-fmadd]");
   if(a){ fmAddT=fmAddT===a.dataset.fmadd?null:a.dataset.fmadd; renderProds(); return; }
+  const cf=e.target.closest("[data-fmcfg]");
+  if(cf){ const s2=$(`#prodCards [data-fmset="${cf.dataset.fmcfg}"]`); if(s2){ s2.hidden=!s2.hidden; cf.classList.toggle("on",!s2.hidden); } return; }
   const d=e.target.closest("[data-fmdel]");
   if(d){ const p=P()[+d.dataset.pi]; p.form.marks.splice(+d.dataset.fmdel,1); renderProds(); esMarkStale(); save(); schedule(); return; }
   const r=e.target.closest("[data-mrow]");
@@ -4495,7 +4522,7 @@ $("#editor").addEventListener("pointerdown",e=>{
   const m=p.form.marks.find(x=>x.id===mk.dataset.mid); if(!m) return;
   e.preventDefault(); fmSelect(m.id);
   if((m.b||"").startsWith("it.")){ const [,n,k]=m.b.split("."), c=$(`#prodCards [data-p="prods.${th.dataset.fpi}.form.rows.${n}.${k}"]`); if(c){ c.scrollIntoView({block:"nearest"}); c.focus(); } }
-  else{ const row=$(`#prodCards [data-mrow="${m.id}"]`); if(row){ row.hidden=false; row.scrollIntoView({block:"nearest"}); } }
+  else{ const row=$(`#prodCards [data-mrow="${m.id}"]`); if(row){ const ln=row.closest("[data-line]"); if(ln) ln.hidden=false; row.scrollIntoView({block:"nearest"}); } }
   fmDrag={m,el:mk,R,sx:e.clientX,sy:e.clientY,x:m.x,y:m.y,moved:false};
   try{ mk.setPointerCapture(e.pointerId); }catch(_){}
 });
@@ -4679,7 +4706,7 @@ function onProdsOf(d){ return (d.prods||[]).filter(p=>p.on); }
 document.getElementById("editor").addEventListener("input",e=>{
   const f=e.target.closest&&e.target.closest("[data-fmfind]"); if(!f) return;
   const q=f.value.trim().toLowerCase().replace(/\s+/g,""), box=f.closest(".in");
-  box.querySelectorAll(".fm-rows [data-mrow]").forEach(r=>{ const t=(r.dataset.ftxt||"").replace(/\s+/g,""); const inp=r.querySelector("input.fm-v"); const v=inp?inp.value.toLowerCase().replace(/\s+/g,""):t; r.hidden=!!q&&!v.includes(q)&&!t.includes(q); });
+  box.querySelectorAll(".fm-rows [data-line]").forEach(r=>{ const t=(r.dataset.ftxt||"").replace(/\s+/g,""), v=[...r.querySelectorAll("input.fm-v")].map(i=>i.value).join("").toLowerCase().replace(/\s+/g,""); r.hidden=!!q&&!v.includes(q)&&!t.includes(q); });
   box.querySelectorAll(".fm-rows .fm-pgh").forEach(h=>{ h.hidden=!!q; });
 });
 
