@@ -4134,6 +4134,10 @@ async function fmBuildB(f,kind){
     pages.push(fmJpeg(cv));
     txt+=items.length; pp.push({items,W:vp.width,H:vp.height,cv,sc,gl});
   }
+  return fmAnalyze(pp,pages,r,txt,pdf.numPages>N?pdf.numPages:0,kind);
+}
+// 읽은 글자 · 디자인 그림(pp)으로 칸 · 품목 표 · 합계 · 정렬을 찾음 (새로 올린 PDF와 이미 등록된 양식 다시 검토에 같이 씀)
+function fmAnalyze(pp,pages,r,txt,more,kind){
   // 1회차: 이미 적혀 있는 값(상대방 업체명 등)을 모음 → 2회차: 그 값이 다른 쪽 · 본문에 나와도 수정 칸으로
   const ctx={vals:{}}, marks=[];
   // 인식 단계 하나가 실패해도 원본 모양 불러오기는 멈추지 않음 (그 단계만 건너뜀)
@@ -4224,8 +4228,9 @@ async function fmBuildB(f,kind){
     if(!/^cert/.test(kind)&&!has(/^(co\.|company)/)) chk.add("우리 회사 칸(상호 · 대표자 · 직인)을 찾지 못했습니다.\n원본 글자가 그대로 남습니다.");
     if(/^(contract|labor)/.test(kind)&&!marks.some(m=>m.t==="client")) chk.add("상대방 서명 자리를 찾지 못했습니다.\n전자서명을 받으려면 [+ 상대방 서명]으로 넣어 주세요.");
   }
-  const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s}); }));
-  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,cn:T.cn||null,vat:T.vat?1:0,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt,chk:[...chk]};
+  // 굵기 · 색 · 취소선도 함께 남김 (나중에 최신 인식으로 다시 검토할 때 씀)
+  const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push(Object.assign({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s},it.bd?{bd:1}:{},it.st?{st:1}:{},it.c?{c:it.c}:{})); }));
+  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,cn:T.cn||null,vat:T.vat?1:0,rate:rm?rate:0,lines,more,scan:!txt,chk:[...chk],pw:pp.map(p=>+p.W.toFixed(2)),kd:kind,ver:FM_VER};
 }
 // 한 글자씩 쪼개진 PDF 글자를 같은 줄 · 가까운 것끼리 이어 붙임 (글자마다 x 위치는 xs에 보관)
 function fmMerge(items){
@@ -4759,6 +4764,7 @@ function fmBinds(){ return [["","직접 입력"],["client.name","상대방 업�
   ["date","작성일"],["co.name","우리 상호"],["co.name co.ceo","우리 상호 + 대표자"],["client.name client.ceo","상대방 업체명 + 대표자"],["co.ceo","우리 대표자"],["co.bizno","우리 사업자등록번호"],["co.address","우리 주소"],["co.phone","우리 연락처"],["co.email","우리 이메일"]]; }
 function fmBindName(b){ const r=fmBinds().find(x=>x[0]===(b||"")); return b&&r?r[1]:""; }
 function formCardHtml(p,pi){
+  if(p.form&&p.form.ver!==FM_VER) setTimeout(()=>fmReview(p),0);   // 예전에 등록한 양식: 최신 인식으로 다시 검토 (뒤에서)
   const k=`p${p.pid}`, F=p.form, B=fmBinds(), TY={text:"글자 칸",client:"상대방 서명",company:"회사 직인"};
   // 문서 순서(쪽 → 위 → 왼쪽)로 보여 줌. 품목 표 칸은 아래 품목 표에서 고침
   const order=F.marks.map((m,i)=>i).filter(i=>!(F.marks[i].b||"").startsWith("it.")).sort((a,b)=>{ const A=F.marks[a], B2=F.marks[b]; return A.pg-B2.pg||Math.round((A.y-B2.y)*400)||A.x-B2.x; });
@@ -4843,7 +4849,7 @@ function formCardHtml(p,pi){
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
     <summary>${esc(p.name||"(이름 없는 양식)")} — 원본 양식</summary>
     <div class="in">
-      ${F.chk&&F.chk.length&&!F.chkOk?fmChkHtml(F.chk,pi):""}
+      ${fmRevHtml(F,pi)}${F.chk&&F.chk.length&&!F.chkOk?fmChkHtml(F.chk,pi):""}
       <div class="fm-tools">
         <span>칸 추가:</span>
         ${Object.entries(TY).map(([v,t])=>`<button class="btn${fmAddT===v?" go":""}" type="button" data-fmadd="${v}" data-pi="${pi}">+ ${t}</button>`).join("")}
@@ -5063,7 +5069,8 @@ $("#fmOkB").onclick=()=>{
   const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
   const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
   const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
-    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice()}});
+    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),pw:B.pw,kd:B.kd,ver:B.ver}});
+  p.form.ms=fmSig(p.form.marks);
   if(B.rate) state.depositRate=B.rate;
   if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
     return alert("양식 그림이 커서 이 브라우저에 저장할 공간이 부족합니다.\n쪽수가 적은 PDF로 나눠 올리거나, 문서 목록에서 오래된 문서를 지운 뒤 다시 해 주세요."); }
@@ -5201,6 +5208,66 @@ $("#editor").addEventListener("focusin",e=>{
 $("#editor").addEventListener("focusout",()=>{ setTimeout(()=>{ const a=document.activeElement; if(a&&a===fmHlEl) return; fmHl=null; fmHlEl=null; fmHlShow(false); },0); });
 // 문서를 다시 그린 뒤(글자를 고칠 때마다)에도 표시 유지
 new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")) fmHlShow(false); }).observe(document.getElementById("pages"),{childList:true});
+/* --- 등록된 양식 다시 검토: 인식 방식이 좋아지면, 예전에 등록한 양식도 저장해 둔 글자 · 디자인 그림으로 최신 방식으로 다시 읽음 ---
+   원본 파일이 없어도 됨 (등록할 때 글자 위치(lines)와 글자 뺀 그림을 저장해 둠).
+   더 많이 찾으면(품목 칸 · 연결 칸 · 입력 칸) 바로 바꾸고, 바꾼 내용과 [되돌리기]를 카드 위에 알림. 입력해 둔 품목 내용은 그대로 옮김. */
+var FM_VER="2026-11-17c";
+function fmSig(marks){ let h=0; const s=JSON.stringify((marks||[]).map(m=>[m.t,m.b,m.v,m.x,m.y,m.w,m.f,m.al,m.fld])); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return h; }
+function fmScore(F){ const M=F.marks||[];
+  return {rows:(F.rows||[]).length, cells:M.filter(m=>/^it\./.test(m.b||"")).length, binds:M.filter(m=>m.t!=="text"||(m.b&&!/^it\./.test(m.b))||/\{[^{}]+\}/.test(m.v||"")).length, fields:M.filter(m=>m.fld).length, chk:(F.chk||[]).length}; }
+async function fmRebuild(F){
+  const imgs=(profile.forms||{})[F.key]; if(!imgs||!imgs.length||!F.lines||!F.lines.length) return null;
+  const pp=[], r=(F.r||[]).slice();
+  for(let i=0;i<imgs.length;i++){
+    const img=new Image(); img.src=imgs[i]; await img.decode();
+    const cv=document.createElement("canvas"); cv.width=img.naturalWidth; cv.height=img.naturalHeight; cv.getContext("2d").drawImage(img,0,0);
+    const W=(F.pw&&F.pw[i])||595.28, H=W*(r[i]||1.4142), sc=cv.width/W;
+    // 예전 양식은 글자 굵기를 따로 안 남겼으면: 예전 칸의 굵기로
+    const old=(F.marks||[]).filter(m=>m.pg===i&&m.t==="text"&&m.bd);
+    const items=F.lines.filter(l=>l.pg===i&&String(l.s).trim()).map(l=>({s:l.s,x:l.x*W,y:l.y*H,w:l.w*W,h:l.f*W,
+      bd:l.bd||old.some(m=>m.x<l.x+l.w&&l.x<m.x+m.w&&Math.abs(m.y-l.y)<l.f*.8/(r[i]||1.4142))||undefined,st:l.st||undefined,c:l.c||undefined}));
+    pp.push({items,W,H,cv,sc,gl:[]});
+  }
+  const kind=F.kd||fmDetect(F.lines.map(l=>l.s).join("\n"));
+  return fmAnalyze(pp,imgs.slice(),r,F.lines.length,0,kind);
+}
+const fmReviewing=new Set();
+async function fmReview(p){
+  const F=p&&p.form; if(!F||F.ver===FM_VER||fmReviewing.has(F.key)) return; fmReviewing.add(F.key);
+  let B=null; try{ B=await fmRebuild(F); }catch(e){ console.warn("양식 다시 검토 실패",e); }
+  if(!B){ F.ver=FM_VER; save(); return; }
+  const a=fmScore(F), b=fmScore(B), better=(b.cells-a.cells)+(b.binds-a.binds)*2+(b.fields-a.fields)-(b.chk-a.chk)*5>0&&b.cells>=a.cells&&b.binds>=a.binds;
+  const apply=G=>{ if(!G||G.ver===FM_VER) return;
+    if(better){
+      G.prev={marks:G.marks,rows:G.rows,cols:G.cols,cn:G.cn,vat:G.vat,chk:G.chk,chkOk:G.chkOk};
+      const rows=clone(B.rows||[]); (G.rows||[]).forEach((o,n)=>{ if(rows[n]&&(!fmRowEmpty(o)||o.on)) ["cat","desc","qty","unit","up","amt","note","mode","fl","on"].forEach(k=>{ if(o[k]!=null&&o[k]!=="") rows[n][k]=o[k]; }); });
+      Object.assign(G,{marks:clone(B.marks),rows,cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),chkOk:0,pw:B.pw,kd:B.kd});
+      delete G.rb; G.ms=fmSig(G.marks);
+      G.rev={at:Date.now(),a,b};
+    }
+    G.ver=FM_VER; };
+  // 지금 문서의 이 양식 · 같은 그림을 쓰는 기본 상품(다음 새 문서에 쓰는 원본)까지 함께
+  P().forEach(q=>{ if(q.form&&q.form.key===F.key) apply(q.form); });
+  (profile.templates||[]).forEach(q=>{ if(q.form&&q.form.key===F.key){ apply(q.form); delete q.form.prev; delete q.form.rev; } });
+  saveProfile(); save(); schedule(); if(better){ renderEditor(); esMarkStale&&esMarkStale(); }
+}
+function fmRevHtml(F,pi){
+  if(!F.rev) return "";
+  const {a,b}=F.rev, d=[];
+  if(b.rows>a.rows) d.push(`품목 표 ${b.rows}줄 (전에는 ${a.rows}줄)`);
+  if(b.cells>a.cells) d.push(`품목 칸 ${b.cells}곳 (전에는 ${a.cells}곳)`);
+  if(b.binds>a.binds) d.push(`자동으로 채우는 칸 ${b.binds}곳 (전에는 ${a.binds}곳)`);
+  if(b.fields>a.fields) d.push(`표의 입력 칸 ${b.fields}곳 (전에는 ${a.fields}곳)`);
+  if(b.chk<a.chk) d.push(`확인이 필요한 곳 ${b.chk}곳 (전에는 ${a.chk}곳)`);
+  return `<div class="fm-chk ok"><b>이 양식을 최신 인식 방식으로 다시 검토했습니다</b><span>등록할 때 못 찾았던 칸을 더 찾아서 바꿨습니다.<br>입력해 둔 품목 내용은 그대로 옮겼습니다.</span><ul>${d.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
+    <button class="btn" type="button" data-fmrev="ok" data-pi="${pi}">확인했어요</button> <button class="btn" type="button" data-fmrev="undo" data-pi="${pi}">되돌리기</button></div>`;
+}
+document.getElementById("editor").addEventListener("click",e=>{
+  const c=e.target.closest("[data-fmrev]"); if(!c) return;
+  const p=P()[+c.dataset.pi], F=p&&p.form; if(!F) return;
+  if(c.dataset.fmrev==="undo"&&F.prev){ Object.assign(F,F.prev); delete F.rb; F.ms=fmSig(F.marks); esMarkStale&&esMarkStale(); }
+  delete F.prev; delete F.rev; save(); schedule(); renderEditor();
+});
 // 인식 점검 안내: 자동으로 못 맞춘 곳 목록. pi가 있으면 편집 카드 위 (확인하면 닫힘)
 function fmChkHtml(list,pi){
   const ok=!list||!list.length;
@@ -5238,6 +5305,8 @@ $("#editor").addEventListener("input",e=>{
     const p=P()[+mm[1]], m=p&&p.form&&p.form.marks[+mm[2]]; if(!m||!m.b||m.b.startsWith("it.")) return;
     x.placeholder=fmVal(Object.assign({},m,{v:""}),p)||"(비어 있음)"; });
 });
+// 시작할 때: 등록된 기본 상품(원본 양식)도 하나씩 최신 인식으로 다시 검토 (화면을 막지 않게 차례로 · 뒤에서)
+setTimeout(async()=>{ for(const t of [...P(),...(profile.templates||[])]) if(t.form&&t.form.ver!==FM_VER){ try{ await fmReview(t); }catch(e){} } },2500);
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다.
