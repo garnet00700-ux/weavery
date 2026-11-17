@@ -4530,21 +4530,82 @@ function fmBox(p,i,mode){
   const u=v=>edit?`${(v*100).toFixed(3)}cqw`:`${(v*bw).toFixed(2)}mm`;   // 너비 비율 → 길이
   const cs=state.clientSign&&!esignMode&&!edit?`<img src="${state.clientSign}" alt="">`:"";
   const coImg=profile.seal||profile.sign;
+  // 비운 품목 줄: 실제 문서에서는 그 줄을 통째로 빼고 아래를 위로 당김 (편집 카드는 원본 그대로)
+  const cuts=show?[]:fmCuts(p,i), M=y=>fmMap(cuts,y);
   const marks=F.marks.map((m,n)=>{ if(m.pg!==i) return "";
-    const pos=`left:${(m.x*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`, no=edit&&!m.src?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":` data-fid="${m.id}"`;
+    let my=m.y, cov="";
+    if(cuts.length){
+      const hh=(m.t==="text"?(m.o?(m.h?Math.max(m.f,m.h):m.f*1.18):m.f*1.18):0)/r, t=m.y, bt=t+hh;
+      if(m.t==="text"?cuts.some(([a,b])=>t>=a-1e-4&&bt<=b+1e-4):cuts.some(([a,b])=>t>a&&t<b)) return "";
+      my=M(t);
+      const ck=/^it\.(\d+)\.cat$/.exec(m.b||""), band=ck&&F.rb&&F.rb[+ck[1]];
+      if(band){ const c=t+hh/2, B=2*c-band.y0; my=(M(band.y0)+M(B))/2-hh/2; }   // 합친 대분류 칸: 남은 칸의 가운데로
+      if(m.t==="text"&&m.o&&(Math.abs(my-M(t))>1e-5||cuts.some(([a,b])=>t<b&&bt>a))){   // 원본 글자가 남은 조각은 덮음
+        let s=t; [...cuts,[bt,bt]].forEach(([a,b])=>{ const e=Math.min(a,bt); if(e>s+1e-5) cov+=`<div class="fm-t o" style="left:${(m.x*100).toFixed(3)}%;top:${(M(s)*100).toFixed(3)}%;width:${u(m.w)};height:${u((e-s)*r)};${m.bg?`background:${m.bg};`:""}"></div>`; s=Math.max(s,b); });
+      }
+    }
+    const pos=`left:${(m.x*100).toFixed(3)}%;top:${(my*100).toFixed(3)}%;`, no=edit&&!m.src?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":` data-fid="${m.id}"`;
     if(m.t==="text"){
       const val=fmVal(m,p), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
       // al: c 가운데 · l 왼쪽 (칸 너비 고정, 길면 줄바꿈) · r 오른쪽 끝 맞춤
-      const al=m.al, ps=al==="r"?`right:${((1-m.x-m.w)*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`:pos;
+      const al=m.al, ps=al==="r"?`right:${((1-m.x-m.w)*100).toFixed(3)}%;top:${(my*100).toFixed(3)}%;`:pos;
       const wd=al==="c"||al==="l"?`width:${u(m.w)};text-align:${al==="c"?"center":"left"};white-space:normal;`:m.o||show?`min-width:${u(m.w)};${al==="r"?"text-align:right;":""}`:"";
-      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}${!show&&fmHl===m.id?" fm-hl":""}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.st?"text-decoration:line-through;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
+      return cov+`<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}${!show&&fmHl===m.id?" fm-hl":""}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.st?"text-decoration:line-through;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
     }
     const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
     if(m.t==="client") return `<span class="fm-s${sel}"${dm}${show?"":' data-client-seal data-mark=" "'} style="${pos}${ctr}width:${w};height:${h}">${no}${show&&!cs?"상대방<br>서명":cs}</span>`;
     return `<span class="fm-s co${sel}"${dm} style="${pos}${ctr}width:${w};height:${h}">${no}${coImg?`<img src="${coImg}" alt="">`:show?"회사<br>직인":""}</span>`;
   }).join("");
-  const bg=img?`<img class="fm-bg" src="${img}" alt="">`:`<div class="fm-miss">원본 양식 그림이 이 브라우저에 없습니다.<br>구글 시트에 연결된 브라우저에서 열거나 양식을 다시 불러와 주세요.</div>`;
+  let bg=img?`<img class="fm-bg" src="${img}" alt="">`:`<div class="fm-miss">원본 양식 그림이 이 브라우저에 없습니다.<br>구글 시트에 연결된 브라우저에서 열거나 양식을 다시 불러와 주세요.</div>`;
+  if(img&&cuts.length){   // 원본 그림을 뺀 줄 앞뒤로 잘라 붙임 (mm 단위: 전자서명 PDF에서도 같게)
+    bg=""; let s=0; [...cuts,[1,1]].forEach(([a,b])=>{ if(a>s+1e-5) bg+=`<div style="position:absolute;left:0;top:${(M(s)*bh).toFixed(2)}mm;width:${bw.toFixed(2)}mm;height:${((a-s)*bh).toFixed(2)}mm;overflow:hidden"><img class="fm-bg" src="${img}" alt="" style="top:-${(s*bh).toFixed(2)}mm;width:${bw.toFixed(2)}mm;height:${bh.toFixed(2)}mm"></div>`; s=Math.max(s,b); });
+  }
   return edit?`<div class="fm-box ed">${bg}${marks}</div>`:`<div class="fm-box${pv?" pv":""}" style="width:${bw.toFixed(2)}mm;height:${bh.toFixed(2)}mm">${bg}${marks}</div>`;
+}
+// 이 쪽에서 뺄 줄 범위 [위, 아래) — 높이 비율. F.rb(줄마다 원본 그림의 위아래 선)가 없으면 한 번 찾고 다시 그림
+function fmCuts(p,i){
+  const F=p.form; if(!F||!F.rows||!F.rows.some(r=>fmRowEmpty(r)&&!r.on)) return [];
+  if(!F.rb){ fmScanBands(p); return []; }
+  const c=[]; F.rows.forEach((r,n)=>{ const b=F.rb[n]; if(b&&b.pg===i&&fmRowEmpty(r)&&!r.on&&b.y1>b.y0) c.push([b.y0,b.y1]); });
+  c.sort((a,b)=>a[0]-b[0]); const out=[];
+  c.forEach(x=>{ const l=out[out.length-1]; if(l&&x[0]<=l[1]+1e-4) l[1]=Math.max(l[1],x[1]); else out.push(x.slice()); });
+  return out;
+}
+function fmMap(cuts,y){ let d=0; for(const [a,b] of cuts){ if(y>=b) d+=b-a; else { if(y>a) d+=y-a; break; } } return y-d; }
+var fmScanning=new WeakSet();
+async function fmScanBands(p){
+  const F=p.form; if(fmScanning.has(F)) return; fmScanning.add(F);
+  try{
+    const byPg={};
+    F.marks.forEach(m=>{ const k=/^it\.(\d+)\.(\w+)$/.exec(m.b||""); if(!k) return; const n=+k[1], r=F.r[m.pg]||1.4142;
+      const e=byPg[m.pg]=byPg[m.pg]||{}, o=e[n]=e[n]||{n,y0:1,y1:0,x0:1,x1:0,cy0:1,cy1:0};
+      const y1=m.y+(m.h?Math.max(m.f,m.h):m.f*1.18)/r;
+      if(k[2]==="cat"){ o.cy0=Math.min(o.cy0,m.y); o.cy1=Math.max(o.cy1,y1); }   // 합친 대분류 칸은 줄 높이 계산에서 뺌
+      else { o.y0=Math.min(o.y0,m.y); o.y1=Math.max(o.y1,y1); }
+      o.x0=Math.min(o.x0,m.x); o.x1=Math.max(o.x1,m.x+m.w); });
+    const rb=[];
+    for(const pg of Object.keys(byPg)){
+      const src=fmImg(F.key,+pg); if(!src) continue;
+      const im=new Image(); im.src=src; await im.decode();
+      const W=im.naturalWidth, H=im.naturalHeight, cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+      const g=cv.getContext("2d"); g.drawImage(im,0,0); const d=g.getImageData(0,0,W,H).data;
+      const score=(y,xa,xb)=>{ let k=0,c=0; for(let x=xa;x<xb;x+=2){ const o=(y*W+x)*4; c++; if(d[o]*.3+d[o+1]*.59+d[o+2]*.11<205) k++; } return c?k/c:0; };
+      // [ya,yb] 안의 얇은 가로선 (표 너비의 55% 넘게 진함 · 두께 얇음)
+      const line=(ya,yb,xa,xb,pref)=>{ ya=Math.max(1,Math.round(ya*H)); yb=Math.min(H-2,Math.round(yb*H)); xa=Math.max(0,Math.round(xa*W)); xb=Math.min(W,Math.round(xb*W));
+        const L=[]; let y=ya; while(y<=yb){ if(score(y,xa,xb)>=.55){ let e=y; while(e+1<H&&score(e+1,xa,xb)>=.55) e++; if(e-y<=Math.max(4,H*.004)) L.push(y); y=e+1; } else y++; }
+        return L.length?(pref==="last"?L[L.length-1]:L[0])/H:null; };
+      const R=Object.values(byPg[pg]).map(o=>{ if(o.y1<o.y0){ o.y0=o.cy0; o.y1=o.cy1; } return o; }).sort((a,b)=>a.y0-b.y0);
+      R.forEach((o,j)=>{ const h=Math.max(.004,o.y1-o.y0), pv=R[j-1];
+        if(pv&&o.y0-pv.y1<h*3){ const a=Math.min(pv.y1,o.y0)-.002, b=Math.max(pv.y1,o.y0)+.002;
+          o.top=line(a,b,Math.min(o.x0,pv.x0),Math.max(o.x1,pv.x1),"first"); if(o.top===null) o.top=(pv.y1+o.y0)/2; }
+        else { o.top=line(o.y0-h*2.5,o.y0+.001,o.x0,o.x1,"last"); if(o.top===null) o.top=o.y0-h*.3; if(pv) pv.bot=null; o.first=1; }
+      });
+      R.forEach((o,j)=>{ const nx=R[j+1], h=Math.max(.004,o.y1-o.y0);
+        o.bot=nx&&!nx.first?nx.top:(line(o.y1-.001,o.y1+h*2.5,o.x0,o.x1,"first")??o.y1+h*.3);
+        rb[o.n]={pg:+pg,y0:o.top,y1:o.bot}; });
+    }
+    F.rb=rb; save(); schedule();
+  }catch(e){ console.warn("표 줄 위치 찾기 실패",e); }
 }
 function fmRender(p){
   (p.form&&p.form.r||[]).forEach((_,i)=>{
@@ -5002,7 +5063,7 @@ document.getElementById("editor").addEventListener("click",e=>{
   const vis=R.map((r,n)=>n).filter(n=>!fmRowEmpty(R[n])||R[n].on), n=+b.dataset.n, j=vis.indexOf(n), act=b.dataset.fmit;
   const keep=r=>{ const o=Object.assign({},r); delete o.on; return o; };
   if(act==="up"||act==="down"){ const m=vis[j+(act==="up"?-1:1)]; if(m===undefined) return; const a=keep(R[n]), c=keep(R[m]); R[n]=Object.assign(c,{on:1}); R[m]=Object.assign(a,{on:1}); }
-  else if(act==="clear"){ if(!fmRowEmpty(R[n])&&!confirm("이 품목 줄을 비울까요?\n원본 표의 그 줄이 빈 칸이 됩니다.")) return; R[n]={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""}; }
+  else if(act==="clear"){ if(!fmRowEmpty(R[n])&&!confirm("이 품목 줄을 비울까요?\n문서에서는 그 줄이 빠지고 아래 줄이 위로 당겨집니다.\n다시 쓰려면 [+ 품목 추가]를 누르세요.")) return; R[n]={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""}; }
   else if(act==="add"){ const k=R.findIndex((r,i)=>fmRowEmpty(r)&&!r.on); if(k<0) return alert("원본 표에 남은 빈 줄이 없습니다.\n필요 없는 줄을 비우거나 다른 줄 내용을 고쳐 써 주세요."); R[k].on=1; R[k].mode="normal"; openSet.add(`prods.${b.dataset.pi}.form.rows.${k}`);
     setTimeout(()=>{ const i=$(`#prodCards [data-p="prods.${b.dataset.pi}.form.rows.${k}.desc"]`); if(i){ i.scrollIntoView({block:"center"}); i.focus(); } },50); }
   renderProds(); updateSums(); esMarkStale(); save(); schedule();
