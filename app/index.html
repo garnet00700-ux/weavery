@@ -4828,7 +4828,7 @@ async function prodDelete(pi){
   if(draft) msg.push("(아직 임시저장하지 않은 서류는 임시저장할지 한 번 더 묻습니다)");
   if(!confirm(msg.join("\n"))) return;
   if(draft&&!(await certLeaveOk())) return;
-  profile.templates=profile.templates.filter(x=>!sameTpl(x,p));
+  const tp=tplOf(p); profile.templates=profile.templates.filter(x=>x!==tp);     // 누른 그 양식 하나만 지움
   if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
   saveProfile();
   if(keep){
@@ -4861,8 +4861,12 @@ function docUntouched(){
 }
 // 처음 켜거나 새로고침했을 때: 아직 아무것도 안 쓴 문서면 양식 선택을 모두 끈 상태로
 if(docUntouched()&&onProds().length){ state.prods.forEach(p=>{ p.on=false; }); lastSaved=JSON.stringify(state); lsSet(K.doc,state); renderEditor(); renderPreview(); }
-function sameTpl(t,p){ return t.pid===p.pid||((t.name||"").trim()&&(t.name||"").trim()===(p.name||"").trim()&&(t.kind||"")===(p.kind||"")); }
-function inTemplates(p){ return profile.templates.some(t=>sameTpl(t,p)); }
+function sameTpl(t,p){ return (!!t.pid&&t.pid===p.pid)||((t.name||"").trim()&&(t.name||"").trim()===(p.name||"").trim()&&(t.kind||"")===(p.kind||"")); }
+// 이 상품에 해당하는 양식 하나: 같은 번호(pid)가 먼저 · 없으면 이름이 같은 양식 중 다른 상품의 짝이 아닌 것
+// (이름이 같은 양식이 둘 있어도 하나만 짝지음 → 하나 지울 때 둘 다 사라지지 않게)
+function tplOf(p){ const T=profile.templates;
+  return (p.pid&&T.find(t=>t.pid===p.pid))||T.find(t=>sameTpl(t,p)&&!P().some(q=>q!==p&&q.pid&&q.pid===t.pid)); }
+function inTemplates(p){ return !!tplOf(p); }
 
 /* --- 작성을 시작하면 바로 자동 저장 ---
    편집 칸에 입력하거나 고르기 · 버튼을 누르거나, 불러오기 창에서 넣으면 '작성 시작'(state._t)으로 보고
