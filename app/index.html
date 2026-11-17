@@ -4398,7 +4398,7 @@ function fmAlign(marks,pp){
 
 /* --- 4-2. 원본 모양: 품목 표 · 합계 · 약관 문장 인식 --- */
 var FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명|구성|구성항목|대분류|카테고리|서비스|서비스명|작업명|작업항목|과업|분야|종류)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
-  ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/]];
+  ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/],["no",/^(No\.?|NO\.?|no\.?|번호|순번|연번)$/]];   // no: 줄 번호 칸 (원본 숫자 그대로 · 품목 내용 아님)
 var FM_FLAG=/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/;
 function fmNum(s){ if(typeof s==="number") return s; const t=String(s??"").replace(/[₩\s원]/g,""); return /^-?\d[\d,]*(\.\d+)?$/.test(t)?Number(t.replace(/,/g,"")):null; }
 // 한 줄의 공급가액: 직접 적은 금액 → 없으면 수량 × 단가
@@ -4439,7 +4439,7 @@ function fmTable(items,W,H,pg,T){
     const kOf=it=>{ const k=colOf(it); return dx!==null&&/^(cat|desc)$/.test(k)?(it.x>=dx-3?"desc":"cat"):k; };
     // 숫자(수량 · 단가 · 금액)가 있는 줄 = 품목 한 줄
     // 숫자가 없는 표("1회" · "월" · "별도")도: 수량 · 단위 · 단가 · 금액 칸에 글자가 있는 줄을 품목 줄로
-    const anchor=r=>r.its.some(i=>/^(qty|unit|up|amt)$/.test(kOf(i))&&String(i.s).trim());
+    const anchor=r=>r.its.some(i=>(/^(qty|unit|up|amt)$/.test(kOf(i))&&String(i.s).trim())||(kOf(i)==="no"&&/^\d{1,3}$/.test(String(i.s).trim())));   // 빈 양식: 번호(1 · 2 · 3 …)만 있는 줄도 품목 줄
     const R=[]; body.forEach(r=>{ if(anchor(r)) R.push({y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}); });
     const rowOf=new Map(), A0=R.length?Math.min(...R.map(x=>x.y)):0, A1=R.length?Math.max(...R.map(x=>x.y)):0;
     body.forEach(r=>{
@@ -4462,7 +4462,7 @@ function fmTable(items,W,H,pg,T){
       return [c.x0-4,c.x1+4]; };
     R.forEach(t=>{
       const n=T.rows.length, row={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""};
-      cols.forEach(c=>{ const k=c.k, fr=(t.cells[k]||[]).sort((a,b)=>a.y-b.y||a.x-b.x);
+      cols.forEach(c=>{ if(c.k==="no") return; const k=c.k, fr=(t.cells[k]||[]).sort((a,b)=>a.y-b.y||a.x-b.x);
         let [x0,x1]=box(k), y0=t.y, y1=t.y+t.h, f=t.h;
         if(fr.length){ x0=Math.min(x0,...fr.map(i=>i.x)); x1=Math.max(x1,...fr.map(i=>i.x+i.w)); y0=Math.min(...fr.map(i=>i.y)); y1=Math.max(...fr.map(i=>i.y+i.h)); f=Math.max(...fr.map(i=>i.h)); }
         const s=fr.reduce((a,i,j)=>a+(j?(Math.abs(i.y-fr[j-1].y)>i.h*.5?"\n":" "):"")+i.s.trim(),"").trim();
@@ -4472,6 +4472,7 @@ function fmTable(items,W,H,pg,T){
         T.marks.push({id:newId(),pg,t:"text",b:`it.${n}.${k}`,v:"",x:Math.max(0,x0-1)/W,y:(y0-f*.05)/H,w:(x1-x0+2)/W,f:Math.min(f,hh*1.05)/W,h:(y1-y0+f*.12)/W,o:fr.length?1:0,bd:fr.some(i=>i.bd)?1:undefined,al:/^(desc|note)$/.test(k)?"l":"c",
           tx0:fr.length?Math.min(...fr.map(i=>i.x))/W:undefined,tx1:fr.length?Math.max(...fr.map(i=>i.x+i.w))/W:undefined,tk:k});
       });
+      if(fmRowEmpty(row)) row.bl=1;   // 원본부터 빈 줄(빈 양식): 문서에서 빼지 않음
       T.rows.push(row);
     });
     T.cols=T.cols||cols.map(c=>c.k);
@@ -4564,9 +4565,9 @@ function fmBox(p,i,mode){
 }
 // 이 쪽에서 뺄 줄 범위 [위, 아래) — 높이 비율. F.rb(줄마다 원본 그림의 위아래 선)가 없으면 한 번 찾고 다시 그림
 function fmCuts(p,i){
-  const F=p.form; if(!F||!F.rows||!F.rows.some(r=>fmRowEmpty(r)&&!r.on)) return [];
+  const F=p.form; if(!F||!F.rows||!F.rows.some(r=>fmRowEmpty(r)&&!r.on&&!r.bl)) return [];
   if(!F.rb){ fmScanBands(p); return []; }
-  const c=[]; F.rows.forEach((r,n)=>{ const b=F.rb[n]; if(b&&b.pg===i&&fmRowEmpty(r)&&!r.on&&b.y1>b.y0) c.push([b.y0,b.y1]); });
+  const c=[]; F.rows.forEach((r,n)=>{ const b=F.rb[n]; if(b&&b.pg===i&&fmRowEmpty(r)&&!r.on&&!r.bl&&b.y1>b.y0) c.push([b.y0,b.y1]); });
   c.sort((a,b)=>a[0]-b[0]); const out=[];
   c.forEach(x=>{ const l=out[out.length-1]; if(l&&x[0]<=l[1]+1e-4) l[1]=Math.max(l[1],x[1]); else out.push(x.slice()); });
   return out;
@@ -5063,7 +5064,7 @@ document.getElementById("editor").addEventListener("click",e=>{
   const vis=R.map((r,n)=>n).filter(n=>!fmRowEmpty(R[n])||R[n].on), n=+b.dataset.n, j=vis.indexOf(n), act=b.dataset.fmit;
   const keep=r=>{ const o=Object.assign({},r); delete o.on; return o; };
   if(act==="up"||act==="down"){ const m=vis[j+(act==="up"?-1:1)]; if(m===undefined) return; const a=keep(R[n]), c=keep(R[m]); R[n]=Object.assign(c,{on:1}); R[m]=Object.assign(a,{on:1}); }
-  else if(act==="clear"){ if(!fmRowEmpty(R[n])&&!confirm("이 품목 줄을 비울까요?\n문서에서는 그 줄이 빠지고 아래 줄이 위로 당겨집니다.\n다시 쓰려면 [+ 품목 추가]를 누르세요.")) return; R[n]={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""}; }
+  else if(act==="clear"){ if(!fmRowEmpty(R[n])&&!confirm("이 품목 줄을 비울까요?\n문서에서는 그 줄이 빠지고 아래 줄이 위로 당겨집니다.\n다시 쓰려면 [+ 품목 추가]를 누르세요.")) return; R[n]={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:"",bl:R[n].bl}; }
   else if(act==="add"){ const k=R.findIndex((r,i)=>fmRowEmpty(r)&&!r.on); if(k<0) return alert("원본 표에 남은 빈 줄이 없습니다.\n필요 없는 줄을 비우거나 다른 줄 내용을 고쳐 써 주세요."); R[k].on=1; R[k].mode="normal"; openSet.add(`prods.${b.dataset.pi}.form.rows.${k}`);
     setTimeout(()=>{ const i=$(`#prodCards [data-p="prods.${b.dataset.pi}.form.rows.${k}.desc"]`); if(i){ i.scrollIntoView({block:"center"}); i.focus(); } },50); }
   renderProds(); updateSums(); esMarkStale(); save(); schedule();
