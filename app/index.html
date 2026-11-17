@@ -4092,15 +4092,21 @@ async function fmBuildB(f,kind){
       const top=Object.entries(cc).sort((a,b)=>b[1]-a[1])[0]; const c=top&&top[0];
       if(c&&/^#[0-9a-f]{6}$/i.test(c)){ const v=[1,3,5].map(k=>parseInt(c.substr(k,2),16)); if(Math.max(...v)>60) it.c=c; } });
     // 굵기를 글꼴로 알 수 없으면(글자 모양에 굵기가 박힌 PDF): 원본과 글자 뺀 그림을 비교해 글자 진하기로 판단
-    if(!items.some(it=>it.bd)&&items.length>3){
+    const fontBold=items.some(it=>it.bd);
+    if(items.length>3){
       const c2=document.createElement("canvas"); c2.width=cv.width; c2.height=cv.height; const y=c2.getContext("2d"); y.fillStyle="#fff"; y.fillRect(0,0,c2.width,c2.height);
       try{ await page.render({canvasContext:y,viewport:v2}).promise;
         const D1=x.getImageData(0,0,cv.width,cv.height).data, D2=y.getImageData(0,0,cv.width,cv.height).data, Wd=cv.width;
+        // 취소선: 글자 가운데 높이에 글자 폭 전체를 가로지르는 얇은 선이 원본에만 있으면 → 글자 모양(줄 긋기)으로 기억
+        items.forEach(it=>{ const x0=Math.max(0,Math.round(it.x*sc)), x1=Math.min(Wd-1,Math.round((it.x+it.w)*sc)), n=x1-x0; if(n<6||it.s.trim().length<2) return;
+          const full=yy=>{ let k0=0; for(let xx=x0;xx<=x1;xx++){ const k=(yy*Wd+xx)*4; if(D2[k]+D2[k+1]+D2[k+2]<560&&Math.abs(D1[k]-D2[k])+Math.abs(D1[k+1]-D2[k+1])+Math.abs(D1[k+2]-D2[k+2])>60) k0++; } return k0/(n+1); };
+          const ya=Math.round((it.y+it.h*.3)*sc), yb=Math.round((it.y+it.h*.78)*sc);
+          for(let yy=ya;yy<=yb&&yy<cv.height;yy++) if(full(yy)>.9){ it.st=true; break; } });
         items.forEach(it=>{ const x0=Math.max(0,Math.round(it.x*sc)), x1=Math.min(Wd-1,Math.round((it.x+it.w)*sc)), y0=Math.max(0,Math.round(it.y*sc)), y1=Math.min(cv.height-1,Math.round((it.y+it.h)*sc));
           let ink=0, n=0; for(let yy=y0;yy<=y1;yy++) for(let xx=x0;xx<=x1;xx++){ const k=(yy*Wd+xx)*4; n++; if(Math.abs(D1[k]-D2[k])+Math.abs(D1[k+1]-D2[k+1])+Math.abs(D1[k+2]-D2[k+2])>200) ink++; }
           it.ink=n?ink/n/Math.max(.3,[...it.s.replace(/\s/g,"")].length*it.h/Math.max(1,it.w)):0; });   // 글자 수 · 크기로 나눠 맞춤
-        const v=items.map(it=>it.ink).filter(Boolean).sort((a,b)=>a-b), med=v[Math.floor(v.length/2)]||0;
-        if(med) items.forEach(it=>{ if(it.ink>med*1.32) it.bd=true; });
+        const v=items.map(it=>it.ink).filter(Boolean).sort((a,b)=>a-b), med=v[Math.floor(v.length/2)]||0;        // 글꼴로 굵기를 이미 일부 알면 더 확실한 것만 (취소선 그은 글자는 선 때문에 진해 보이니 뺌)
+        if(med) items.forEach(it=>{ if(!it.st&&it.ink>med*(fontBold?1.5:1.32)) it.bd=true; });
       }catch(_){}
     }
     // 같은 역할 글자끼리(같은 칸 줄 · 같은 크기 · "제 N조" 제목) 굵기를 맞춤: 반 이상 굵으면 모두 굵게
@@ -4113,11 +4119,14 @@ async function fmBuildB(f,kind){
   }
   // 1회차: 이미 적혀 있는 값(상대방 업체명 등)을 모음 → 2회차: 그 값이 다른 쪽 · 본문에 나와도 수정 칸으로
   const ctx={vals:{}}, marks=[];
-  pp.forEach((p,i)=>fmFind(p.items,p.W,p.H,i,kind,ctx,false));
-  pp.forEach((p,i)=>marks.push(...fmFind(p.items,p.W,p.H,i,kind,ctx,true)));
+  // 인식 단계 하나가 실패해도 원본 모양 불러오기는 멈추지 않음 (그 단계만 건너뜀)
+  const safe=(f,why)=>{ try{ return f(); }catch(e){ console.warn("원본 양식 인식 건너뜀:",why,e); return null; } };
+  pp.forEach((p,i)=>safe(()=>fmFind(p.items,p.W,p.H,i,kind,ctx,false),"칸"));
+  pp.forEach((p,i)=>{ const r0=safe(()=>fmFind(p.items,p.W,p.H,i,kind,ctx,true),"칸"); if(r0) marks.push(...r0); });
   // 품목 표 → 칸마다 수정 칸 (표 안에 겹친 다른 칸은 버림)
   const T={rows:[],marks:[],used:new Set(),cols:null};
-  if(!/^(labor|cert)/.test(kind)) pp.forEach((p,i)=>fmTable(p.items,p.W,p.H,i,T));
+  if(!/^(labor|cert)/.test(kind)) pp.forEach((p,i)=>{ const n0=T.rows.length, m0=T.marks.length, u0=new Set(T.used);
+    if(safe(()=>{ fmTable(p.items,p.W,p.H,i,T); return 1; },"품목 표")===null){ T.rows.length=n0; T.marks.length=m0; T.used=u0; } });
   const hit=(a,b)=>a.pg===b.pg&&a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+(b.h||b.f*1.2)*(1/(r[b.pg]||1.4142))&&b.y<a.y+(a.h||a.f*1.2)*(1/(r[a.pg]||1.4142));
   for(let i=marks.length-1;i>=0;i--) if(marks[i].t==="text"&&T.marks.some(t=>hit(t,marks[i]))) marks.splice(i,1);
   // 합계 · 계약금 · 약관 문장: 기본 양식처럼 {총액} {계약금비율} {의뢰인} … 로 바꿔 덮어 씀
@@ -4135,7 +4144,7 @@ async function fmBuildB(f,kind){
   }));
   for(let i=marks.length-1;i>=0;i--) if(marks[i].gap&&!marks[i].b) marks.splice(i,1);   // 띄어쓰기로 비어 보이는 자리(채울 내용 없음)는 칸으로 안 만듦
   // 이름표 오른쪽 빈칸: 표 칸이면 이름표 칸의 경계선을 넘어 '내용 칸' 안쪽에서 시작 (원본 글자 위치처럼)
-  marks.forEach(m=>{ if(!m.gap||m.lx==null) return; const P0=pp[m.pg]; delete m.gap;
+  marks.forEach(m=>{ if(!m.gap||m.lx==null) return; const P0=pp[m.pg]; delete m.gap; m.ga=1;
     const lx=m.lx, rx=m.rx; delete m.lx; delete m.rx; if(!P0||!P0.cv) return;
     const g=P0.cv.getContext("2d"), s=P0.sc, Wc=P0.cv.width, hp=m.f*P0.W, py=Math.round((m.y*P0.H+hp*.5)*s);
     const a=Math.round(lx*P0.W*s)+2, b=Math.min(Wc-1,Math.round(rx*P0.W*s)); if(b-a<8) return;
@@ -4164,7 +4173,7 @@ async function fmBuildB(f,kind){
       let j=i; while(j<it.s.length&&!covered[j]) j++;
       const str=it.s.slice(i,j).trim();
       if(str){ const a=i+it.s.slice(i,j).search(/\S/), x0=xAt(a), x1=xAt(a+str.length);
-        const m={id:newId(),pg,t:"text",b:"",v:str,x:Math.max(0,x0-1)/p.W,y:(it.y-it.h*.1)/p.H,w:(x1-x0+2)/p.W,f:it.h/p.W,o:1,bd:it.bd?1:undefined,fc:it.c||undefined,src:1};
+        const m={id:newId(),pg,t:"text",b:"",v:str,x:Math.max(0,x0-1)/p.W,y:(it.y-it.h*.1)/p.H,w:(x1-x0+2)/p.W,f:it.h/p.W,o:1,bd:it.bd?1:undefined,fc:it.c||undefined,st:it.st?1:undefined,src:1};
         fit(m,str,x1-x0,it.h,it.bd); marks.push(m); }
       i=j; }
   }));
@@ -4172,7 +4181,7 @@ async function fmBuildB(f,kind){
   marks.forEach(m=>{ if(m.t!=="text"||m.src) return; const P0=pp[m.pg]; if(!P0) return;
     const x0=m.x*P0.W, x1=(m.x+m.w)*P0.W, y0=m.y*P0.H, y1=y0+Math.max(m.f*1.2,m.h||0)*P0.W;
     const its=P0.items.filter(it=>it.x+it.w>x0&&it.x<x1&&it.y+it.h>y0&&it.y<y1); if(!its.length) return;
-    if(its.some(it=>it.bd)) m.bd=1; const c=its.find(it=>it.c); if(c) m.fc=c.c;
+    if(its.some(it=>it.bd)) m.bd=1; if(its.some(it=>it.st)) m.st=1; const c=its.find(it=>it.c); if(c) m.fc=c.c;
     if(m.v&&!/\{/.test(m.v)&&!m.al&&its.length===1) fit(m,m.v,its[0].w,its[0].h,its[0].bd); });
   marks.forEach(m=>{ if(m.t!=="text") return; m.o=0;   // 글자를 뺀 디자인 그림이라 덮개 없이 글자만 얹음 (선 · 칸 색을 가리지 않음)
     const P0=pp[m.pg]; if(!P0||!P0.cv) return;
@@ -4184,6 +4193,8 @@ async function fmBuildB(f,kind){
     const c=[1,2,3].map(i=>Math.round(top[i]/top[0])); if(c.every(v=>v>=246)) return;
     if(c[0]*.3+c[1]*.59+c[2]*.11<110&&!m.fc) m.fc="#fff";   // 진한 바탕 → 흰 글자
   });
+  // 정렬: 글자를 둘러싼 칸(디자인 그림의 경계선)을 찾아 원본이 왼쪽 · 가운데 · 오른쪽 중 어디에 맞췄는지 보고 그대로 따름
+  safe(()=>fmAlign(marks,pp),"정렬");
   // 원본 글자 줄 (글자 고치기용): 쪽 · 위치 · 크기 · 내용 (비율)
   const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s}); }));
   return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
@@ -4216,12 +4227,20 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     if(n==="갑"||n==="甲") return labor?"company":"client";
     if(n==="을"||n==="乙") return labor?"client":"company";
     return CO.test(n)?"company":CL.test(n)?"client":""; };
-  const keys=items.map(it=>({it,p:partyOfStr(it.s)})).filter(k=>k.p);
+  // 세로로 한 글자씩 쌓인 이름표("의 / 뢰 / 자", "수 / 행 / 자")는 한 덩어리로 읽고, 그 글자들은 내용 칸으로 쓰지 않음
+  const vset=new Set(), virt=[];
+  { const one=items.filter(it=>/^[가-힣A-Za-z]$/.test(String(it.s).trim())).sort((a,b)=>a.x-b.x||a.y-b.y), used=new Set();
+    one.forEach(a=>{ if(used.has(a)) return; const g=[a]; used.add(a);
+      for(;;){ const l=g[g.length-1], n=one.find(b=>!used.has(b)&&Math.abs(b.x-l.x)<l.h*.6&&b.y>l.y&&b.y-l.y<l.h*2.6); if(!n) break; g.push(n); used.add(n); }
+      if(g.length<2) return; g.forEach(i=>vset.add(i));
+      const L=g[g.length-1]; virt.push({s:g.map(i=>i.s.trim()).join(""),x:Math.min(...g.map(i=>i.x)),y:g[0].y,w:Math.max(...g.map(i=>i.w)),h:L.y+L.h-g[0].y,vt:1}); }); }
+  const keys=items.filter(it=>!vset.has(it)).concat(virt).map(it=>({it,p:partyOfStr(it.s)})).filter(k=>k.p);
   const partyAt=(cx,cy,self)=>{ const own=self&&partyOfStr(self.s); if(own) return own;
     let best=null, bd=1e9;
     // 같은 줄에서 바로 왼쪽에 있는 이름표("의뢰인 : ○○ (인)")가 있으면 그것을 먼저 믿음
     keys.forEach(k=>{ const ky=k.it.y+k.it.h/2, right=k.it.x+k.it.w;
-      if(Math.abs(ky-cy)<k.it.h&&right<=cx+4){ const d=(cx-right)*.2; if(d<bd){ bd=d; best=k.p; } } });
+      const same=k.it.vt?cy>=k.it.y-k.it.h*1.3&&cy<=k.it.y+k.it.h*2.3:Math.abs(ky-cy)<k.it.h;   // 세로 이름표는 그 칸 높이 전체가 같은 줄
+      if(same&&right<=cx+4){ const d=(cx-right)*.2; if(d<bd){ bd=d; best=k.p; } } });
     if(best) return best;
     keys.forEach(k=>{ const kx=k.it.x+k.it.w/2, ky=k.it.y+k.it.h/2; if(ky>cy+H*.05) return;
       const d=Math.hypot((kx-cx)*.45,(ky-cy)*(ky>cy+2?2.5:1)); if(d<bd){ bd=d; best=k.p; } });   // 아래쪽 글자는 덜 믿음
@@ -4236,7 +4255,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
   const remember=(b,v)=>{ v=String(v||"").trim(); if(b&&v&&!ctx.vals[b]) ctx.vals[b]=v; };
   // 같은 줄끼리 묶기
   const rows=[];
-  items.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
+  items.filter(it=>!vset.has(it)).sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
   rows.forEach(r=>r.its.sort((a,b)=>a.x-b.x));
   const xAt=(it,i)=>it.xs?(i<it.xs.length?it.xs[i]:it.x+it.w):it.x+it.w*i/Math.max(1,it.s.length);
   // ① "(인)" "(서명)" "(서명 또는 인)" 자리
@@ -4262,12 +4281,13 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     const k=labOf(it.s); if(!k||isSign(it.s)) return;
     const nx=r.its[j+1], cy=it.y+it.h/2, party=partyAt(it.x,cy,it);
     const pt=party||(cert&&/^(co|bizno|ceo)$/.test(k)?"company":"client"), b=bindOf(k,pt);
-    if(nx&&!labOf(nx.s)&&!isSign(nx.s)&&!/^[_\s]+$/.test(nx.s)){          // 이미 내용이 적혀 있음 → 덮어 쓰는 칸
+    const hon=s=>/^\s*(귀하|귀중|님|님께|좌하|앞)\s*$/.test(s);     // "○○ 귀하"의 귀하 · 님은 내용이 아니라 꼬리 글자
+    if(nx&&!labOf(nx.s)&&!isSign(nx.s)&&!/^[_\s]+$/.test(nx.s)&&!hon(nx.s)){          // 이미 내용이 적혀 있음 → 덮어 쓰는 칸
       if(k==="sign") return;
       let e=j+1, vEnd=nx.x+nx.w, val=nx.s;
       while(r.its[e+1]&&!labOf(r.its[e+1].s)&&!isSign(r.its[e+1].s)&&r.its[e+1].x-vEnd<W*.06){ e++; vEnd=r.its[e].x+r.its[e].w; val+=" "+r.its[e].s; }
       const room=(r.its[e+1]?r.its[e+1].x-8:W*.95)-nx.x, x1=nx.x+Math.max(vEnd-nx.x,Math.min(room,(vEnd-nx.x)*1.5));
-      remember(b,val); cover(nx.x,x1,nx,b,val); return;
+      remember(b,val); const n0=out.length; cover(nx.x,x1,nx,b,val); if(out.length>n0){ out[n0].tx0=nx.x/W; out[n0].tx1=vEnd/W; } return;
     }
     const x0=it.x+it.w+Math.max(4,it.h*.6), end=nx?nx.x:W-W*.05, gap=end-x0;
     if(gap<Math.max(36,it.h*3)) return;
@@ -4334,8 +4354,50 @@ function fmFind(items,W,H,pg,kind,ctx,final){
   return out.map(m=>{ const o=Object.assign({},m); delete o.cx; delete o.cy; delete o.cw; delete o.ch; return o; });
 }
 
+/* --- 4-1b. 정렬 인식 ---
+   글자를 뺀 디자인 그림에서 글자 좌우로 바탕색이 바뀌는 곳(칸 경계선)을 찾아 칸 [L, R]을 정하고,
+   원본 글자가 칸 안 어디에 있었는지로 왼쪽(l) · 가운데(c) · 오른쪽(r)을 정함. 고쳐 써도 같은 정렬로 들어감 */
+function fmAlign(marks,pp){
+  const cellAt=(P0,xa,xb,yc)=>{   // xa~xb: 글자 자리(pt) · yc: 가운데 높이(pt) → 칸 [L,R](pt) 또는 null
+    const g=P0.cv.getContext("2d"), s=P0.sc, Wc=P0.cv.width, py=Math.min(P0.cv.height-1,Math.max(0,Math.round(yc*s)));
+    const D=g.getImageData(0,py,Wc,1).data, px=k=>[D[k*4],D[k*4+1],D[k*4+2]], df=(u,v)=>Math.abs(u[0]-v[0])+Math.abs(u[1]-v[1])+Math.abs(u[2]-v[2]);
+    const a=Math.max(1,Math.round(xa*s)), b=Math.min(Wc-2,Math.round(xb*s)), base=px(Math.round((a+b)/2)), lim=Math.round(P0.W*.6*s);
+    let L=a; while(L>0&&a-L<lim&&df(px(L),base)<40) L--;
+    let R=b; while(R<Wc-1&&R-b<lim&&df(px(R),base)<40) R++;
+    if(L<=0||R>=Wc-1||a-L>=lim||R-b>=lim) return null;
+    return [(L+1)/s,(R-1)/s]; };
+  const pick=(L,R,x0,x1,h)=>{ const gl=x0-L, gr=R-x1, cw=R-L;
+    if(Math.abs(gl-gr)<Math.max(h*.7,cw*.06)&&gl+gr>cw*.12) return "c";
+    if(gr<gl*.45&&gr<h*2.2) return "r";
+    return "l"; };
+  // ① 품목 표: 칸마다 원본 글자 위치로 판단 → 열마다 많은 쪽으로 맞춤 (빈 칸도 같은 열 정렬)
+  const colV={};
+  marks.forEach(m=>{ if(!m.tk) return; const P0=pp[m.pg]; if(!P0||!P0.cv) return;
+    const yc=m.y*P0.H+m.f*P0.W*.6, has=m.tx0!=null, x0=(has?m.tx0:m.x)*P0.W, x1=(has?m.tx1:m.x+m.w)*P0.W;
+    const c=cellAt(P0,has?x0:(x0+x1)/2-1,has?x1:(x0+x1)/2+1,yc); if(!c) return;
+    m._c=c; if(has){ const v=pick(c[0],c[1],x0,x1,m.f*P0.W); (colV[m.tk]=colV[m.tk]||{})[v]=(colV[m.tk][v]||0)+1; } });
+  marks.forEach(m=>{ if(!m.tk) return; const P0=pp[m.pg], V=colV[m.tk], c=m._c; delete m._c; delete m.tx0; delete m.tx1; delete m.tk;
+    if(!c||!V) return; const al=Object.entries(V).sort((a,b)=>b[1]-a[1])[0][0], pad=Math.max(2,m.f*P0.W*.35);
+    if(al==="r"){ m.al="r"; m.w=Math.min(m.w,(c[1]-pad)/P0.W-m.x); m.x=(c[1]-pad)/P0.W-m.w; return; }
+    m.al=al; m.x=(c[0]+pad)/P0.W; m.w=Math.max(.01,(c[1]-c[0]-pad*2)/P0.W); });
+  // ② 나머지 글자 (이름표 · 내용 · 문장): 칸 안에 있으면 칸 기준, 칸이 없으면 쪽 가운데 · 오른쪽 끝 맞춤인지
+  marks.forEach(m=>{ if(m.t!=="text"||(m.b||"").startsWith("it.")||m.ga) return; const P0=pp[m.pg]; if(!P0||!P0.cv) return;
+    const W=P0.W, h=m.f*W, x0=(m.tx0!=null?m.tx0:m.x)*W+1, x1=(m.tx1!=null?m.tx1:m.x+m.w)*W-1, yc=m.y*P0.H+h*.6; delete m.tx0; delete m.tx1; if(x1-x0<1) return;
+    const c=cellAt(P0,x0,x1,yc);
+    if(c){ const al=pick(c[0],c[1],x0,x1,h), pad=Math.max(2,h*.3);
+      if(al==="c"){ m.al="c"; m.x=(c[0]+pad)/W; m.w=(c[1]-c[0]-pad*2)/W; }
+      else if(al==="r"){ m.al="r"; }
+      else if(m.al==="r") m.al="";
+      return; }
+    const mid=(x0+x1)/2;
+    if(Math.abs(mid-W/2)<W*.012&&x1-x0<W*.75){ const half=Math.min(mid,W-mid)-W*.04; m.al="c"; m.x=(mid-half)/W; m.w=half*2/W; }
+    else if(x0>W*.45&&x1>W*.86){ m.al="r"; }
+  });
+  marks.forEach(m=>{ delete m.ga; });
+}
+
 /* --- 4-2. 원본 모양: 품목 표 · 합계 · 약관 문장 인식 --- */
-var FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
+var FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명|구성|구성항목|대분류|카테고리|서비스|서비스명|작업명|작업항목|과업|분야|종류)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
   ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/]];
 var FM_FLAG=/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/;
 function fmNum(s){ if(typeof s==="number") return s; const t=String(s??"").replace(/[₩\s원]/g,""); return /^-?\d[\d,]*(\.\d+)?$/.test(t)?Number(t.replace(/,/g,"")):null; }
@@ -4376,15 +4438,19 @@ function fmTable(items,W,H,pg,T){
     }
     const kOf=it=>{ const k=colOf(it); return dx!==null&&/^(cat|desc)$/.test(k)?(it.x>=dx-3?"desc":"cat"):k; };
     // 숫자(수량 · 단가 · 금액)가 있는 줄 = 품목 한 줄
-    const R=[]; body.forEach(r=>{ if(r.its.some(i=>/^(qty|up|amt)$/.test(kOf(i))&&isNum(i.s))) R.push({y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}); });
-    const rowOf=new Map();
+    // 숫자가 없는 표("1회" · "월" · "별도")도: 수량 · 단위 · 단가 · 금액 칸에 글자가 있는 줄을 품목 줄로
+    const anchor=r=>r.its.some(i=>/^(qty|unit|up|amt)$/.test(kOf(i))&&String(i.s).trim());
+    const R=[]; body.forEach(r=>{ if(anchor(r)) R.push({y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}); });
+    const rowOf=new Map(), A0=R.length?Math.min(...R.map(x=>x.y)):0, A1=R.length?Math.max(...R.map(x=>x.y)):0;
     body.forEach(r=>{
       let t=R.find(x=>x.y===r.y), own=null;
-      if(!t){ let bd=1e9; R.forEach(x=>{ const d=Math.abs(x.y-r.y); if(d<bd){ bd=d; t=x; } }); if(bd>hh*1.6) own={y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}; }
+      // 품목 줄 사이에 낀 글자(여러 줄을 합친 칸 "홈페이지 제작")는 가장 가까운 품목 줄로 · 표 위아래 바깥 글자만 따로 한 줄
+      if(!t){ let bd=1e9; R.forEach(x=>{ const d=Math.abs(x.y-r.y); if(d<bd){ bd=d; t=x; } }); if(bd>hh*1.6&&!(r.y>A0&&r.y<A1)) own={y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}; }
       r.its.forEach(it=>{ const k=kOf(it); let tt=t;
         if(!R.some(x=>x.y===r.y)){   // 바로 위 같은 칸 글자에 붙은 둘째 줄(합친 칸 "홈페이지 제작 / (페이지형)")은 그 줄로
           const a=[...rowOf.keys()].find(a=>kOf(a)===k&&a.x<it.x+it.w&&it.x<a.x+a.w&&it.y-(a.y+a.h)>=-1&&it.y-(a.y+a.h)<it.h*.6);
           tt=a?rowOf.get(a):own||t; }
+        if(!tt){ own=own||{y:r.y,h:Math.max(...r.its.map(i=>i.h||0)),cells:{}}; tt=own; }     // 짝이 될 품목 줄이 없으면 이 줄을 따로 (어떤 양식이 와도 멈추지 않게)
         if(tt===own&&!R.includes(own)) R.push(own);
         (tt.cells[k]=tt.cells[k]||[]).push(it); rowOf.set(it,tt); T.used.add(it); });
     });
@@ -4403,7 +4469,8 @@ function fmTable(items,W,H,pg,T){
         if(k==="amt"&&FM_FLAG.test(s)){ row.mode=/별도/.test(s)?"exclude":"service"; row.fl=s; }
         else if(k==="up"||k==="amt"){ const v=fmNum(s); row[k]=v===null?s:v; }
         else row[k]=s;
-        T.marks.push({id:newId(),pg,t:"text",b:`it.${n}.${k}`,v:"",x:Math.max(0,x0-1)/W,y:(y0-f*.05)/H,w:(x1-x0+2)/W,f:Math.min(f,hh*1.05)/W,h:(y1-y0+f*.12)/W,o:fr.length?1:0,bd:fr.some(i=>i.bd)?1:undefined,al:/^(desc|note)$/.test(k)?"l":"c"});
+        T.marks.push({id:newId(),pg,t:"text",b:`it.${n}.${k}`,v:"",x:Math.max(0,x0-1)/W,y:(y0-f*.05)/H,w:(x1-x0+2)/W,f:Math.min(f,hh*1.05)/W,h:(y1-y0+f*.12)/W,o:fr.length?1:0,bd:fr.some(i=>i.bd)?1:undefined,al:/^(desc|note)$/.test(k)?"l":"c",
+          tx0:fr.length?Math.min(...fr.map(i=>i.x))/W:undefined,tx1:fr.length?Math.max(...fr.map(i=>i.x+i.w))/W:undefined,tk:k});
       });
       T.rows.push(row);
     });
@@ -4470,7 +4537,7 @@ function fmBox(p,i,mode){
       // al: c 가운데 · l 왼쪽 (칸 너비 고정, 길면 줄바꿈) · r 오른쪽 끝 맞춤
       const al=m.al, ps=al==="r"?`right:${((1-m.x-m.w)*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`:pos;
       const wd=al==="c"||al==="l"?`width:${u(m.w)};text-align:${al==="c"?"center":"left"};white-space:normal;`:m.o||show?`min-width:${u(m.w)};${al==="r"?"text-align:right;":""}`:"";
-      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}${!show&&fmHl===m.id?" fm-hl":""}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
+      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}${!show&&fmHl===m.id?" fm-hl":""}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.st?"text-decoration:line-through;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
     }
     const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
     if(m.t==="client") return `<span class="fm-s${sel}"${dm}${show?"":' data-client-seal data-mark=" "'} style="${pos}${ctr}width:${w};height:${h}">${no}${show&&!cs?"상대방<br>서명":cs}</span>`;
@@ -4767,7 +4834,13 @@ addEventListener("resize",()=>{ if($("#fmModal").hidden) return; fmZoom($("#fmPr
 function fmAddProduct(p,client){
   P().forEach(q=>{ q.on=false; });
   p.on=true; P().push(p); profile.templates.push(Object.assign(clone(p),{on:false})); saveProfile();
-  Object.entries(client||{}).forEach(([k,v])=>{ if(v) state.client[k]=v; });
+  // 읽어 온 상대방 정보가 말이 되는 것만 넣음 (세로 이름표 글자 "행" · "귀하" 같은 조각은 버림)
+  const ok=(k,v)=>{ v=String(v||"").trim(); if(!v||/^(귀하|귀중|님|좌하|\(인\)|인)$/.test(v)) return false;
+    if(k==="phone") return (v.match(/\d/g)||[]).length>=7;
+    if(k==="email") return /@/.test(v);
+    if(k==="bizno") return (v.match(/\d/g)||[]).length>=8;
+    return v.replace(/\s/g,"").length>=2; };
+  Object.entries(client||{}).forEach(([k,v])=>{ if(ok(k,v)) state.client[k]=String(v).trim(); });
   if(p.kind==="labor"||p.kind==="cert") state.client.ceo=state.client.name||"";
   $("#fmModal").hidden=true;
   renderEditor(); esMarkStale(); save(); schedule();
