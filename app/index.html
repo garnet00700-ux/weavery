@@ -1127,6 +1127,17 @@ function korWon(n){
 /* ===== 기본값 ===== */
 // mode: normal(합계 포함) | service(서비스, 0원) | monthly(월 금액, 합계 제외) | exclude(별도, 합계 제외)
 const ITEM=(cat,desc,sub,qty,price,mode)=>({cat,desc,sub,qty,price,amount:null,note:"",mode});
+// 불러온 품목 정리 (모든 불러오기 공통)
+//  · 단위(Page · EA · 회 · 각 …)가 세부내용 밑줄로 읽혔으면 수량에 붙임 ("5 Page", "1회")
+//  · 원본에서 합친 칸(대분류)은 위아래 빈 줄에도 같은 대분류를 채워 한 묶음으로
+function impItems(list){
+  const items=(list||[]).map(x=>{ let sub=String(x.sub||"").trim(), qty=String(x.qty||"").trim()||"1식";
+    if(/^\d+(\.\d+)?$/.test(qty)&&/^[A-Za-z가-힣]{1,5}$/.test(sub)){ qty+=(/^[A-Za-z]/.test(sub)?" ":"")+sub; sub=""; }
+    return ITEM(String(x.cat||"").trim(),x.desc,sub,qty,x.price===""||x.price==null?"":Number(x.price),x.mode||"normal"); });
+  const fc=items.findIndex(x=>x.cat); if(fc>0) for(let i=0;i<fc;i++) items[i].cat=items[fc].cat;
+  for(let i=1;i<items.length;i++) if(!items[i].cat) items[i].cat=items[i-1].cat;
+  return items;
+}
 const GENERIC_PRODUCT=()=>({
   pid:newId(), on:true, name:"기본 양식",
   quoteTitle:"견적서", contractTitle:"용역 계약서",
@@ -2828,7 +2839,7 @@ $("#qiOk").onclick=()=>{
   if(!qiRes&&!qiDes) return alert("먼저 견적서 파일을 올리거나 내용을 붙여넣어 주세요.");
   const dk=qiDes?Object.keys(qiDes.on).filter(k=>qiDes.on[k]&&qiDes[k]):[];
   if(!qiRes) qiRes={items:[],client:{},totals:{}};
-  const items=qiRes.items.filter(x=>x.on&&(x.desc||x.cat)).map(x=>{ const it=ITEM(x.cat,x.desc,x.sub||"",x.qty||"1식",x.price===""?"":Number(x.price),x.mode); return it; });
+  const items=impItems(qiRes.items.filter(x=>x.on&&(x.desc||x.cat)));
   const picks=QI_CF.filter(([k])=>{ const c=$(`#qiOut [data-qc="${k}"]`); return c&&c.checked&&qiRes.client[k]; });
   if(!items.length&&!picks.length&&!dk.length) return alert("넣을 품목이나 의뢰자 정보가 없습니다.");
   if(dk.length){ dk.forEach(k=>{ if(k==="seal") profile.sign=qiDes.seal; else profile[k]=qiDes[k]; });
@@ -3882,15 +3893,7 @@ function fmBuildA(text,kind){
       tr.terms.push(...add);
     }
     const junk=/견적일|연락처|등록번호|업체명|대표자|납품일|공급가액|총\s*액|합\s*계|계약금|잔금|업태|업종|상호|전화|이메일|일금|원정|계좌번호|예금주/;
-    const items=q.items.filter(x=>x.on!==false&&(x.desc||x.cat)&&!junk.test(`${x.cat} ${x.desc}`))
-      .map(x=>{ let sub=x.sub||"", qty=x.qty||"1식";
-        // 단위(Page · EA · 회 · 각 · 식 …)가 세부내용 밑줄로 들어온 경우 → 수량에 붙임 ("5 Page", "1회")
-        if(/^\d+(\.\d+)?$/.test(String(x.qty||"").trim())&&/^[A-Za-z가-힣]{1,5}$/.test(sub.trim())){ qty=String(x.qty).trim()+(/^[A-Za-z]/.test(sub.trim())?" ":"")+sub.trim(); sub=""; }
-        return ITEM(x.cat,x.desc,sub,qty,x.price===""?"":Number(x.price),x.mode); });
-    // 합친 칸(대분류)은 위아래 빈 줄에도 같은 대분류를 채워 한 묶음으로 (중간에 선이 생기지 않게)
-    const fc=items.findIndex(x=>x.cat); if(fc>0) for(let i=0;i<fc;i++) items[i].cat=items[fc].cat;
-    for(let i=1;i<items.length;i++) if(!items[i].cat) items[i].cat=items[i-1].cat;
-    // 금액 없는 빈 양식: 품목 표 머리(구성 · 품목 … 수량) 아래에서 "이름 ⇥ 수량" 줄만 품목으로
+    const items=impItems(q.items.filter(x=>x.on!==false&&(x.desc||x.cat)&&!junk.test(`${x.cat} ${x.desc}`)));
     if(!items.length){
       const ql=qText.split("\n"), h0=ql.findIndex(l=>/(구성|품목|품명|항목|내역)/.test(l)&&/수량/.test(l));
       if(h0>=0) for(const l of ql.slice(h0+1)){
@@ -4481,20 +4484,22 @@ function formCardHtml(p,pi){
 // 원본 품목 표 편집: 기본 양식과 같은 품목 카드 (줄 수는 원본 표의 줄 수까지)
 function fmColN(){ return {cat:"품목",desc:"세부내용",qty:"수량",unit:"단위",up:"단가",amt:"공급가액",note:"비고"}; }   // 함수로: 시작할 때(이 줄보다 먼저) 불려도 됨
 function fmRowEmpty(r){ return !(r.cat||r.desc||r.qty||r.unit||fmNum(r.up)!==null||fmNum(r.amt)!==null); }
-function fmRowHead(r){
+function fmRowHead(r,dc){
   const a=fmRowAmt(r), money=r.mode&&r.mode!=="normal"?fmFlagText(r):a===""?"":won(a)+"원";
-  return `<b>${esc(r.desc||r.cat||"(빈 줄)")}</b><small>${esc([r.desc?r.cat:"",[r.qty,r.unit].filter(Boolean).join(" "),money].filter(Boolean).join(" · "))}</small>`;
+  return `<b>${esc(r.desc||r.cat||"(빈 줄)")}</b><small>${esc([r.desc?(r.cat||dc||""):"",[r.qty,r.unit].filter(Boolean).join(" "),money].filter(Boolean).join(" · "))}</small>`;
 }
 function fmItemsHtml(p,pi){
   const F=p.form; if(!F.rows||!F.rows.length) return "";
   const cols=(F.cols||Object.keys(fmColN())).filter(k=>fmColN()[k]);
   const shown=F.rows.map((r,n)=>n).filter(n=>!fmRowEmpty(F.rows[n])||F.rows[n].on), left=F.rows.length-shown.length;
+  // 원본에서 합친 대분류 칸: 위아래 빈 줄도 같은 대분류로 보여 줌 (원본 표 모양은 그대로)
+  const dcat=[]; { const fc=F.rows.findIndex(r=>r.cat); F.rows.forEach((r,n)=>{ dcat[n]=r.cat||(n<fc?F.rows[fc].cat:dcat[n-1]||""); }); }
   const cards=shown.map((n,j)=>{ const r=F.rows[n], b=`prods.${pi}.form.rows.${n}`;
     const f=k=>{ if(!cols.includes(k)) return "";
       if(k==="amt"){ const a=fmRowAmt(Object.assign({},r,{amt:""})); return `<label class="f">${fmColN()[k]} (원)<input data-p="${b}.amt" data-fmrow inputmode="numeric" placeholder="${r.mode!=="normal"?esc(fmFlagText(r)):a===""?"":"자동 "+won(a)}"></label>`; }
       return `<label class="f">${fmColN()[k]}${k==="up"?" (원)":""}<input data-p="${b}.${k}" data-fmrow${/^(qty|up)$/.test(k)?' inputmode="numeric"':""}></label>`; };
     return `<div class="item" data-irow="${n}">
-      <div class="ih"><div class="it" data-ih="${pi}.${n}">${fmRowHead(r)}</div>
+      <div class="ih"><div class="it" data-ih="${pi}.${n}">${fmRowHead(r,dcat[n])}</div>
         <div class="tools"><button class="btn" type="button" data-fmit="up" data-pi="${pi}" data-n="${n}" title="위로"${j?"":" disabled"}>↑</button><button class="btn" type="button" data-fmit="down" data-pi="${pi}" data-n="${n}" title="아래로"${j<shown.length-1?"":" disabled"}>↓</button><button class="btn" type="button" data-fmit="clear" data-pi="${pi}" data-n="${n}" title="이 줄 비우기">✕</button></div></div>
       <div class="need"><div class="fm-g3">${f("qty")}${f("up")}${f("amt")}</div></div>
       <details class="more" data-k="${b}" ${isOpen(b)}><summary>항목 수정</summary><div class="grid2">${f("cat")}${f("desc")}</div><div class="grid2">${f("unit")}<label class="f">합계 반영<select data-p="${b}.mode" data-fmrow>${[["normal","금액 (합계 포함)"],["service","서비스 제공 (무상)"],["exclude","별도 (합계 제외)"]].map(([v,l])=>`<option value="${v}"${(r.mode||"normal")===v?" selected":""}>${l}</option>`).join("")}</select></label></div>${f("note")}</details>
