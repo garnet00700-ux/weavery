@@ -2584,7 +2584,7 @@ const qiMoney=s=>{ s=String(s).trim().replace(/^[(（]\s*|\s*[)）]$/g,""); if(!
   const m=s.match(/^[₩\\￦]?\s*(-?\d{1,3}(?:,\d{3})+|-?\d{4,})(?:\.\d+)?\s*(원|won|krw)?$/i)||s.match(/^[₩\\￦]?\s*(-?\d{1,3})\s*(원)$/);
   return m?Number(m[1].replace(/,/g,"")):null; };
 const qiSmallNum=s=>/^\d{1,3}(\.\d+)?$/.test(String(s).trim());
-const qiFlag=s=>/^(별도|서비스|무상|무료|포함|-)$/.test(String(s).trim());
+const qiFlag=s=>/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/.test(String(s).trim());
 
 // 한 줄 → 칸 목록. 탭 · 두 칸 이상 공백 · | 로 나누고, 글자 칸 끝에 붙은 숫자(수량 · 금액)는 떼어냅니다
 function qiCells(line){
@@ -2634,23 +2634,24 @@ function qiParseItems(lines){
         if(!desc&&!g("cat")) return;
         let qty=g("qty"); const unit=g("unit"); if(qty&&unit&&/^\d+(\.\d+)?$/.test(qty)) qty+=unit;
         const q=parseFloat(qty);
-        let amount=amountRaw; if(amount==null&&up!=null) amount=Math.round(up*(q||1));
+        const fa=qiFlag(g("amount"))?g("amount"):"";   // 금액 칸에 "서비스 제공 · 별도"
+        let amount=amountRaw; if(amount==null&&up!=null&&!fa) amount=Math.round(up*(q||1));
         let mode="normal";
-        if(amount==null){ const f=cs.find(qiFlag); if(!f) return; mode=/별도/.test(f)?"exclude":/서비스|무상|무료/.test(f)?"service":"normal"; if(mode==="normal") return; }
+        if(amount==null){ const f=fa||cs.find(qiFlag); if(!f) return; mode=/별도/.test(f)?"exclude":/서비스|무상|무료/.test(f)?"service":"normal"; if(mode==="normal") return; }
         if(!qty&&up&&amount&&amount%up===0&&amount/up<=999) qty=String(amount/up);
         items.push({on:true,cat,desc:desc||cat,qty:qty?qty.replace(/\s+/g,""):"1식",price:mode==="normal"?amount:"",mode,sub:[g("spec"),g("note")].filter(Boolean).join(" · ")});
         return;
       }
     }
     const cells=qiCells(line); if(!cells.length) return;
-    const txt=[], nums=[], flags=[], after=[]; let qty="", seenNum=false;
+    const txt=[], nums=[], flags=[], after=[]; let qty="", seenNum=false, flagLast=false;
     cells.forEach((c,i)=>{
       const mv=qiMoney(c);
       if(mv!==null){ nums.push(mv); seenNum=true; }
       else if(QI_QTY.test(c)){ if(!qty) qty=c.replace(/\s+/g,""); seenNum=true; }
       else if(qiSmallNum(c)){ if(!seenNum&&!txt.length&&i<cells.length-1) return;   // 맨 앞 줄 번호
         if(!qty) qty=c; seenNum=true; }
-      else if(qiFlag(c)){ flags.push(c); seenNum=true; }
+      else if(qiFlag(c)){ flags.push(c); if(nums.length) flagLast=true; seenNum=true; }
       else (seenNum?after:txt).push(c);
     });
     const label=txt.join(" ");
@@ -2662,7 +2663,10 @@ function qiParseItems(lines){
     if(!nums.length&&!flags.length) return;                                  // 금액이 없는 줄은 설명 글
     if(label.length>60&&!qty) return;                                        // 긴 문장 속 숫자
     let mode="normal", price="";
-    if(nums.length){
+    if(nums.length&&flagLast){   // "30,000 ⇥ 서비스 제공" · "30,000 ⇥ 별도": 금액 칸에 글자 → 단가는 참고, 합계에서 뺌
+      const f=flags[flags.length-1]; mode=/별도/.test(f)?"exclude":/서비스|무상|무료/.test(f)?"service":"normal";
+      if(mode==="normal") price=nums[nums.length-1];
+    }else if(nums.length){
       const ns=nums.slice();
       // 공급가액 | 세액(10%) 칸이 있는 양식: 마지막 숫자가 바로 앞 숫자의 10%면 세액으로 보고 뺍니다
       if(ns.length>=2){ const a=ns[ns.length-1], b=ns[ns.length-2]; if(b>0&&Math.abs(a-b*0.1)<=Math.max(1,b*0.001)) ns.pop(); }
@@ -3714,7 +3718,8 @@ function fmDetect(text){
 }
 // 문서 제목: 맨 위쪽에서 '…서 / …표 / …증'으로 끝나는 짧은 줄
 function fmTitle(text,kind){
-  for(const raw of String(text).split("\n").slice(0,14)){
+  // 줄 전체, 그리고 표 칸(⇥)마다 — "We Design Your Growth ⇥ 홈페이지 제작 견적서 및 공급계약서" 같은 머리줄
+  for(const raw of String(text).split("\n").slice(0,14).flatMap(l=>/\t/.test(l)?[l,...l.split("\t")]:[l])){
     const n=raw.replace(/\s+/g,"").replace(/^[\[【(]+|[\]】)]+$/g,"");
     if(n.length>=3&&n.length<=22&&/(서|표|증)(\(.{1,14}\))?$/.test(n)&&!/[:：]/.test(n))
       return /^([가-힣]\s+)+[가-힣]$/.test(raw.trim())?n:raw.trim().replace(/\s{2,}|\t/g," ");   // "재 직 증 명 서" → 붙여 씀, "홈페이지 제작 견적서"는 그대로
@@ -3748,6 +3753,33 @@ function parseCert(text){
 }
 
 /* --- 3. A 방식: 우리 양식으로 옮긴 상품 만들기 --- */
+/* 계약 당사자 표 읽기: "의뢰인 정보 | 공급자 정보" 두 칸 표, 서명줄 "의뢰인 : ○○ (인)" */
+function fmParties(text){
+  const L=String(text).replace(/\r/g,"").split("\n"), nn=s=>String(s).replace(/\s+/g,"");
+  const CLW=/^(의뢰인|의뢰자|발주자|발주처|공급받는자|구매자|매수인|고객|도급인|위탁자|갑)/, COW=/^(공급자|공급하는자|수행자|수급인|판매자|매도인|수탁자|을)/;
+  const LB=[[/^(상호|상호명|업체명|회사명|상호법인명|법인명|거래처명?)$/,"name"],[/^(대표|대표자|대표자명|대표이사|성명)$/,"ceo"],
+    [/^(연락처|전화|전화번호|휴대폰|휴대전화|핸드폰|tel)$/i,"phone"],[/^(이메일|e-?mail|메일)$/i,"email"],[/^(주소|사업장주소|소재지)$/,"addr"],[/^(사업자번호|사업자등록번호|등록번호)$/,"bizno"]];
+  const lab=c=>{ const n=nn(String(c).replace(/[(（][^)）]{0,10}[)）]/g,"")).replace(/[:：]$/,""); const r=LB.find(([re])=>re.test(n)); return r&&r[1]; };
+  const out={client:{},co:{}};
+  const h=L.findIndex(l=>{ const c=l.split("\t").map(nn); return c.some(x=>CLW.test(x)&&!COW.test(x))&&c.some(x=>COW.test(x)&&!CLW.test(x)); });
+  if(h>=0){
+    const c=L[h].split("\t").map(nn), iCl=c.findIndex(x=>CLW.test(x)&&!COW.test(x)), iCo=c.findIndex(x=>COW.test(x)&&!CLW.test(x));
+    const side=iCl<iCo?["client","co"]:["co","client"];
+    for(const l of L.slice(h+1,h+12)){
+      const cells=l.split("\t").map(s=>s.trim()).filter(Boolean); if(!cells.some(lab)) { if(/^\s*\d+\s*[.)]/.test(l)) break; continue; }
+      let n=0; cells.forEach((x,i)=>{ const k=lab(x); if(!k) return; const v=cells[i+1];
+        if(v&&!lab(v)) { const who=side[Math.min(n,1)]; if(!out[who][k]) out[who][k]=v; } n++; });
+    }
+  }
+  // 서명줄: "의뢰인 : 블루드래곤 (인)  공급자 : 페이지숲 홍길동 (인)"
+  L.forEach(l=>l.split("\t").forEach(c=>{ const m=c.match(/^\s*([가-힣]{1,6})\s*[:：]\s*([^()（）]{2,40}?)\s*(\(\s*(인|서명)\s*\))?\s*$/); if(!m) return;
+    const who=CLW.test(m[1])&&!COW.test(m[1])?"client":COW.test(m[1])&&!CLW.test(m[1])?"co":""; if(who&&!out[who].sign) out[who].sign=m[2].trim(); }));
+  if(!out.client.name&&out.client.sign) out.client.name=out.client.sign;
+  return out;
+}
+// 이름을 글자 사이 띄어쓰기와 상관없이 찾는 정규식 ("페이지숲" = "페이지 숲")
+function fmNameRe(v){ const k=String(v||"").split(/[(（]/)[0].replace(/\s+/g,""); if(k.length<2) return null;
+  return new RegExp([...k].map(ch=>ch.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("\\s*"),"g"); }
 function fmBuildA(text,kind){
   const title=fmTitle(text,kind), client={}; let p;
   if(kind.startsWith("cert-")){
@@ -3770,9 +3802,36 @@ function fmBuildA(text,kind){
     const j1=lines.findIndex(l=>/^\s*제\s*1\s*조/.test(l));
     let cut=lines.findIndex((l,i)=>i>2&&nn(l).length<=30&&/(계약서|약관|약정서)$/.test(nn(l)));
     if(cut<0||(j1>=0&&j1<cut)) cut=j1;
-    const qText=kind==="contract"||cut<0?text:lines.slice(0,cut).join("\n");
+    // 품목 표가 두 줄로 쪼개진 것 잇기: "SEO 최적화" + "1 ⇥ 각 ⇥ 30,000" → 한 줄, "(네이버 …)" 괄호만 있는 줄은 앞 품목 이름에 붙임
+    const qRaw=(kind==="contract"||cut<0?text:lines.slice(0,cut).join("\n")).split("\n"), qL=[];
+    for(let i=0;i<qRaw.length;i++){ const l=qRaw[i], nx=qRaw[i+1]||"", cells=l.split("\t").filter(c=>c.trim());
+      if(cells.length===1&&!/\d/.test(l)&&l.trim().length<=40&&/^\s*\d[\d,.]*\s*\t/.test(nx)&&!/[:：]|사항|조건|합\s*계/.test(l)){ qL.push(l.trim()+"\t"+nx); i++; continue; }
+      // "(페이지형) ⇥ 서비스 제공": 괄호는 앞 품목 이름에, "서비스 제공 · 별도"는 바로 다음 품목 줄의 금액 칸으로
+      if(cells.length>=2&&cells.every(c=>/^\s*[(（][^)）]{1,40}[)）]\s*$/.test(c)||qiFlag(c))&&cells.some(qiFlag)&&/^[^\t]*\t.*\d/.test(nx)&&!nx.split("\t").some(qiFlag)){
+        const par=cells.filter(c=>!qiFlag(c)).join(" ").trim(); if(par&&qL.length){ const pc=qL[qL.length-1].split("\t"); pc[0]=pc[0].trim()+" "+par; qL[qL.length-1]=pc.join("\t"); }
+        qRaw[i+1]=nx+"\t"+cells.filter(qiFlag).join(" "); continue; }
+      if(cells.length===1&&/^\s*[(（][^)）]{2,60}[)）]\s*$/.test(l)&&qL.length&&/\d/.test(qL[qL.length-1])){ const pc=qL[qL.length-1].split("\t"); pc[0]=pc[0].trim()+" "+l.trim(); qL[qL.length-1]=pc.join("\t"); continue; }
+      qL.push(l); }
+    const qText=qL.join("\n");
     const q=qiParse(qText), tr=parseTerms(String(text).replace(/\t+/g," "));
-    const junk=/견적일|연락처|등록번호|업체명|대표자|납품일|공급가액|총\s*액|합\s*계|계약금|잔금|업태|업종|상호|전화|이메일/;
+    // 마지막 조항 뒤에 붙어 온 '특약 사항' · 맺음말 · 서명줄 · 날짜줄 정리 (서명 · 날짜는 작성기가 따로 넣으므로 빼고, 특약은 조항으로)
+    if(tr.terms.length){
+      const SIG=/(의뢰인|의뢰자|공급자|수급인|수행자|발주자|사업주|근로자|대표자?|갑|을)\s*[:：].*[(（]\s*(인|서명|날인)\s*[)）]/;
+      const DATE=/^\s*(((\d{4}|20)\s*년\s*\d{0,2}\s*월\s*\d{0,2}\s*일)|\d{4}\s*[.\-/]\s*\d{1,2}\s*[.\-/]\s*\d{1,2}\.?)\s*$/;
+      const add=[];
+      tr.terms.forEach(t=>{ const keep=[]; let sp=null, tail="";
+        String(t.body).split("\n").forEach(l=>{ const x=l.trim();
+          if(/^특약\s*사항\s*[:：]?$/.test(x)){ sp=[]; return; }
+          if(SIG.test(x)||DATE.test(x)) return;
+          if(/^[『「“"].{4,80}[』」”"]$/.test(x)){ tail=x; return; }
+          (sp||keep).push(l); });
+        t.body=keep.join("\n").trim();
+        if(sp&&sp.join("").trim()) add.push({title:"특약 사항",body:(sp.join("\n")+(tail?"\n\n"+tail:"")).trim()});
+        else if(tail) t.body+=(t.body?"\n\n":"")+tail;
+      });
+      tr.terms.push(...add);
+    }
+    const junk=/견적일|연락처|등록번호|업체명|대표자|납품일|공급가액|총\s*액|합\s*계|계약금|잔금|업태|업종|상호|전화|이메일|일금|원정|계좌번호|예금주/;
     const items=q.items.filter(x=>x.on!==false&&(x.desc||x.cat)&&!junk.test(`${x.cat} ${x.desc}`))
       .map(x=>ITEM(x.cat,x.desc,x.sub||"",x.qty||"1식",x.price===""?"":Number(x.price),x.mode));
     // 금액 없는 빈 양식: 품목 표 머리(구성 · 품목 … 수량) 아래에서 "이름 ⇥ 수량" 줄만 품목으로
@@ -3792,7 +3851,9 @@ function fmBuildA(text,kind){
     if(hi>=0){ const bul=/^([-•·*※▶▪◦]|\d+[.)]|[①-⑳])\s*/, rest=qa.slice(hi+1), fi=rest.findIndex(l=>bul.test(l));
       if(fi>=0){ const ns=[]; for(const l of rest.slice(fi)){ if(!bul.test(l)) break; ns.push(l.replace(bul,"").trim()); }
         if(ns.length){ p.notices=ns; p.noticeIntro=rest.slice(0,fi).join("\n").slice(0,400); } } }
-    const co=s=>profile.name&&profile.name.length>=2?s.split(profile.name).join("{수행자}"):s;
+    // 본문 안의 회사 이름 · 상대방 이름 → 자동 칸 ({수행자} · {의뢰인}) — 다른 회사 양식을 가져와도 내 회사 · 새 상대방으로 바뀜
+    const PT=fmParties(text), reCo=[profile.name,PT.co.name].map(fmNameRe).filter(Boolean), reCl=fmNameRe(PT.client.name);
+    const co=s=>{ s=String(s); reCo.forEach(re=>{ s=s.replace(re,"{수행자}"); }); if(reCl) s=s.replace(reCl,"{의뢰인}"); return s; };
     if(tr.terms.length){
       p.terms=tr.terms.map(t=>({title:t.title,body:co(t.body)}));
       // 계약서 머리말: 계약서 제목줄 다음부터 제1조 앞까지 ("의뢰인 ___(이하 '의뢰자'라 한다)과 …")
@@ -3801,15 +3862,18 @@ function fmBuildA(text,kind){
       if(lead&&lead.length<500&&/다\.?$/.test(lead)) p.intro=lead;
       if(cut>=0&&cut<j1&&kind!=="contract") p.contractTitle=nn(lines[cut]).length<=30?lines[cut].trim().replace(/\s{2,}/g," "):p.contractTitle;
     }
-    if(kind==="contract"){ p.contractTitle=title; p.quoteTitle=`${title.replace(/계약서$/,"")} 견적서`.trim(); p.docs=q.items.length?"both":"contract"; }
+    const both=String(title).match(/^(.*?)\s*견적서\s*(및|와|\+|&|·)\s*(.*계약서)$/);   // "홈페이지 제작 견적서 및 공급계약서"
+    if(both){ p.name=title; p.quoteTitle=`${both[1]} 견적서`.trim(); p.contractTitle=`${both[1]} ${both[3]}`.trim(); p.docs=tr.terms.length?"both":"quote"; }
+    else if(kind==="contract"){ p.contractTitle=title; p.quoteTitle=`${title.replace(/계약서$/,"")} 견적서`.trim(); p.docs=q.items.length?"both":"contract"; }
     else{
       p.quoteTitle=title; p.docs=tr.terms.length&&kind==="quote"?"both":"quote";
       if(kind==="stmt"&&/인수자|인수인|수령인|수령자|\(\s*서명\s*\)/.test(String(text).replace(/\s+/g,""))) p.recvSign=true;
       if(p.docs==="both"&&!(cut>=0&&cut<j1)) p.contractTitle=`${title.replace(/견적서$/,"")} 계약서`.trim();
     }
     // 의뢰자 정보: 우리 회사 정보 · 문장 조각은 빼고
-    const c=q.client||{}, mine=[profile.name,profile.ceo,profile.phone,profile.email].filter(Boolean).map(nn);
-    ["name","ceo","phone","email"].forEach(k=>{ const v=String(c[k]||"").trim();
+    const c=Object.assign({},q.client||{}), mine=[profile.name,profile.ceo,profile.phone,profile.email].filter(Boolean).map(nn);
+    Object.entries(PT.client).forEach(([k,v])=>{ if(v&&k!=="sign") c[k]=v; });   // 당사자 표에서 읽은 값이 더 정확함
+    ["name","ceo","phone","email","addr"].forEach(k=>{ const v=String(c[k]||"").trim();
       if(v&&v.length<=40&&!/이하|한다|귀하|라\s*함|^\(|^(등록번호|사업자등록번호|대표자|상호명?|연락처|견적일|업태|업종|주소|이메일|업체명)$/.test(v)&&!mine.includes(nn(v))) client[k]=v; });
   }
   p.on=true;
@@ -3855,7 +3919,7 @@ async function fmBuildB(f,kind){
   if(!/\.pdf$/i.test(f.name)) return {err:"원본 모양 그대로 쓰기는 PDF나 사진(스캔 이미지) 파일에서만 됩니다.<br>한글 · 워드 · 엑셀에서 <b>[PDF로 저장]</b>한 뒤 다시 올려 주세요."};
   await fmPdfLib();
   const pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise, N=Math.min(pdf.numPages,8);
-  const pages=[], r=[], marks=[]; let txt=0;
+  const pages=[], r=[], pp=[]; let txt=0;
   for(let i=1;i<=N;i++){
     const page=await pdf.getPage(i), vp=page.getViewport({scale:1}), sc=Math.min(2.2,1000/vp.width), v2=page.getViewport({scale:sc});
     const cv=document.createElement("canvas"); cv.width=Math.round(v2.width); cv.height=Math.round(v2.height);
@@ -3863,18 +3927,39 @@ async function fmBuildB(f,kind){
     await page.render({canvasContext:x,viewport:v2}).promise;
     pages.push(fmJpeg(cv)); r.push(vp.height/vp.width);
     const tc=await page.getTextContent();
-    const items=tc.items.filter(it=>it.str&&it.str.trim()).map(it=>{
+    const items=fmMerge(tc.items.filter(it=>it.str&&it.str.trim()).map(it=>{
       const t=pdfjsLib.Util.transform(vp.transform,it.transform), h=Math.hypot(t[2],t[3])||10;
       return {s:it.str, x:t[4], y:t[5]-h*.86, w:it.width||h*it.str.length*.9, h};
-    });
-    txt+=items.length;
-    marks.push(...fmFind(items,vp.width,vp.height,i-1,kind));
+    }));
+    txt+=items.length; pp.push({items,W:vp.width,H:vp.height});
   }
-  return {pages,r,marks:marks.slice(0,80),more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
+  // 1회차: 이미 적혀 있는 값(상대방 업체명 등)을 모음 → 2회차: 그 값이 다른 쪽 · 본문에 나와도 수정 칸으로
+  const ctx={vals:{}}, marks=[];
+  pp.forEach((p,i)=>fmFind(p.items,p.W,p.H,i,kind,ctx,false));
+  pp.forEach((p,i)=>marks.push(...fmFind(p.items,p.W,p.H,i,kind,ctx,true)));
+  // 원본 글자 줄 (글자 고치기용): 쪽 · 위치 · 크기 · 내용 (비율)
+  const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s}); }));
+  return {pages,r,marks:marks.slice(0,120),lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
+}
+// 한 글자씩 쪼개진 PDF 글자를 같은 줄 · 가까운 것끼리 이어 붙임 (글자마다 x 위치는 xs에 보관)
+function fmMerge(items){
+  const rows=[], out=[];
+  items.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
+  rows.forEach(r=>{ r.its.sort((a,b)=>a.x-b.x); let cur=null;
+    r.its.forEach(it=>{
+      const n=it.s.length, xs=Array.from({length:n},(_,i)=>it.x+it.w*i/Math.max(1,n));
+      if(cur){ const gap=it.x-(cur.x+cur.w), hh=Math.max(it.h,cur.h);
+        if(gap<hh*1.1&&gap>-hh){ if(gap>hh*.25){ cur.s+=" "; cur.xs.push(cur.x+cur.w); }
+          cur.s+=it.s; cur.xs.push(...xs); cur.w=Math.max(cur.w,it.x+it.w-cur.x); cur.h=hh; cur.y=Math.min(cur.y,it.y); return; } }
+      cur={s:it.s,x:it.x,y:it.y,w:it.w,h:it.h,xs}; out.push(cur);
+    });
+  });
+  return out;
 }
 // 글자 위치로 빈칸 · 서명 자리 찾기 (좌표는 페이지 너비 · 높이에 대한 비율로 저장)
-function fmFind(items,W,H,pg,kind){
-  const out=[], nm=s=>String(s).replace(/[\s:：()（）\[\]「」<>]/g,"");
+function fmFind(items,W,H,pg,kind,ctx,final){
+  ctx=ctx||{vals:{}};
+  const out=[], nm=s=>String(s).replace(/[\s:：()（）\[\]「」<>]/g,""), cmp=s=>String(s||"").replace(/\s/g,"");
   const labor=kind==="labor", cert=String(kind).startsWith("cert-");
   // 어느 쪽 사람인지: 가까운 곳의 '갑 · 을 · 근로자 · 공급자 …' 글자로 판단
   const CO=/^(사업주|사용자|공급자|공급하는자|발급자|발급처|발급기관|수급인|수급자|판매자|매도인|임대인|수행사|수행자|수탁자|대표이사)/;
@@ -3887,6 +3972,10 @@ function fmFind(items,W,H,pg,kind){
   const keys=items.map(it=>({it,p:partyOfStr(it.s)})).filter(k=>k.p);
   const partyAt=(cx,cy,self)=>{ const own=self&&partyOfStr(self.s); if(own) return own;
     let best=null, bd=1e9;
+    // 같은 줄에서 바로 왼쪽에 있는 이름표("의뢰인 : ○○ (인)")가 있으면 그것을 먼저 믿음
+    keys.forEach(k=>{ const ky=k.it.y+k.it.h/2, right=k.it.x+k.it.w;
+      if(Math.abs(ky-cy)<k.it.h&&right<=cx+4){ const d=(cx-right)*.2; if(d<bd){ bd=d; best=k.p; } } });
+    if(best) return best;
     keys.forEach(k=>{ const kx=k.it.x+k.it.w/2, ky=k.it.y+k.it.h/2; if(ky>cy+H*.05) return;
       const d=Math.hypot((kx-cx)*.45,(ky-cy)*(ky>cy+2?2.5:1)); if(d<bd){ bd=d; best=k.p; } });   // 아래쪽 글자는 덜 믿음
     return bd<H*.22?best:""; };
@@ -3895,39 +3984,63 @@ function fmFind(items,W,H,pg,kind){
   const sign=(cx,cy,party)=>{ const t=cert?"company":party||"client";
     const w=t==="company"?22/210:17/210;
     add({id:newId(),pg,t,x:cx/W,y:cy/H,w,cx,cy,cw:w*W,ch:w*W*.7}); };
+  // 이미 적힌 글자 위를 흰 바탕으로 덮는 칸 (b: 채울 내용, v: 직접 입력 값)
+  const cover=(x0,x1,it,b,v)=>add({id:newId(),pg,t:"text",b:b||"",v:b?"":(v||""),x:Math.max(0,x0-1)/W,y:(it.y-it.h*.1)/H,w:(x1-x0+2)/W,f:it.h/W,o:1,cx:(x0+x1)/2,cy:it.y+it.h/2,cw:x1-x0,ch:it.h});
+  const remember=(b,v)=>{ v=String(v||"").trim(); if(b&&v&&!ctx.vals[b]) ctx.vals[b]=v; };
   // 같은 줄끼리 묶기
   const rows=[];
   items.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
   rows.forEach(r=>r.its.sort((a,b)=>a.x-b.x));
-  const xAt=(it,i)=>it.x+it.w*i/Math.max(1,it.s.length);
+  const xAt=(it,i)=>it.xs?(i<it.xs.length?it.xs[i]:it.x+it.w):it.x+it.w*i/Math.max(1,it.s.length);
   // ① "(인)" "(서명)" "(서명 또는 인)" 자리
   items.forEach(it=>{
     const re=/[(（]\s*(인|印|서\s*명|날\s*인|서명\s*또는\s*(날)?인|사\s*인)\s*[)）]/g; let m;
     while((m=re.exec(it.s))){ const cx=(xAt(it,m.index)+xAt(it,m.index+m[0].length))/2, cy=it.y+it.h/2;
       const left=it.s.slice(0,m.index); sign(cx,cy,partyOfStr(left)||partyAt(cx,cy,null)); }
   });
-  // ② 이름표 오른쪽이 비어 있는 칸 ("성명 :      ", 표의 '주소' 칸 옆 빈칸)
+  // ② 이름표 오른쪽 칸 — 비어 있으면 빈칸, 이미 적혀 있어도 그 글자를 덮어 수정 칸으로
   const FL=[[/^(성명|이름|성함|근로자명|직원명|성명또는명칭)$/,"name"],[/^(대표자|대표자명|대표|대표자성명|대표이사)$/,"ceo"],
     [/^(상호|상호명|업체명|회사명|사업체명|상호법인명|법인명|거래처|거래처명|고객명)$/,"co"],[/^(주소|사업장주소|소재지|사업장소재지|현주소|주소지)$/,"addr"],
     [/^(연락처|전화|전화번호|휴대폰|휴대전화|핸드폰|tel|연락처휴대폰)$/i,"phone"],[/^(이메일|e-?mail|메일)$/i,"email"],
     [/^(사업자등록번호|사업자번호|등록번호)$/,"bizno"],[/^(작성일|작성일자|발급일|발급일자|계약일|계약일자|일자|날짜|거래일|거래일자|견적일|견적일자|발행일)$/,"date"],
     [/^(서명|날인|서명또는날인|서명인|사인|서명란)$/,"sign"],
     [/^(생년월일|주민등록번호|부서|소속|직위|직급|직책|재직기간|근무기간|입사일|입사일자|퇴사일|퇴직일|담당업무|업무내용|용도|제출처|퇴직사유|업태|종목|품명|비고|계좌번호|입금계좌)$/,"etc"]];
-  const labOf=s=>{ const t=String(s).replace(/^\s*[(（][^)）]{1,6}[)）]\s*/,"").split(/[:：]/); if(t.length>2||(t[1]&&t[1].trim())) return null; const n=nm(t[0]); const r=FL.find(([re])=>re.test(n)); return r&&r[1]; };
+  const keyOf=s=>{ const n=nm(String(s).replace(/[(（][^)）]{0,10}[)）]/g,"")); const r=FL.find(([re])=>re.test(n)); return r&&r[1]; };
+  const labOf=s=>{ const t=String(s).replace(/^\s*[(（][^)）]{1,6}[)）]\s*/,"").split(/[:：]/); if(t.length>2||(t[1]&&t[1].trim())) return null; return keyOf(t[0]); };
   const isSign=s=>/[(（]\s*(인|印|서\s*명|날\s*인|서명\s*또는|사\s*인)/.test(s);
+  const bindOf=(k,pt)=>({name:pt==="company"?"co.ceo":"client.name", ceo:pt==="company"?"co.ceo":"client.ceo", co:pt==="company"?"co.name":"client.name",
+      addr:pt==="company"?"co.address":"client.addr", phone:pt==="company"?"co.phone":"client.phone", email:pt==="company"?"co.email":"client.email",
+      bizno:pt==="company"?"co.bizno":"", date:"date"})[k]||"";
   rows.forEach(r=>r.its.forEach((it,j)=>{
     const k=labOf(it.s); if(!k||isSign(it.s)) return;
-    const nx=r.its[j+1], x0=it.x+it.w+Math.max(4,it.h*.6), end=nx?nx.x:W-W*.05, gap=end-x0;
-    if(nx&&!labOf(nx.s)&&!isSign(nx.s)&&!/^[_\s]+$/.test(nx.s)) return;          // 이미 내용이 적혀 있음
+    const nx=r.its[j+1], cy=it.y+it.h/2, party=partyAt(it.x,cy,it);
+    const pt=party||(cert&&/^(co|bizno|ceo)$/.test(k)?"company":"client"), b=bindOf(k,pt);
+    if(nx&&!labOf(nx.s)&&!isSign(nx.s)&&!/^[_\s]+$/.test(nx.s)){          // 이미 내용이 적혀 있음 → 덮어 쓰는 칸
+      if(k==="sign") return;
+      let e=j+1, vEnd=nx.x+nx.w, val=nx.s;
+      while(r.its[e+1]&&!labOf(r.its[e+1].s)&&!isSign(r.its[e+1].s)&&r.its[e+1].x-vEnd<W*.06){ e++; vEnd=r.its[e].x+r.its[e].w; val+=" "+r.its[e].s; }
+      const room=(r.its[e+1]?r.its[e+1].x-8:W*.95)-nx.x, x1=nx.x+Math.max(vEnd-nx.x,Math.min(room,(vEnd-nx.x)*1.5));
+      remember(b,val); cover(nx.x,x1,nx,b,val); return;
+    }
+    const x0=it.x+it.w+Math.max(4,it.h*.6), end=nx?nx.x:W-W*.05, gap=end-x0;
     if(gap<Math.max(36,it.h*3)) return;
-    const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3), cy=it.y+it.h/2, party=partyAt(it.x,cy,it);
+    const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3);
     if(k==="sign"){ sign(x0+Math.min(w,80)/2,cy,party); return; }
-    const pt=party||(cert&&/^(co|bizno|ceo)$/.test(k)?"company":"client");
-    const map={name:pt==="company"?"co.ceo":"client.name", ceo:pt==="company"?"co.ceo":"client.ceo", co:pt==="company"?"co.name":"client.name",
-      addr:pt==="company"?"co.address":"client.addr", phone:pt==="company"?"co.phone":"client.phone", email:pt==="company"?"co.email":"client.email",
-      bizno:pt==="company"?"co.bizno":"", date:"date"};
-    add({id:newId(),pg,t:"text",b:map[k]||"",v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,cx:x0+w/2,cy,cw:w,ch:it.h});
+    add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,cx:x0+w/2,cy,cw:w,ch:it.h});
   }));
+  // ②-2 한 덩어리 안의 "이름표 : 내용" ("의뢰인 : 블루드래곤", "대표자: 홍길동")
+  items.forEach(it=>{
+    const m=it.s.match(/^\s*([^:：]{1,14}?)\s*[:：]\s*(\S.*)$/); if(!m) return;
+    const val=m[2].replace(/[(（]\s*(인|印|서\s*명|날\s*인|사\s*인)\s*[)）].*$/,"").trim(); if(!val||/^[_\s]+$/.test(val)) return;
+    const who=partyOfStr(m[1]), k=keyOf(m[1]); if(!k&&!who||k==="sign") return;
+    let b;
+    if(k) b=bindOf(k,who||partyAt(it.x,it.y+it.h/2,null)||"client");
+    else{ const side=who==="company"?"co":"client", ceo=ctx.vals[side+".ceo"];
+      b=ceo&&cmp(val).endsWith(cmp(ceo))&&cmp(val)!==cmp(ceo)?`${side}.name ${side}.ceo`:`${side}.name`; }
+    const i0=it.s.indexOf(val,m[1].length), x0=xAt(it,i0), x1=xAt(it,i0+val.length);
+    if(!b.includes(" ")) remember(b,val);
+    cover(x0,x1,it,b,val);
+  });
   // ③ "____" 밑줄 빈칸
   rows.forEach(r=>r.its.forEach((it,j)=>{
     const re=/_{4,}/g; let m;
@@ -3941,21 +4054,39 @@ function fmFind(items,W,H,pg,kind){
       add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:(x1-x0)/W,f:it.h/W,o:0,cx:(x0+x1)/2,cy,cw:x1-x0,ch:it.h});
     }
   }));
-  // ④ "    년    월    일" 날짜 빈칸 → 작성일로 덮어 씀 (흰 바탕)
+  // ④ 날짜 줄 → 작성일로 덮어 씀 (흰 바탕): "  년  월  일" 빈칸도, "2026년 7월 5일"처럼 이미 적힌 것도
   rows.forEach(r=>{
-    const s=r.its.map(i=>i.s).join(" ");
-    // "20  년  월  일" · "2026년  월  일" (연도만 적힌 것도 통째로 덮음)
-    if(!/(^|[^\d])(20\s*|\d{4}\s*)?년\s+월\s+일/.test(s)||/년\s*\d{1,2}\s*월/.test(s)) return;
-    const a=r.its.find(i=>/년\s*(월|$)/.test(i.s)); if(!a) return;
-    const ai=r.its.indexOf(a), b=r.its.slice(ai).find(i=>/일/.test(i.s.slice(i===a?i.s.indexOf("년"):0)))||a;
-    const ya=a.s.indexOf("년"), st=a.s.slice(0,ya).match(/(\d{4}|20)\s*$/);
-    const x0=st?xAt(a,ya-st[0].length):xAt(a,ya)-a.h*2.8, x1=xAt(b,b.s.lastIndexOf("일")+1);
-    if(x1-x0<a.h*3) return;
-    out.forEach((m,i)=>{ if(m.pg===pg&&m.t==="text"&&m.b==="date"&&Math.abs(m.cy-(a.y+a.h/2))<a.h) out.splice(i,1); });
-    add({id:newId(),pg,t:"text",b:"date",v:"",x:Math.max(0,x0-2)/W,y:(a.y-a.h*.1)/H,w:(x1-x0+4)/W,f:a.h/W,o:1,cx:(x0+x1)/2,cy:a.y+a.h/2,cw:x1-x0,ch:a.h});
+    const s=r.its.map(i=>i.s).join(" "), sc=cmp(s);
+    const blank=/(^|[^\d])(20\s*|\d{4}\s*)?년\s+월\s+일/.test(s)&&!/년\s*\d{1,2}\s*월/.test(s);
+    const filled=/^([^\d]{0,10}[:：])?(\d{4}|20)?년\d{0,2}월\d{0,2}일$/.test(sc)||/^([^\d]{0,10}[:：])?\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}\.?$/.test(sc);
+    if(!blank&&!filled) return;
+    let a=r.its.find(i=>/년/.test(i.s)), x0, x1, top;
+    if(a){
+      const ai=r.its.indexOf(a), b=r.its.slice(ai).find(i=>/일/.test(i.s.slice(i===a?i.s.indexOf("년"):0)))||a;
+      const ya=a.s.indexOf("년"), st=a.s.slice(0,ya).match(/(\d{4}|20)\s*$/), pv=r.its[ai-1];
+      x0=st?xAt(a,ya-st[0].length):pv&&/^\s*(\d{4}|20)\s*$/.test(pv.s)?pv.x:xAt(a,ya)-a.h*2.8; x1=xAt(b,b.s.lastIndexOf("일")+1); top=a;
+    }else{   // 2026.07.05 모양
+      a=r.its.find(i=>/\d{4}[.\-/]/.test(i.s)); if(!a) return;
+      const i0=a.s.search(/\d{4}[.\-/]/), last=r.its[r.its.length-1]; x0=xAt(a,i0); x1=last.x+last.w; top=a;
+    }
+    if(x1-x0<top.h*3) return;
+    for(let i=out.length-1;i>=0;i--){ const m=out[i]; if(m.pg===pg&&m.t==="text"&&m.b==="date"&&Math.abs(m.cy-(top.y+top.h/2))<top.h) out.splice(i,1); }
+    add({id:newId(),pg,t:"text",b:"date",v:"",x:Math.max(0,x0-2)/W,y:(top.y-top.h*.1)/H,w:(x1-x0+4)/W,f:top.h/W,o:1,cx:(x0+x1)/2,cy:top.y+top.h/2,cw:x1-x0,ch:top.h});
   });
+  // ⑤ 위에서 찾은 상대방 이름이 본문 · 서명 줄 등 다른 곳에 또 나오면 그 자리도 수정 칸으로
+  if(final){
+    const list=[["client.name",ctx.vals["client.name"]],["client.ceo",ctx.vals["client.ceo"]]];
+    const coN=ctx.vals["co.name"]; if(coN&&profile.name&&cmp(coN.split(/[(（]/)[0])!==cmp(profile.name)) list.push(["co.name",coN]);
+    list.forEach(([b,v])=>{ const key=cmp(String(v||"").split(/[(（]/)[0]); if(key.length<2) return;
+      items.forEach(it=>{ let c=""; const idx=[];
+        for(let i=0;i<it.s.length;i++) if(!/\s/.test(it.s[i])){ c+=it.s[i]; idx.push(i); }
+        for(let p=c.indexOf(key);p>=0;p=c.indexOf(key,p+key.length)) cover(xAt(it,idx[p]),xAt(it,idx[p+key.length-1]+1),it,b,"");
+      });
+    });
+  }
   return out.map(m=>{ const o=Object.assign({},m); delete o.cx; delete o.cy; delete o.cw; delete o.ch; return o; });
 }
+
 
 /* --- 5. 원본 모양 문서 그리기 (미리보기 · 인쇄 · 전자서명 모두 같은 HTML) ---
    전자서명 PDF는 html2canvas로 찍기 때문에 페이지 안에서는 mm 단위만 씀 (cqw · aspect-ratio · object-fit 안 씀) */
@@ -3964,6 +4095,7 @@ function fmVal(m){
   if(m.v) return m.v;
   if(m.b==="date"){ return certYmd(certDate(state.quoteDate)||new Date()); }
   if(!m.b) return "";
+  if(m.b.includes(" ")) return m.b.split(" ").map(b=>fmVal({b})).filter(Boolean).join(" ");   // 상호 + 대표자
   const [o,k]=m.b.split("."); return String(((o==="co"?profile:state.client)||{})[k]||"");
 }
 // mode: true = 편집 카드 (칸 번호 · 끌기), "pv" = 고르는 창 미리보기 (찾은 칸 표시), false = 실제 문서
@@ -3977,7 +4109,7 @@ function fmBox(p,i,mode){
     const pos=`left:${(m.x*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`, no=edit?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":"";
     if(m.t==="text"){
       const val=fmVal(m), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
-      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}"${dm} style="${pos}${m.o||show?`min-width:${u(m.w)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
+      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}"${dm} style="${pos}${m.o||show?`min-width:${u(m.w)};`:""}${m.o?`min-height:${u(m.f*1.18)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
     }
     const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
     if(m.t==="client") return `<span class="fm-s${sel}"${dm}${show?"":' data-client-seal data-mark=" "'} style="${pos}${ctr}width:${w};height:${h}">${no}${show&&!cs?"상대방<br>서명":cs}</span>`;
@@ -3996,7 +4128,7 @@ function fmRender(p){
 /* --- 6. 원본 모양 문서 편집 카드 --- */
 var fmSel=null, fmAddT=null, fmDrag=null;
 function fmBinds(){ return [["","직접 입력"],["client.name","상대방 업체명 · 성명"],["client.ceo","상대방 대표자"],["client.phone","상대방 연락처"],["client.addr","상대방 주소"],["client.email","상대방 이메일"],
-  ["date","작성일"],["co.name","우리 상호"],["co.ceo","우리 대표자"],["co.bizno","우리 사업자등록번호"],["co.address","우리 주소"],["co.phone","우리 연락처"],["co.email","우리 이메일"]]; }
+  ["date","작성일"],["co.name","우리 상호"],["co.name co.ceo","우리 상호 + 대표자"],["client.name client.ceo","상대방 업체명 + 대표자"],["co.ceo","우리 대표자"],["co.bizno","우리 사업자등록번호"],["co.address","우리 주소"],["co.phone","우리 연락처"],["co.email","우리 이메일"]]; }
 function fmBindName(b){ const r=fmBinds().find(x=>x[0]===(b||"")); return b&&r?r[1]:""; }
 function formCardHtml(p,pi){
   const k=`p${p.pid}`, F=p.form, B=fmBinds(), TY={text:"글자 칸",client:"상대방 서명",company:"회사 직인"};
@@ -4016,7 +4148,8 @@ function formCardHtml(p,pi){
       <div class="fm-tools">
         <span>칸 추가:</span>
         ${Object.entries(TY).map(([v,t])=>`<button class="btn${fmAddT===v?" go":""}" type="button" data-fmadd="${v}" data-pi="${pi}">+ ${t}</button>`).join("")}
-        <span class="hint" style="margin:0">${fmAddT?`<b>양식 그림에서 넣을 곳을 누르세요</b>`:"칸은 끌어서 옮길 수 있습니다"}</span>
+        ${F.lines&&F.lines.length?`<button class="btn${fmAddT==="fix"?" go":""}" type="button" data-fmadd="fix" data-pi="${pi}" title="원본에 인쇄된 글자를 눌러 그 줄을 고쳐 씁니다">✎ 원본 글자 고치기</button>`:""}
+        <span class="hint" style="margin:0">${fmAddT==="fix"?`<b>고칠 글자를 양식 그림에서 누르세요</b> (여러 줄 계속 가능 · 다 했으면 버튼을 다시 누름)`:fmAddT?`<b>양식 그림에서 넣을 곳을 누르세요</b>`:"칸은 끌어서 옮길 수 있습니다"}</span>
       </div>
       <div class="fm-thumbs">${F.r.map((_,i)=>`<div class="fm-thumb${fmAddT?" adding":""}" data-fpi="${pi}" data-fpg="${i}">${fmBox(p,i,true)}${F.r.length>1?`<div class="fm-tn">${i+1}쪽</div>`:""}</div>`).join("")}</div>
       <div class="sub" style="margin-top:10px">칸 ${F.marks.length}개 <span class="hint" style="margin:0;font-weight:400">— 상대방 정보는 위 의뢰자 정보, 날짜는 작성일 칸의 값이 자동으로 들어갑니다</span></div>
@@ -4063,6 +4196,16 @@ $("#editor").addEventListener("pointerdown",e=>{
   const box=e.target.closest(".fm-thumb .fm-box"); if(!box) return;
   const th=box.closest(".fm-thumb"), p=P()[+th.dataset.fpi], pg=+th.dataset.fpg, R=box.getBoundingClientRect();
   const fx=(e.clientX-R.left)/R.width, fy=(e.clientY-R.top)/R.height;
+  if(fmAddT==="fix"){ e.preventDefault();
+    const L=(p.form.lines||[]).filter(l=>l.pg===pg&&fx>=l.x-.004&&fx<=l.x+l.w+.004&&fy>=l.y-.006&&fy<=l.y+l.f/(p.form.r[pg]||1.4142)*1.25+.006);
+    const l=L.sort((a,b)=>a.w-b.w)[0];
+    if(!l){ $("#saved").textContent="그 자리에서 글자를 찾지 못했습니다 — 글자 위를 눌러 주세요"; return; }
+    const ex=p.form.marks.find(m=>m.t==="text"&&m.o&&m.pg===pg&&Math.abs(m.x-l.x)<.01&&Math.abs(m.y-l.y)<.006);
+    const m=ex||{id:newId(),pg,t:"text",b:"",v:l.s,x:Math.max(0,l.x-.002),y:l.y-.001,w:l.w+.004,f:l.f,o:1};
+    if(!ex) p.form.marks.push(m); fmSel=m.id;
+    renderProds(); esMarkStale(); save(); schedule();
+    const row=$(`#prodCards [data-mrow="${m.id}"]`); if(row){ row.scrollIntoView({block:"nearest"}); const i=row.querySelector('input[data-p$=".v"]'); if(i){ i.focus(); i.select(); } }
+    return; }
   if(fmAddT){ const m=fmNewMark(fmAddT,pg,fx,fy); p.form.marks.push(m); fmAddT=null; fmSel=m.id; e.preventDefault();
     renderProds(); esMarkStale(); save(); schedule();
     const row=$(`#prodCards [data-mrow="${m.id}"]`); if(row){ row.scrollIntoView({block:"nearest"}); const i=row.querySelector('input[data-p$=".v"]'); if(i) i.focus(); }
@@ -4161,7 +4304,7 @@ $("#fmOkB").onclick=()=>{
   const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
   const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
   const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
-    form:{key,r:B.r.slice(),marks:clone(B.marks)}});
+    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[])}});
   if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
     return alert("양식 그림이 커서 이 브라우저에 저장할 공간이 부족합니다.\n쪽수가 적은 PDF로 나눠 올리거나, 문서 목록에서 오래된 문서를 지운 뒤 다시 해 주세요."); }
   fmSel=null; fmAddT=null;
