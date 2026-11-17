@@ -991,7 +991,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
       <button class="btn" id="lClose" type="button">닫기</button>
     </div>
     <div class="lfilter" id="lFilter">
-      <span class="lfl">견적일</span>
+      <span class="lfl">작성일</span>
       <button type="button" data-f="all" class="on">전체</button>
       <button type="button" data-f="today">당일</button>
       <button type="button" data-f="yesterday">전일</button>
@@ -1586,7 +1586,7 @@ function prodCardHtml(p,pi){
         <option value="quote"${d==="quote"?" selected":""}>${esc(qn)}만 (계약서 없음 — 거래명세서 · 청구서 · 영수증 등)</option>
         <option value="contract"${d==="contract"?" selected":""}>계약서만</option>
       </select></label>
-      ${d==="quote"?`<label class="chk" style="margin-top:8px"><input type="checkbox" data-p="prods.${pi}.recvSign" data-bool data-struct ${recvOn(p)?"checked":""}>하단에 <b>인수자 서명란</b> 넣기 <span style="font-weight:400;color:var(--ui-sub)">(받는 분 서명 · 전자서명 가능, 날짜는 아래 '날짜 · 서명' 칸)</span></label>`:""}
+      ${d==="quote"?`<label class="chk" style="margin-top:8px"><input type="checkbox" data-p="prods.${pi}.recvSign" data-bool data-struct ${recvOn(p)?"checked":""}>하단에 <b>인수자 서명란</b> 넣기 <span style="font-weight:400;color:var(--ui-sub)">(받는 분 서명 · 전자서명 가능, 날짜는 위 정보 칸의 날짜)</span></label>`:""}
       <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>상품 이름 · 문서 제목</summary>
         <div class="grid3">
           <label class="f">상품 이름<input data-p="prods.${pi}.name" data-title></label>
@@ -4447,7 +4447,7 @@ function fmVal(m,p){
     return String(r[k]??"");
   }
   if(m.b==="date"){
-    // 서명 · 직인 칸 가까이(같은 쪽 · 위아래 12% 안)에 있는 날짜 = 계약일 → '계약일 · 의뢰자 서명'의 년 · 월 · 일 (기본 양식과 같음)
+    // 서명 · 직인 칸 가까이(같은 쪽 · 위아래 12% 안)에 있는 날짜 = 계약일 → ctrDate (견적일 · 계약일 한 칸, 서명하면 서명일)
     const sg=p&&p.form&&(p.form.marks||[]).some(s=>s.t!=="text"&&s.pg===m.pg&&Math.abs(s.y-m.y)<.12);
     if(sg){ const d=ctrDate(), sp="   ";
       return `${d.y||sp}년 ${d.m||sp}월 ${d.d||sp}일`; }
