@@ -3876,7 +3876,13 @@ function fmBuildA(text,kind){
     }
     const junk=/견적일|연락처|등록번호|업체명|대표자|납품일|공급가액|총\s*액|합\s*계|계약금|잔금|업태|업종|상호|전화|이메일|일금|원정|계좌번호|예금주/;
     const items=q.items.filter(x=>x.on!==false&&(x.desc||x.cat)&&!junk.test(`${x.cat} ${x.desc}`))
-      .map(x=>ITEM(x.cat,x.desc,x.sub||"",x.qty||"1식",x.price===""?"":Number(x.price),x.mode));
+      .map(x=>{ let sub=x.sub||"", qty=x.qty||"1식";
+        // 단위(Page · EA · 회 · 각 · 식 …)가 세부내용 밑줄로 들어온 경우 → 수량에 붙임 ("5 Page", "1회")
+        if(/^\d+(\.\d+)?$/.test(String(x.qty||"").trim())&&/^[A-Za-z가-힣]{1,5}$/.test(sub.trim())){ qty=String(x.qty).trim()+(/^[A-Za-z]/.test(sub.trim())?" ":"")+sub.trim(); sub=""; }
+        return ITEM(x.cat,x.desc,sub,qty,x.price===""?"":Number(x.price),x.mode); });
+    // 합친 칸(대분류)은 위아래 빈 줄에도 같은 대분류를 채워 한 묶음으로 (중간에 선이 생기지 않게)
+    const fc=items.findIndex(x=>x.cat); if(fc>0) for(let i=0;i<fc;i++) items[i].cat=items[fc].cat;
+    for(let i=1;i<items.length;i++) if(!items[i].cat) items[i].cat=items[i-1].cat;
     // 금액 없는 빈 양식: 품목 표 머리(구성 · 품목 … 수량) 아래에서 "이름 ⇥ 수량" 줄만 품목으로
     if(!items.length){
       const ql=qText.split("\n"), h0=ql.findIndex(l=>/(구성|품목|품명|항목|내역)/.test(l)&&/수량/.test(l));
