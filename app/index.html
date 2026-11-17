@@ -4679,6 +4679,23 @@ function fmVecCells(segs,W,H){
   const tid=new Map(); cells.forEach((c,k)=>{ const r=tf(k); if(!tid.has(r)) tid.set(r,tid.size); c.t=tid.get(r); });
   return cells.sort((a,b)=>a.t-b.t||a.r0-b.r0||a.c0-b.c0);
 }
+// 그림에서 가는 선 찾기 (PDF 선 정보가 없는 예전 양식용): 어두운 점이 가로 · 세로로 이어지고 그 위아래(좌우)는 밝은 곳 = 선 (진한 색 띠는 빼고)
+function fmImgSegs(cv,sc){
+  // 연한 회색 선도 찾도록 밝기 그 자체가 아니라 '양옆보다 확실히 어두운가'로 봄
+  const Wc=cv.width, Hc=cv.height, d=cv.getContext("2d").getImageData(0,0,Wc,Hc).data, L=new Uint8Array(Wc*Hc);
+  for(let k=0,p=0;k<L.length;k++,p+=4) L[k]=d[p]*.3+d[p+1]*.59+d[p+2]*.11;
+  const lu=(x,y)=>x>=0&&y>=0&&x<Wc&&y<Hc?L[y*Wc+x]:255;
+  const segs=[], minL=Math.max(8,Math.round(6*sc)), T=Math.max(3,Math.round(2.2*sc))+1, C=22;
+  // 색 띠의 경계(위는 고른 한 색 · 아래는 고른 다른 색)도 칸을 나누는 선으로 봄
+  const ed=(a,b,a2,b2)=>Math.abs(a-b)>60&&Math.abs(a-a2)<25&&Math.abs(b-b2)<25;   // 저장 그림(JPEG)은 경계가 3~4px 번져서 ±2px · ±5px로 봄
+  const hOn=(x,y)=>{ const v=L[y*Wc+x]; return v<235&&v<lu(x,y-T)-C&&v<lu(x,y+T)-C||ed(lu(x,y-2),lu(x,y+2),lu(x,y-5),lu(x,y+5)); },
+    vOn=(x,y)=>{ const v=L[y*Wc+x]; return v<235&&v<lu(x-T,y)-C&&v<lu(x+T,y)-C||ed(lu(x-2,y),lu(x+2,y),lu(x-5,y),lu(x+5,y)); };
+  for(let y=0;y<Hc;y++){ let a=-1; for(let x=0;x<=Wc;x++){ const on=x<Wc&&hOn(x,y);
+    if(on){ if(a<0) a=x; } else if(a>=0){ if(x-a>=minL) segs.push([a/sc,(y+.5)/sc,x/sc,(y+.5)/sc]); a=-1; } } }
+  for(let x=0;x<Wc;x++){ let a=-1; for(let y=0;y<=Hc;y++){ const on=y<Hc&&vOn(x,y);
+    if(on){ if(a<0) a=y; } else if(a>=0){ if(y-a>=minL) segs.push([(x+.5)/sc,a/sc,(x+.5)/sc,y/sc]); a=-1; } } }
+  return segs;
+}
 // 한 글자씩 따로 찍힌 이름표("품   명" · "합 계 금 액")를 한 낱말로: 같은 줄에서 가까이 이어진 한 글자 덩어리들을 합친 새 덩어리 (xs: 글자마다 위치)
 function fmJoinSpaced(its){
   const one=it=>/^[가-힣A-Za-z]$/.test(String(it.s).trim()), rows=[];
@@ -5448,7 +5465,7 @@ new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")
 /* --- 등록된 양식 다시 검토: 인식 방식이 좋아지면, 예전에 등록한 양식도 저장해 둔 글자 · 디자인 그림으로 최신 방식으로 다시 읽음 ---
    원본 파일이 없어도 됨 (등록할 때 글자 위치(lines)와 글자 뺀 그림을 저장해 둠).
    더 많이 찾으면(품목 칸 · 연결 칸 · 입력 칸) 바로 바꾸고, 바꾼 내용과 [되돌리기]를 카드 위에 알림. 입력해 둔 품목 내용은 그대로 옮김. */
-var FM_VER="2026-11-17f";
+var FM_VER="2026-11-17g";
 function fmSig(marks){ let h=0; const s=JSON.stringify((marks||[]).map(m=>[m.t,m.b,m.v,m.x,m.y,m.w,m.f,m.al,m.fld])); for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return h; }
 function fmScore(F){ const M=F.marks||[];
   return {rows:(F.rows||[]).length, cells:M.filter(m=>/^it\./.test(m.b||"")).length, binds:M.filter(m=>m.t!=="text"||(m.b&&!/^it\./.test(m.b))||/\{[^{}]+\}/.test(m.v||"")).length, fields:M.filter(m=>m.fld).length, chk:(F.chk||[]).length}; }
@@ -5465,7 +5482,9 @@ async function fmRebuild(F){
     const old=(F.marks||[]).filter(m=>m.pg===i&&m.t==="text"&&m.bd);
     const items=F.lines.filter(l=>l.pg===i&&String(l.s).trim()).map(l=>({s:l.s,x:l.x*W,y:l.y*H,w:l.w*W,h:l.f*W,
       bd:l.bd||old.some(m=>m.x<l.x+l.w&&l.x<m.x+m.w&&Math.abs(m.y-l.y)<l.f*.8/(r[i]||1.4142))||undefined,st:l.st||undefined,c:l.c||undefined}));
-    const vc=((F.vc||[])[i]||[]).map(([a,b,c,d,c0,c1,r0,r1,t,bg])=>({x0:a*W,y0:b*H,x1:c*W,y1:d*H,c0,c1,r0,r1,t,bg}));
+    // 표 칸: 저장된 PDF 선 칸이 있으면 그것, 없으면(예전에 등록한 양식) 저장 그림의 가는 선에서 다시 찾음
+    const sv=(F.vc||[])[i];
+    const vc=sv&&sv.length?sv.map(([a,b,c,d,c0,c1,r0,r1,t,bg])=>({x0:a*W,y0:b*H,x1:c*W,y1:d*H,c0,c1,r0,r1,t,bg})):fmVecCells(fmImgSegs(cv,sc),W,H);
     pp.push({items,W,H,cv,sc,gl:[],vc});
   }
   const kind=F.kd||fmDetect(F.lines.map(l=>l.s).join("\n"));
@@ -5484,12 +5503,12 @@ async function fmReview(p){
       Object.assign(G,{marks:clone(B.marks),rows,cols:B.cols?B.cols.slice():null,cn:B.cn?Object.assign({},B.cn):null,vat:B.vat?1:0,chk:(B.chk||[]).slice(),chkOk:0,pw:B.pw,kd:B.kd,vc:B.vc,cov:B.cov});
       delete G.rb; G.ms=fmSig(G.marks);
       G.rev={at:Date.now(),a,b};
-    }
+    } else if(B.vc&&B.vc.some(L=>L.length)&&!(G.vc&&G.vc.some(L=>L.length))){ G.vc=B.vc; G.cov=B.cov; G.tbl=1; }
     G.ver=FM_VER; };
   // 지금 문서의 이 양식 · 같은 그림을 쓰는 기본 상품(다음 새 문서에 쓰는 원본)까지 함께
   P().forEach(q=>{ if(q.form&&q.form.key===F.key) apply(q.form); });
   (profile.templates||[]).forEach(q=>{ if(q.form&&q.form.key===F.key){ apply(q.form); delete q.form.prev; delete q.form.rev; } });
-  saveProfile(); save(); schedule(); if(better){ renderEditor(); esMarkStale&&esMarkStale(); }
+  saveProfile(); save(); schedule(); if(better||P().some(q=>q.form&&q.form.key===F.key&&q.form.tbl)){ renderEditor(); esMarkStale&&esMarkStale(); }
 }
 function fmRevHtml(F,pi){
   if(!F.rev) return "";
