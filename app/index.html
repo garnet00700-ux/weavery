@@ -4053,6 +4053,7 @@ async function fmBuildB(f,kind){
     for(let i=marks.length-1;i>=0;i--) if(marks[i].t==="text"&&(marks[i].n5||!marks[i].b)&&hit(marks[i],me)) marks.splice(i,1);
     marks.push({id:newId(),pg,t:"text",b:"",v:t,x:Math.max(0,it.x-1)/p.W,y:(it.y-it.h*.1)/p.H,w:(it.w+2)/p.W,f:it.h/p.W,o:1,bd:it.bd?1:undefined,al:it.x>p.W*.55?"r":""});
   }));
+  for(let i=marks.length-1;i>=0;i--) if(marks[i].gap&&!marks[i].b) marks.splice(i,1);   // 띄어쓰기로 비어 보이는 자리(채울 내용 없음)는 칸으로 안 만듦
   marks.unshift(...T.marks);
   const fam=getComputedStyle(document.querySelector("#pages .page")||document.body).fontFamily, mc=document.createElement("canvas").getContext("2d");
   const fit=(m,str,wpt,hpt,bd)=>{ mc.font=`${bd?700:500} ${(hpt*.92).toFixed(2)}px ${fam}`; const n=[...str].length; if(n<2) return;
@@ -4177,7 +4178,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     if(gap<Math.max(36,it.h*3)) return;
     const w=nx?Math.min(gap-Math.max(12,it.h*1.6),W*.42):Math.min(gap,W*.3);
     if(k==="sign"){ sign(x0+Math.min(w,80)/2,cy,party); return; }
-    add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,cx:x0+w/2,cy,cw:w,ch:it.h});
+    add({id:newId(),pg,t:"text",b,v:"",x:x0/W,y:it.y/H,w:w/W,f:it.h/W,o:0,gap:1,cx:x0+w/2,cy,cw:w,ch:it.h});
   }));
   // ②-2 한 덩어리 안의 "이름표 : 내용" ("의뢰인 : 블루드래곤", "대표자: 홍길동")
   items.forEach(it=>{
