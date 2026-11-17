@@ -487,6 +487,13 @@ textarea{resize:vertical;line-height:1.5}
 .fm-sech .fm-v:hover{border-color:var(--ui-border)}
 .fm-sech .fm-v:focus{border-color:#7aa64a;background:#fff}
 .fm-sech.sel .fm-v{background:#f1f6fd}
+/* 임시저장 안내창 (다른 서류로 넘어갈 때) */
+.draft-ask{z-index:9999}
+.draft-ask .mbox{max-width:460px}
+.draft-ask .da-t{margin:0 0 10px;line-height:1.7}
+.draft-ask .da-note{background:#f4f8ec;border:1px solid #d9e8c4;border-radius:10px;padding:10px 12px;line-height:1.7;font-size:13.5px;margin-bottom:14px}
+.draft-ask .da-btns{display:flex;flex-direction:column;gap:6px}
+.draft-ask .da-btns .btn{width:100%;padding:10px}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -1054,7 +1061,7 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
           <label class="f"><span data-ll="성명">업체명</span><input data-p="client.name"></label>
           <label class="f" data-only="quote">대표자<input data-p="client.ceo"></label>
           <label class="f">연락처<input data-p="client.phone"></label>
-          <label class="f" id="cBizno" hidden>사업자 번호<input data-p="client.bizno"></label>
+          <label class="f" id="cBizno" style="display:none">사업자 번호<input data-p="client.bizno"></label>
           <label class="f">이메일 <span style="font-weight:400" data-only="quote labor">(최종 계약서 받을 주소)</span><span style="font-weight:400" data-only="cert">(증명서 PDF 받을 주소 · 원할 때만 발송)</span><input type="email" data-p="client.email" placeholder="example@naver.com"></label>
           <label class="f" data-only="labor cert" style="grid-column:1/-1">주소<input data-p="client.addr" data-addr></label>
           <label class="f"><span data-ll="작성일" data-lc="발급일">견적일</span><input type="date" data-p="quoteDate"></label>
@@ -1300,38 +1307,70 @@ function saveNow(){
   if(!lsSet(K.doc,state)){ $("#saved").textContent="자동 저장 실패 (브라우저 저장 공간이 가득 찼습니다)"; return; }
   saveToList();
   const hm=new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
-  const draftIn=isCert(state)&&!state.issuedAt&&state._t&&loadList().some(x=>x.id===state.docId);
+  const draftIn=isDraftDoc(state)&&state._t&&loadList().some(x=>x.id===state.docId);
   $("#saved").textContent=certPending()?(state.issuedAt?"발급 뒤 고친 내용 · [다시 발급]을 눌러야 문서 목록에 반영됩니다"
-      :"증명서 작성 중 · 발급하지 않고 넘어가면 임시저장할지 물어봅니다")
-    :draftIn?`임시저장됨 · ${hm} · 발급하지 않으면 ${DRAFT_DAYS}일 뒤 자동 삭제`
+      :"작성 중 · 아직 문서 목록에 없습니다 · [임시저장]을 누르면 그 뒤로는 고칠 때마다 자동 저장됩니다")
+    :draftIn?`임시저장됨 · ${hm} · ${isCert(state)?"발급하지":"서명 요청을 만들지"} 않으면 ${DRAFT_DAYS}일 뒤 자동 삭제`
     :"자동 저장됨 · "+hm;
   if(typeof certIssueUI==="function") certIssueUI();
 }
 /* 증명서 저장 규칙
    - 발급 전: 다른 문서로 넘어갈 때 '임시저장할까요?'를 물어보고, [확인]이면 목록에 임시저장(7일 보관). 한 번 임시저장하면 그 뒤로는 자동 저장.
    - 발급 뒤: [다시 발급]을 눌러야 목록에 반영 */
+/* 모든 서류 공통 저장 규칙
+   - 작성을 시작해도 [임시저장]을 누르기 전에는 문서 목록에 넣지 않음 (지금 화면의 내용은 이 브라우저에 남음)
+   - 임시저장하지 않고 다른 문서로 넘어가려 하면 안내창으로 물어봄 · 한 번 임시저장하면 그 뒤로는 고칠 때마다 자동 저장
+   - 확정 기준: 증명서 = [발급하기] · 양측 서명 서류(계약서 · 근로계약서) = [서명 요청 만들기]
+     확정 전 임시저장은 7일 뒤 자동 삭제 (예전부터 목록에 있던 서류는 지우지 않음: _draft 표시가 있는 것만) */
+function needsSign(d){ return !isCert(d)&&((d||state).prods||[]).some(p=>p.on&&(p.kind==="labor"||p.kind==="form"||(typeof docsOf==="function"?docsOf(p):"both")!=="quote")); }
+function isDraftDoc(d){ d=d||state; if(!d||!d.prods) return false; if(isCert(d)) return !d.issuedAt; return !!d._draft&&!d.esign&&needsSign(d); }
 function certPending(){
-  if(!isCert(state)||!state._t) return false;
+  if(!state._t) return false;
   const inList=loadList().some(x=>x.id===state.docId);
+  if(!isCert(state)) return !inList&&!state.esign;     // 아직 임시저장 안 한 서류
   if(!state.issuedAt) return !inList;     // 발급 전: 아직 임시저장 안 한 것만
   // lastSaved = 발급했을 때(또는 목록에서 열었을 때)의 내용
   return !inList||JSON.stringify(state)!==lastSaved;
 }
+// 임시저장: 목록에 넣고 그 뒤로 자동 저장 (확정 전이면 7일 보관 표시)
+function draftSave(){ state._t=1; if(!isCert(state)&&!state.esign&&needsSign(state)) state._draft=1; lsSet(K.doc,state); saveToList(true); }
+// 임시저장 안내창: "save" | "skip" | "stay"
+function draftAsk(){
+  return new Promise(res=>{
+    const cert=isCert(state), sign=needsSign(state);
+    const keep=cert?`[발급하기]를 누르기 전까지는 ${DRAFT_DAYS}일 동안만 보관됩니다.`:sign?`[서명 요청 만들기]를 하기 전까지는 ${DRAFT_DAYS}일 동안만 보관됩니다.`:"";
+    const m=document.createElement("div"); m.className="modal draft-ask";
+    m.innerHTML=`<div class="mbox" role="dialog" aria-label="임시저장 안내">
+      <div class="mhead"><b>아직 임시저장하지 않은 서류입니다</b></div>
+      <div class="mbody">
+        <p class="da-t">지금 작성한 내용은 아직 문서 목록에 저장되지 않았습니다.<br>임시저장하면 문서 목록에 들어가고, 나중에 다시 열어 이어서 쓸 수 있습니다.</p>
+        <div class="da-note"><b>한 번 임시저장하면</b><br>그 뒤로는 고칠 때마다 자동으로 저장됩니다.${keep?`<br>${keep}`:""}</div>
+        <div class="da-btns"><button type="button" class="btn go" data-da="save">임시저장하고 넘어가기</button><button type="button" class="btn" data-da="skip">저장하지 않고 넘어가기</button><button type="button" class="btn" data-da="stay">계속 작성하기</button></div>
+      </div></div>`;
+    const done=v=>{ m.remove(); removeEventListener("keydown",esc1); res(v); };
+    const esc1=e=>{ if(e.key==="Escape") done("stay"); };
+    m.addEventListener("click",e=>{ const b=e.target.closest("[data-da]"); if(b) done(b.dataset.da); else if(e.target===m) done("stay"); });
+    addEventListener("keydown",esc1);
+    document.body.appendChild(m); m.querySelector("[data-da=save]").focus();
+  });
+}
 // 다른 문서로 넘어가기 전 확인. false면 넘어가지 않음
-function certLeaveOk(){
+async function certLeaveOk(){
   if(!certPending()) return true;
   if(state.issuedAt) return confirm("발급한 뒤 고친 내용이 아직 발급되지 않았습니다.\n이대로 넘어가면 고친 내용은 사라지고,\n문서 목록에는 발급했던 내용이 남습니다.\n\n계속할까요?");
-  if(confirm(`아직 발급하지 않은 증명서입니다.\n\n임시저장할까요?\n\n[확인] 임시저장 — 문서 목록에 ${DRAFT_DAYS}일 동안 보관됩니다\n[취소] 저장하지 않기`)){
-    lsSet(K.doc,state); saveToList(true); return true;
-  }
-  return confirm("저장하지 않으면 지금 작성한 증명서 내용은 사라집니다.\n\n[확인] 저장하지 않고 넘어가기\n[취소] 돌아가서 계속 작성하기");
+  const a=await draftAsk();
+  if(a==="save"){ draftSave(); return true; }
+  if(a==="skip") return confirm("저장하지 않으면 지금 작성한 내용은 사라집니다.\n\n[확인] 저장하지 않고 넘어가기\n[취소] 돌아가서 계속 작성하기");
+  return false;
 }
+// 창을 닫거나 새로고침할 때도: 임시저장 안 한 서류면 브라우저 확인창
+addEventListener("beforeunload",e=>{ try{ if(certPending()&&!state.issuedAt){ e.preventDefault(); e.returnValue=""; } }catch(_){} });
 const loadList=()=>{ const l=lsGet(K.list,[]); return Array.isArray(l)?l:[]; };
 // 발급하지 않은 증명서(임시저장)는 마지막 수정 뒤 7일이 지나면 목록 · 서버에서 지움 (지금 열린 문서는 제외)
 const DRAFT_DAYS=7;
 const draftLeft=x=>Math.max(0,Math.ceil(((x.updated||0)+DRAFT_DAYS*864e5-Date.now())/864e5));
 function purgeDrafts(){
-  const list=loadList(), old=list.filter(x=>x.id!==state.docId&&x.data&&isCert(x.data)&&!x.data.issuedAt&&draftLeft(x)<=0);
+  const list=loadList(), old=list.filter(x=>x.id!==state.docId&&isDraftDoc(x.data)&&draftLeft(x)<=0);
   if(!old.length) return;
   storeList(list.filter(x=>!old.includes(x)));
   old.forEach(x=>{ dirty.delete(x.id); delQ.add(x.id); }); storeQ(); pushSoon();
@@ -1350,6 +1389,7 @@ let lastSaved="";
 function saveToList(force){
   // 증명서: 발급 전에는 목록에 '임시저장'(7일 보관) · 발급한 뒤에는 [다시 발급]으로만 목록 갱신
   if(!force&&isCert(state)&&(state.issuedAt||!loadList().some(x=>x.id===state.docId))) return;     // 발급 전 증명서는 임시저장을 고른 뒤부터 자동 저장
+  if(!force&&!isCert(state)&&!state.esign&&!loadList().some(x=>x.id===state.docId)) return;     // 다른 서류도 임시저장(또는 서명 요청)한 뒤부터 자동 저장
   const list=loadList(), i=list.findIndex(x=>x.id===state.docId);
   if(i<0&&!state._t&&!state.client.name.trim()&&!state.client.ceo.trim()) return;     // 아직 아무것도 안 쓴 새 문서는 목록에 넣지 않음 (작성을 시작하면 _t)
   const snap=JSON.stringify(state);
@@ -1592,6 +1632,7 @@ function prodCardHtml(p,pi){
   </details>`;
 }
 function renderProds(){
+  if(typeof fmClientExtra==="function") setTimeout(fmClientExtra,0);
   $("#prodPick").innerHTML=prodPickHtml();
   $("#deliverBox").innerHTML=P().map((p,i)=>p.on&&!special(p)?`<label class="f">납품일 (${esc(p.name)})<input data-p="prods.${i}.deliver" value="${esc(p.deliver)}" placeholder="예: 2026. 8. 20."></label>`:"").join("");
   $("#prodCards").innerHTML=P().map(prodCardHtml).join("");
@@ -2033,7 +2074,7 @@ let listFilter="all", statusFilter="all";
 // 대기 · 완료: 전자서명이 끝나면 자동으로 '완료'. 종이로 서명받은 건 목록에서 눌러 직접 바꿈.
 // 증명서(재직 · 경력 · 퇴직)는 서명을 받는 문서가 아니라 대기 · 완료 없이 '발급'으로만 저장.
 // 증명서: [발급하기]를 눌러 저장했으면 '발급', 누르지 않고 저장된 것(✕로 양식 지우며 저장 · 예전 자동 저장)은 '미발급'
-const stOf=x=>entryIsCert(x)?(x.data.issuedAt?"발급":"미발급"):x.status==="완료"?"완료":"대기";
+const stOf=x=>entryIsCert(x)?(x.data.issuedAt?"발급":"미발급"):isDraftDoc(x.data)?"미발급":x.status==="완료"?"완료":"대기";
 function entryIsCert(x){ return !!(x&&x.data&&isCert(x.data)); }
 const isoOf=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 function dateRange(f){
@@ -2107,7 +2148,7 @@ function renderList(){
           ${dl} ${esc(fmtDate(x.quoteDate))||"-"}${dirty.has(x.id)&&connected()?` · <span class="by">올리는 중</span>`:""}</div>
       </div>
       ${stOf(x)==="발급"?`<span class="lst issued" title="[발급하기]를 눌러 발급한 증명서입니다">발급</span>`
-        :stOf(x)==="미발급"?`<span class="lst unissued" title="아직 발급하지 않은 증명서입니다.\n${draftLeft(x)}일 뒤 자동으로 지워집니다.\n열어서 맨 아래 [발급하기]를 누르면 계속 보관됩니다">임시저장<small>${draftLeft(x)}일 남음</small></span>`
+        :stOf(x)==="미발급"?`<span class="lst unissued" title="${entryIsCert(x)?"아직 발급하지 않은 증명서입니다.":"아직 서명 요청을 만들지 않은 서류입니다."}\n${draftLeft(x)}일 뒤 자동으로 지워집니다.\n열어서 ${entryIsCert(x)?"맨 아래 [발급하기]를":"[서명 요청 만들기]를"} 누르면 계속 보관됩니다">임시저장<small>${draftLeft(x)}일 남음</small></span>`
         :`<button type="button" class="lst ${stOf(x)==="완료"?"done":"wait"}" data-lact="status" title="${es&&es.status==="signed"?"전자서명이 끝나 자동으로 완료됐습니다":`전자서명이 끝나면 자동으로 완료됩니다.\n종이로 서명받았으면 눌러서 ${stOf(x)==="완료"?"대기":"완료"}로 바꾸세요`}">${stOf(x)}</button>`}
       <div class="lamt"><b>${k!=="quote"?"":x.total?"₩ "+won(x.total):"금액 미입력"}</b>수정 ${fmtTime(x.updated)}${x.by?` · ${esc(x.by)}`:""}</div>
       <div class="lact">
@@ -2139,7 +2180,7 @@ $("#lStat").addEventListener("click",e=>{ const b=e.target.closest("[data-s]"); 
 $("#lYear").addEventListener("change",()=>{ listFilter="year"; renderList(); });
 $("#lKind").addEventListener("change",()=>{ kindFilter=$("#lKind").value; renderList(); });
 $("#lMonth").addEventListener("change",()=>{ listFilter=$("#lMonth").value?"month":"all"; renderList(); });
-$("#lBody").addEventListener("click",e=>{
+$("#lBody").addEventListener("click",async e=>{
   const row=e.target.closest(".lrow"); if(!row) return;
   const list=loadList(), x=list.find(v=>v.id===row.dataset.id); if(!x) return;
   const act=e.target.closest("[data-lact]")?.dataset.lact;
@@ -2158,13 +2199,13 @@ $("#lBody").addEventListener("click",e=>{
     renderList(); return;
   }
   if(act==="dup"){
-    if(!certLeaveOk()) return;
+    if(!(await certLeaveOk())) return;
     const d=clone(x.data); d.docId=newId(); d.client.name=(d.client.name||"")+" (복사)";
     d.quoteDate=todayISO(); d.date={y:String(new Date().getFullYear()),m:"",d:""}; d.clientSign=""; d.status="대기"; d.esign=null;
     delete d.issuedAt; delete d.issueInfo;     // 복제한 증명서는 아직 발급 전 (임시저장)
     openDoc(d); saveNow(); closeList(); return;
   }
-  if(x.id!==state.docId){ if(!certLeaveOk()) return; openDoc(x.data); }
+  if(x.id!==state.docId){ if(!(await certLeaveOk())) return; openDoc(x.data); }
   closeList();
 });
 $("#lBackup").onclick=()=>{
@@ -2194,8 +2235,8 @@ $("#fRestore").onchange=e=>{
 
 /* ===== 파일 · 인쇄 ===== */
 function fileName(){return `${(state.client.name||"견적서").replace(/[\\/:*?"<>|]/g,"").trim()}_${(profile.name||"").replace(/[\\/:*?"<>|]/g,"")} 견적서`}
-$("#bNew").onclick=()=>{
-  if(certPending()){ if(!certLeaveOk()) return; }
+$("#bNew").onclick=async ()=>{
+  if(certPending()){ if(!(await certLeaveOk())) return; }
   else if(!confirm("새 문서를 작성할까요?\n지금 문서는 '문서 목록'에 저장되어 있어 언제든 다시 불러올 수 있습니다.\n(상품 품목 · 안내사항 · 조항은 저장된 기본값으로 시작합니다)"))return;
   saveNow(); state=newDocFrom(profile); lastSaved=""; renderEditor(); save(); schedule();
 };
@@ -2298,7 +2339,7 @@ async function esCreate(){
     const css=$("#docCss").textContent+`\n:root{${brandVars()}}`;
     const r=await api({action:"create",html,css,summary:esSummary(),card:profile.card||"",logo:profile.logo||""});
     state.esign={id:r.id,docNo:r.docNo,hash:r.hash,requestedAt:r.requestedAt,link:esLink(r.id),status:"sent"};
-    state.status="대기"; state.clientSign="";
+    state.status="대기"; state.clientSign=""; delete state._draft;     // 서명 요청을 만들면 임시저장(7일)에서 벗어나 계속 보관
     renderImages(); saveNow(); esBusy("");
   }catch(e){ esignMode=false; renderPreview(); esBusy(""); alert("서명 요청을 만들지 못했습니다.\n"+e.message); }
 }
@@ -3086,11 +3127,11 @@ setTimeout(serverVerCheck,1500);
 var draftBarClosed=false;     // var: 앞 파일에서 목록을 저장할 때 먼저 불릴 수 있음
 function draftBar(){
   const bar=document.getElementById("draftBar"); if(!bar) return;
-  const ds=loadList().filter(x=>x.data&&isCert(x.data)&&!x.data.issuedAt);
+  const ds=loadList().filter(x=>isDraftDoc(x.data));
   if(!ds.length||draftBarClosed){ bar.hidden=true; return; }
   const left=Math.min(...ds.map(draftLeft));
   $("#dbTitle").textContent=`임시저장 중인 서류 ${ds.length}건`;
-  $("#dbText").innerHTML=`아직 발급하지 않은 증명서입니다. ${left<=1?"<b>오늘 · 내일 중</b> 자동으로 지워지는 서류가 있습니다.":`가장 빠른 것은 <b>${left}일 뒤</b> 자동으로 지워집니다.`}<br>필요하면 열어서 [발급하기]를 눌러 주세요.`;
+  $("#dbText").innerHTML=`아직 확정하지 않은 서류입니다. ${left<=1?"<b>오늘 · 내일 중</b> 자동으로 지워지는 서류가 있습니다.":`가장 빠른 것은 <b>${left}일 뒤</b> 자동으로 지워집니다.`}<br>필요하면 열어서 증명서는 [발급하기], 계약서는 [서명 요청 만들기]를 눌러 주세요.`;
   bar.hidden=false;
 }
 $("#dbClose").onclick=()=>{ draftBarClosed=true; $("#draftBar").hidden=true; };
@@ -3653,8 +3694,8 @@ $("#editor").addEventListener("click",e=>{
   e.preventDefault();
   if(!onProds().length) return alert("왼쪽 [상품 선택]에서 양식을 먼저 고르세요.");
   if(isCert(state)&&state.issuedAt) return alert("이미 발급한 증명서입니다.\n고친 내용은 [다시 발급]을 눌러야 저장됩니다.");
-  state._t=1; lsSet(K.doc,state); saveToList(true); saveNow();
-  $("#saved").textContent=isCert(state)?`임시저장했습니다 · 문서 목록에 ${DRAFT_DAYS}일 동안 보관됩니다`:"임시저장했습니다 · 문서 목록에 저장됐습니다";
+  draftSave(); saveNow();
+  $("#saved").textContent=isDraftDoc(state)?`임시저장했습니다 · 이제부터 고칠 때마다 자동 저장 · ${isCert(state)?"발급하지":"서명 요청을 만들지"} 않으면 ${DRAFT_DAYS}일 뒤 자동 삭제`:"임시저장했습니다 · 이제부터 고칠 때마다 자동 저장됩니다";
   const t=b.textContent; b.textContent="저장됨 ✓"; b.disabled=true;
   setTimeout(()=>{ b.textContent=t; b.disabled=false; },1800);
 });
@@ -4769,7 +4810,7 @@ function prodPickHtml(){
     return `<label><input type="checkbox" data-p="prods.${i}.on" data-bool data-struct ${p.on?"checked":""}><span class="pp-n">${esc(p.name||"(이름 없음)")}</span>`+
       (gone?"":`<button type="button" class="pp-x" data-pdel="${i}" title="상품 목록에서 지우기" aria-label="${esc(p.name)} 지우기">✕</button>`)+`</label>`; }).join("");
 }
-function prodDelete(pi){
+async function prodDelete(pi){
   const p=P()[pi]; if(!p) return;
   // 지금 문서에서 쓰는(체크된) 양식이면: 작성하던 문서는 그 양식 그대로 문서 목록에 저장하고, 새 문서로 넘어간다
   const keep=!!p.on;
@@ -4777,10 +4818,10 @@ function prodDelete(pi){
     "다음 새 문서부터 목록에 나오지 않습니다."+(connected()?" (팀 전체)":""),
     "이미 만든 문서와 서명 받은 문서는 [문서 목록]에 그대로 남아,","언제든 다시 열고 저장할 수 있습니다."];
   if(keep) msg.push("","지금 작성하던 문서는 [문서 목록]에 저장하고,","새 문서로 넘어갑니다.");
-  const draft=keep&&p.kind==="cert"&&!state.issuedAt;
-  if(draft) msg.push("(발급하지 않은 증명서는 임시저장할지 한 번 더 묻습니다)");
+  const draft=keep&&certPending()&&!state.issuedAt;
+  if(draft) msg.push("(아직 임시저장하지 않은 서류는 임시저장할지 한 번 더 묻습니다)");
   if(!confirm(msg.join("\n"))) return;
-  if(draft&&!certLeaveOk()) return;
+  if(draft&&!(await certLeaveOk())) return;
   profile.templates=profile.templates.filter(x=>!sameTpl(x,p));
   if(!profile.templates.length) profile.templates=[Object.assign(GENERIC_PRODUCT(),{on:false})];
   saveProfile();
@@ -4887,7 +4928,7 @@ document.getElementById("editor").addEventListener("click",e=>{
 /* --- 원본 양식의 상대방 칸 ↔ 위 '의뢰자 정보' 연결 --- */
 // 원본 양식에 상대방 사업자번호 칸이 있으면 의뢰자 정보에도 그 칸을 보여 줌
 function fmClientExtra(){ const el=document.getElementById("cBizno"); if(!el) return;
-  el.hidden=!P().some(p=>p.on&&p.kind==="form"&&p.form&&(p.form.marks||[]).some(m=>m.b==="client.bizno")); }
+  el.style.display=P().some(p=>p.on&&p.kind==="form"&&p.form&&(p.form.marks||[]).some(m=>m.b==="client.bizno"))?"":"none"; }
 // 한쪽에 적으면 같은 칸(위 의뢰자 정보 · 아래 카드)과 자동 칸의 안내 글자를 바로 맞춤
 $("#editor").addEventListener("input",e=>{
   const el=e.target, path=el.dataset&&el.dataset.p; if(!path) return;
