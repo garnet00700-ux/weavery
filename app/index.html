@@ -4208,11 +4208,13 @@ async function fmBuildB(f,kind){
   });
   // 정렬: 글자를 둘러싼 칸(디자인 그림의 경계선)을 찾아 원본이 왼쪽 · 가운데 · 오른쪽 중 어디에 맞췄는지 보고 그대로 따름
   safe(()=>fmAlign(marks,pp),"정렬");
+  // 표의 빈칸: 이름표를 몰라도 테두리로 둘러싸인 빈칸은 모두 입력 칸으로 (가로: 이름표 오른쪽 · 세로: 머리줄 아래)
+  safe(()=>fmGrid(marks,pp,T),"표 칸");
   // 원본 글자 줄 (글자 고치기용): 쪽 · 위치 · 크기 · 내용 (비율)
   if(!txt) chk.add("글자가 없는 그림 PDF(스캔본)입니다.\n칸을 자동으로 찾지 못하니 [+ 글자 칸]으로 직접 넣어 주세요.");
   else {
     const has=re=>marks.some(m=>re.test(m.t==="text"?(m.b||""):m.t));
-    if(!/^(labor|cert)/.test(kind)&&/(quote|stmt|contract)/.test(kind)&&!T.rows.length) chk.add("품목 표를 찾지 못했습니다.\n표 머리줄(품명 · 수량 · 단가 · 금액 등)이 없거나 처음 보는 이름입니다.\n품목을 넣으려면 이 양식을 보내 주세요.");
+    if(!/^(labor|cert)/.test(kind)&&/(quote|stmt|contract)/.test(kind)&&!T.rows.length) chk.add(marks.some(m=>m.fld)?"금액을 계산하는 품목 표(수량 · 단가 · 금액)는 찾지 못했습니다.\n표의 빈칸은 모두 직접 입력 칸으로 만들었지만, 합계 · 계약금은 자동 계산되지 않습니다.":"품목 표를 찾지 못했습니다.\n표 머리줄(품명 · 수량 · 단가 · 금액 등)이 없거나 처음 보는 이름입니다.\n품목을 넣으려면 이 양식을 보내 주세요.");
     if(!has(/^client/)) chk.add("상대방(의뢰자) 칸을 찾지 못했습니다.\n이름 · 연락처가 자동으로 들어가지 않습니다.\n필요한 자리에 [+ 글자 칸]을 넣어 주세요.");
     if(!/^cert/.test(kind)&&!has(/^(co\.|company)/)) chk.add("우리 회사 칸(상호 · 대표자 · 직인)을 찾지 못했습니다.\n원본 글자가 그대로 남습니다.");
     if(/^(contract|labor)/.test(kind)&&!marks.some(m=>m.t==="client")) chk.add("상대방 서명 자리를 찾지 못했습니다.\n전자서명을 받으려면 [+ 상대방 서명]으로 넣어 주세요.");
@@ -4382,6 +4384,59 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     });
   }
   return out.map(m=>{ const o=Object.assign({},m); delete o.cx; delete o.cy; delete o.cw; delete o.ch; return o; });
+}
+
+/* --- 4-1c. 표 빈칸 인식 ---
+   글자를 뺀 디자인 그림에서 글자 둘레의 칸(사방이 테두리나 바탕색 경계로 닫힌 상자)을 찾음.
+   - 가로: 이름표 칸 바로 오른쪽 칸이 비어 있으면 그 칸이 입력 칸
+   - 세로: 오른쪽이 없거나 차 있고, 바로 아래 같은 너비의 칸이 비어 있으면(머리줄) 아래로 이어진 빈칸 모두가 입력 칸
+   이미 다른 칸(이름 · 날짜 · 품목 표)이 있는 자리는 건드리지 않음 */
+function fmGrid(marks,pp,T){
+  let total=0;
+  pp.forEach((P0,pg)=>{ if(!P0.cv||total>240) return;
+    const s=P0.sc, Wc=P0.cv.width, Hc=P0.cv.height, D=P0.cv.getContext("2d").getImageData(0,0,Wc,Hc).data;
+    const px=(x,y)=>{ const o=(y*Wc+x)*4; return [D[o],D[o+1],D[o+2]]; };
+    const df=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2]);
+    const walk=(x,y,dx,dy,lim)=>{ const b=px(x,y); for(let k=0;k<lim;k++){ const nx=x+dx*(k+1), ny=y+dy*(k+1); if(nx<0||ny<0||nx>=Wc||ny>=Hc) return null; if(df(px(nx,ny),b)>40) return k; } return null; };
+    // (x,y)를 품은 닫힌 칸 [L,R,T,B] (px) · 사방 중 하나라도 안 닫히면 칸이 아님
+    const cellAt=(x,y)=>{ x=Math.round(x); y=Math.round(y); if(x<1||y<1||x>=Wc-1||y>=Hc-1) return null;
+      const l=walk(x,y,-1,0,Wc*.7), r=walk(x,y,1,0,Wc*.7), u=walk(x,y,0,-1,Hc*.12), d=walk(x,y,0,1,Hc*.12);
+      if(l===null||r===null||u===null||d===null) return null;
+      const c={L:x-l,R:x+r,T:y-u,B:y+d}; return c.R-c.L>6&&c.B-c.T>6?c:null; };
+    // 테두리 건너 다음 칸 안쪽 점 (dx · dy 방향)
+    const inb=(a,b)=>a>=1&&b>=1&&a<Wc-1&&b<Hc-1;
+    const past=(x,y,dx,dy)=>{ const b=px(x,y); let k=1;
+      while(k<16&&inb(x+dx*k,y+dy*k)&&df(px(x+dx*k,y+dy*k),b)<=40) k++;      // 칸 끝(테두리 시작)까지
+      if(k>=16||!inb(x+dx*k,y+dy*k)) return null;
+      for(let j=k;j<k+16;j++){                                                    // 테두리를 지나 같은 색이 5px 이어지는 곳 = 다음 칸
+        if(!inb(x+dx*(j+5),y+dy*(j+5))) return null;
+        const c=px(x+dx*j,y+dy*j); let ok=true; for(let t=1;t<5;t++) if(df(px(x+dx*(j+t),y+dy*(j+t)),c)>30){ ok=false; break; }
+        if(ok) return [x+dx*(j+2),y+dy*(j+2)]; }
+      return null; };
+    const items=P0.items.filter(it=>String(it.s).trim());
+    const textIn=c=>items.some(it=>{ const cx=(it.x+it.w/2)*s, cy=(it.y+it.h/2)*s; return cx>c.L&&cx<c.R&&cy>c.T&&cy<c.B; });
+    const markIn=c=>marks.some(m=>m.pg===pg&&m.t==="text"&&(()=>{ const cx=(m.x+m.w/2)*Wc, cy=(m.y*Hc)+m.f*Wc*.6; return cx>c.L&&cx<c.R&&cy>c.T&&cy<c.B; })())||marks.some(m=>m.pg===pg&&m.t!=="text"&&m.x*Wc>c.L&&m.x*Wc<c.R&&m.y*Hc>c.T&&m.y*Hc<c.B);
+    const empty=c=>!textIn(c)&&!markIn(c);
+    const done=[];   // 이미 만든 칸 (겹치지 않게)
+    const add=(c,it,lb,al)=>{ if(done.some(d=>d.L<c.R-2&&c.L<d.R-2&&d.T<c.B-2&&c.T<d.B-2)) return; done.push(c);
+      const f=Math.min(it.h,(c.B-c.T)/s*.62), pad=Math.max(2,f*.5);
+      const y=((c.T+c.B)/2/s-f*.62)/P0.H;
+      marks.push({id:newId(),pg,t:"text",b:"",v:"",fld:1,lb:lb.slice(0,24),x:(c.L/s+pad)/P0.W,y,w:Math.max(.01,((c.R-c.L)/s-pad*2)/P0.W),f:f/P0.W,o:0,ga:1,al}); total++; };
+    const lab=it=>{ const t=String(it.s).trim().replace(/\s*[:：]\s*$/,""); return t.length>=1&&t.length<=24&&/[가-힣A-Za-z]/.test(t)&&!/[(（]\s*(인|서명)\s*[)）]/.test(t)?t:""; };
+    items.forEach(it=>{ if(total>240||T.used.has(it)) return; const lb=lab(it); if(!lb) return;
+      const c=cellAt((it.x+it.w/2)*s,(it.y+it.h/2)*s); if(!c) return;
+      if(c.R-c.L>Wc*.6) return;                                   // 한 줄 전체 칸 = 제목 · 문장 줄
+      const cy=Math.round((it.y+it.h/2)*s);
+      // 가로: 오른쪽 칸
+      const pr=past(c.R-1,cy,1,0), rc=pr&&cellAt(pr[0],pr[1]);
+      if(rc&&Math.abs(rc.T-c.T)<6&&Math.abs(rc.B-c.B)<6&&rc.R-rc.L>it.h*s*1.5){
+        if(empty(rc)){ add(rc,it,lb,"l"); return; } }                          // 오른쪽이 차 있으면(머리줄의 다음 이름표 등) 아래를 봄
+      // 세로: 아래로 같은 너비의 빈칸들
+      let pb=past(Math.round((c.L+c.R)/2),c.B-1,0,1), n=0;
+      while(pb&&n<40){ const bc=cellAt(pb[0],pb[1]); if(!bc||Math.abs(bc.L-c.L)>6||Math.abs(bc.R-c.R)>6||!empty(bc)) break;
+        add(bc,it,lb,"c"); n++; pb=past(Math.round((bc.L+bc.R)/2),bc.B-1,0,1); }
+    });
+  });
 }
 
 /* --- 4-1b. 정렬 인식 ---
@@ -4678,7 +4733,7 @@ function formCardHtml(p,pi){
     const auto=m.b?fmVal(Object.assign({},m,{v:""}),p):"", tp=/\{[^{}]+\}/.test(m.v||""), len=String(m.v||auto||"").length;
     return `<span class="fm-c${m.b?" bound":""}${sel}" data-mrow="${m.id}" style="flex:${Math.max(3,Math.min(60,len))} 1 0">
       ${m.b?`<i class="fm-tag" title="${esc(fmBindName(m.b)||"자동")} — 자동으로 들어갑니다">자동</i>`:tp?`<i class="fm-tag" title="중괄호 부분은 금액 · 이름으로 자동으로 바뀝니다">자동</i>`:""}
-      <input class="fm-v" data-p="${b}.v" placeholder="${esc(m.b?(auto||"(비어 있음)"):"(빈 칸)")}" aria-label="${i+1}번 글자"${m.b?` title="비워 두면 '${esc(auto)}'(이)가 자동으로 들어갑니다"`:""}>
+      <input class="fm-v" data-p="${b}.v" placeholder="${esc(m.b?(auto||"(비어 있음)"):m.lb?m.lb+" (빈 칸)":"(빈 칸)")}" aria-label="${i+1}번 글자"${m.b?` title="비워 두면 '${esc(auto)}'(이)가 자동으로 들어갑니다"`:""}>
       ${m.b?`<button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button>`:`<button class="fm-cb" type="button" data-fmdel="${i}" data-pi="${pi}" title="이 글자 지우기" aria-label="이 글자 지우기">✕</button>`}</span>`; };
   // 같은 쪽 · 같은 높이의 칸을 한 줄로 묶음
   const lines=[]; order.forEach(i=>{ const m=F.marks[i], L=lines[lines.length-1], my=m.t==="text"?m.y+m.f*.5:m.y;
@@ -4690,7 +4745,7 @@ function formCardHtml(p,pi){
   const isSect=L=>plain(L)&&/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(F.marks[L.ids[0]].v||"");
   // 이름표 + 내용 줄 ("상호명 | 블루드래곤", "대표자 | ○○"): 이름표는 고정, 내용만 고치는 카드로
   const short=i=>{ const m=F.marks[i]; return m.t==="text"&&!m.b&&!/\{/.test(m.v||"")&&String(m.v||"").trim().length>0&&String(m.v||"").trim().length<=16; };
-  const isVal=i=>{ const m=F.marks[i]; return m.t==="text"&&m.b&&!m.b.startsWith("it."); };
+  const isVal=i=>{ const m=F.marks[i]; return m.t==="text"&&((m.b&&!m.b.startsWith("it."))||m.fld); };   // fld: 표에서 찾은 빈 입력 칸
   const kvOf=L=>{ const ids=L.ids, pairs=[], rest=[];
     for(let k=0;k<ids.length;k++){ if(short(ids[k])&&ids[k+1]!=null&&isVal(ids[k+1])){ pairs.push({l:ids[k],v:ids[k+1],suf:[]}); k++; }
       else if(pairs.length&&F.marks[ids[k]].t==="text"&&!F.marks[ids[k]].b&&/^\s*[(（][^()（）]{1,8}[)）]\s*$/.test(F.marks[ids[k]].v||"")) pairs[pairs.length-1].suf.push(ids[k]);   // "(인)" 같은 꼬리 글자
@@ -4715,7 +4770,7 @@ function formCardHtml(p,pi){
     const b=ck||`prods.${pi}.form.marks.${i}.v`, auto=ck?"":fmVal(Object.assign({},m,{v:""}),p);
     const suf=P.suf.map(j=>{ const s=F.marks[j]; return s.t==="text"?`<span class="fm-kx">${esc(s.v)}</span>`:`<span class="fm-kx">${s.t==="client"?"✍ 서명":"🔴 직인"}</span>`; }).join("");
     return `<div class="fm-kf${fmSel===m.id?" sel":""}" data-mrow="${m.id}">
-      <div class="fm-kl"><span title="원본 양식의 이름표 (고정)">${esc(String(lm.v).replace(/\s*[:：]\s*$/,""))}</span><i class="fm-tag" title="${ck?"위 '의뢰자 정보'와 연결된 칸입니다 — 어느 쪽에 적어도 같이 바뀝니다":esc(fmBindName(m.b)||"자동")+" — 비워 두면 자동으로 들어갑니다"}">${ck?"의뢰자 정보":"자동"}</i><button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></div>
+      <div class="fm-kl"><span title="원본 양식의 이름표 (고정)">${esc(String(lm.v).replace(/\s*[:：]\s*$/,""))}</span>${!m.b&&m.fld?"":`<i class="fm-tag" title="${ck?"위 '의뢰자 정보'와 연결된 칸입니다 — 어느 쪽에 적어도 같이 바뀝니다":esc(fmBindName(m.b)||"자동")+" — 비워 두면 자동으로 들어갑니다"}">${ck?"의뢰자 정보":"자동"}</i>`}<button class="fm-cb" type="button" data-fmcfg="${m.id}" title="칸 설정">⚙</button></div>
       <div class="fm-kin"><input class="fm-v" data-p="${b}" placeholder="${esc(ck?"(비어 있음)":auto||"(비어 있음)")}" aria-label="${esc(lm.v)}">${suf}</div></div>`; };
   let cn=0;
   const rows=blocks.map(B0=>{
