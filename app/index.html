@@ -551,6 +551,13 @@ table.sg .seal img{position:absolute;left:50%;top:50%;width:17mm;height:11mm;obj
 .fm-box .fm-s img{max-width:100%;max-height:100%;display:block}
 .fm-box .fm-s.co img{opacity:.92}
 .fm-miss{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#999;font-size:11pt;line-height:1.7;background:#f7f7f7}
+
+.fm-box .fm-t.fm-hl{outline:.6mm solid #ff8a00;outline-offset:.4mm;background:rgba(255,214,0,.35);border-radius:.6mm;min-width:6mm;min-height:3.2mm;z-index:5;animation:fmHl 1.2s ease-in-out infinite alternate}
+@keyframes fmHl{from{outline-color:#ff8a00}to{outline-color:#ffc861}}
+@media print{.fm-box .fm-t.fm-hl{outline:0;background:none;animation:none}}
+
+.page .doc-hl{outline:.6mm solid #ff8a00;outline-offset:.5mm;background:rgba(255,214,0,.3);border-radius:.6mm;animation:fmHl 1.2s ease-in-out infinite alternate}
+@media print{.page .doc-hl{outline:0;background:none;animation:none}}
 </style>
 <style>
 
@@ -4340,13 +4347,13 @@ function fmBox(p,i,mode){
   const cs=state.clientSign&&!esignMode&&!edit?`<img src="${state.clientSign}" alt="">`:"";
   const coImg=profile.seal||profile.sign;
   const marks=F.marks.map((m,n)=>{ if(m.pg!==i) return "";
-    const pos=`left:${(m.x*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`, no=edit&&!m.src?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":"";
+    const pos=`left:${(m.x*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`, no=edit&&!m.src?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":` data-fid="${m.id}"`;
     if(m.t==="text"){
       const val=fmVal(m,p), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
       // al: c 가운데 · l 왼쪽 (칸 너비 고정, 길면 줄바꿈) · r 오른쪽 끝 맞춤
       const al=m.al, ps=al==="r"?`right:${((1-m.x-m.w)*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`:pos;
       const wd=al==="c"||al==="l"?`width:${u(m.w)};text-align:${al==="c"?"center":"left"};white-space:normal;`:m.o||show?`min-width:${u(m.w)};${al==="r"?"text-align:right;":""}`:"";
-      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
+      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}${!show&&fmHl===m.id?" fm-hl":""}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.fc?`color:${m.fc};`:""}${m.ls?`letter-spacing:${u(m.ls)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
     }
     const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
     if(m.t==="client") return `<span class="fm-s${sel}"${dm}${show?"":' data-client-seal data-mark=" "'} style="${pos}${ctr}width:${w};height:${h}">${no}${show&&!cs?"상대방<br>서명":cs}</span>`;
@@ -4675,6 +4682,45 @@ document.getElementById("editor").addEventListener("input",e=>{
   box.querySelectorAll(".fm-rows [data-mrow]").forEach(r=>{ const t=(r.dataset.ftxt||"").replace(/\s+/g,""); const inp=r.querySelector("input.fm-v"); const v=inp?inp.value.toLowerCase().replace(/\s+/g,""):t; r.hidden=!!q&&!v.includes(q)&&!t.includes(q); });
   box.querySelectorAll(".fm-rows .fm-pgh").forEach(h=>{ h.hidden=!!q; });
 });
+
+// 왼쪽에서 고치는 칸 → 오른쪽 문서에 그 자리를 표시하고 그쪽으로 이동 (원본 양식: 칸 위치 · 기본 양식: 글자 내용으로 찾음)
+var fmHl=null, fmHlEl=null;
+function fmHlId(el){
+  const row=el.closest("[data-mrow]"); if(row) return row.dataset.mrow;
+  const m=(el.dataset&&el.dataset.p||"").match(/^prods\.(\d+)\.form\.rows\.(\d+)\.(\w+)$/); if(!m) return null;
+  const p=P()[+m[1]], k=m[3]==="mode"?"amt":m[3], mk=p&&p.form&&p.form.marks.find(x=>x.b===`it.${m[2]}.${k}`); return mk?mk.id:null;
+}
+// 기본 양식: 입력 값(채움 글자 · 금액 모양 포함)이 들어 있는 가장 안쪽 글자 덩어리
+function fmHlFind(el){
+  if(!el||el.tagName==="SELECT"||el.type==="checkbox"||el.type==="file") return null;
+  const v=String(el.value||"").trim(); if(!v) return null;
+  const pm=(el.dataset.p||"").match(/^prods\.(\d+)\./), p=pm?P()[+pm[1]]:onProds()[0];
+  const nz=t=>String(t).replace(/[\s\u0001\u0002]+/g,"");
+  const keys=[]; let t=v; try{ t=fill(v,p); }catch(_){}
+  const first=t.split(/\n/).map(x=>x.trim()).find(Boolean)||""; if(first) keys.push(nz(first).slice(0,28));
+  if(/^-?\d+(\.\d+)?$/.test(v)) keys.push(nz(won(Number(v))));
+  const all=[...$("#pages").querySelectorAll("*")].filter(e=>!/^(SCRIPT|STYLE|IMG|BR)$/.test(e.tagName));
+  for(const k of keys){ if(k.length<1) continue;
+    const hit=all.filter(e=>nz(e.textContent).includes(k));
+    const leaf=hit.find(e=>![...e.children].some(c=>nz(c.textContent).includes(k)));
+    if(leaf) return leaf; }
+  return null;
+}
+function fmHlShow(scroll){
+  $$("#pages .fm-hl,#pages .doc-hl").forEach(e=>e.classList.remove("fm-hl","doc-hl"));
+  let el=fmHl?$(`#pages [data-fid="${fmHl}"]`):null;
+  if(el) el.classList.add("fm-hl");
+  else if(fmHlEl){ el=fmHlFind(fmHlEl); if(el) el.classList.add("doc-hl"); }
+  if(el&&scroll) el.scrollIntoView({block:"center",inline:"nearest",behavior:"smooth"});
+}
+$("#editor").addEventListener("focusin",e=>{
+  if(!e.target.matches("input:not([type=checkbox]):not([type=file]):not([data-fmfind]),textarea")) return;
+  if(!$("#editor").contains(e.target)||e.target===fmHlEl) return;
+  fmHlEl=e.target; fmHl=fmHlId(e.target); fmHlShow(true);
+});
+$("#editor").addEventListener("focusout",()=>{ setTimeout(()=>{ const a=document.activeElement; if(a&&a===fmHlEl) return; fmHl=null; fmHlEl=null; fmHlShow(false); },0); });
+// 문서를 다시 그린 뒤(글자를 고칠 때마다)에도 표시 유지
+new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")) fmHlShow(false); }).observe(document.getElementById("pages"),{childList:true});
 
 /* 앱으로 설치 (PWA) — 크롬 · 엣지: [앱으로 설치] 버튼 / 아이폰: 사파리 공유 → 홈 화면에 추가 안내
    sw.js가 늘 최신 파일을 먼저 받으므로, 사이트에 올리면 설치한 앱도 다음 실행 때 자동으로 새 버전이 됩니다.
