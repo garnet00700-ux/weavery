@@ -420,6 +420,13 @@ textarea{resize:vertical;line-height:1.5}
 .sw-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:10px 18px 16px;padding-top:12px;border-top:1px solid #eee}
 .sw-foot span{font-size:13px;color:#888}
 @media (max-width:700px){.sw-body{grid-template-columns:1fr}}
+.fm-items{overflow-x:auto;border:1px solid var(--ui-border);border-radius:8px;margin-top:6px}
+.fm-items table{border-collapse:collapse;width:100%;min-width:640px;font-size:12.5px}
+.fm-items th{background:#f4f6f3;font-weight:700;padding:5px 4px;text-align:center;white-space:nowrap}
+.fm-items td{padding:3px;border-top:1px solid var(--ui-border)}
+.fm-items input,.fm-items select{width:100%;min-width:0;box-sizing:border-box;padding:4px 6px;font-size:12.5px}
+.fm-items td:nth-child(2){min-width:180px}
+.fm-sum{margin-top:6px}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -1177,6 +1184,7 @@ function itemAmount(it){
   return has(it.price)?Number(it.price):0;
 }
 function totals(p){
+  if(p&&p.kind==="form"&&p.form&&p.form.rows&&p.form.rows.length&&typeof fmItems==="function") p.items=fmItems(p.form.rows);   // 원본 양식 품목 표
   const supply=(p.items||[]).reduce((s,it)=>s+itemAmount(it),0);
   // include: 적은 금액에 10%를 더함 · inprice: 적은 금액이 이미 VAT 포함 (공급가액 = 합계 ÷ 1.1)
   let vat=state.vatMode==="include"?Math.round(supply*0.1):0, total=supply+vat, base=supply;
@@ -1191,7 +1199,7 @@ function totalsOut(supply,vat,total){
 const docTotal=()=>onProds().reduce((s,p)=>s+totals(p).total,0);
 // underline=true: 대표자·의뢰인 자리를 밑줄 칸으로
 function fill(text,p,underline){
-  const t=p?totals(p):{supply:0,total:0,rate:Number(state.depositRate)||0};
+  const t=p?totals(p):{supply:0,total:0,dep:0,bal:0,rate:Number(state.depositRate)||0};
   const u=v=>underline?"\u0001"+v+"\u0002":v;
   if(p&&p.kind==="labor") text=laborFill(String(text||""),p,u);
   return String(text||"")
@@ -1204,7 +1212,11 @@ function fill(text,p,underline){
     .replace(/\{잔금비율\}/g,100-t.rate)
     .replace(/\{금액\}/g,t.supply?won(t.supply):"　　　　")
     .replace(/\{총액\}/g,t.total?won(t.total):"　　　　")
-    .replace(/\{납품일\}/g,(p&&p.deliver)||"　　　　");
+    .replace(/\{납품일\}/g,(p&&p.deliver)||"　　　　")
+    .replace(/\{계약금\}/g,t.dep?won(t.dep):"　　　　")
+    .replace(/\{잔금\}/g,t.bal?won(t.bal):"　　　　")
+    .replace(/\{한글총액\}/g,t.total?korWon(t.total):"　　　　")
+    .replace(/\{계좌\}/g,profile.account||"");
 }
 const blankLine=s=>s.replace(/\u0001(.*?)\u0002/g,"<u>$1</u>");
 function tpl(t,v){ return String(t??"").replace(/\{([^{}]+)\}/g,(m,k)=>k in v?v[k]:m); }
@@ -3927,19 +3939,48 @@ async function fmBuildB(f,kind){
     await page.render({canvasContext:x,viewport:v2}).promise;
     pages.push(fmJpeg(cv)); r.push(vp.height/vp.width);
     const tc=await page.getTextContent();
+    const bold=fn=>{ try{ const o=page.commonObjs.has(fn)&&page.commonObjs.get(fn); return !!o&&/bold|black|heavy|semibold|extrabold/i.test(o.name||""); }catch(_){ return false; } };
     const items=fmMerge(tc.items.filter(it=>it.str&&it.str.trim()).map(it=>{
       const t=pdfjsLib.Util.transform(vp.transform,it.transform), h=Math.hypot(t[2],t[3])||10;
-      return {s:it.str, x:t[4], y:t[5]-h*.86, w:it.width||h*it.str.length*.9, h};
+      return {s:it.str, x:t[4], y:t[5]-h*.86, w:it.width||h*it.str.length*.9, h, bd:bold(it.fontName)};
     }));
-    txt+=items.length; pp.push({items,W:vp.width,H:vp.height});
+    txt+=items.length; pp.push({items,W:vp.width,H:vp.height,cv,sc});
   }
   // 1회차: 이미 적혀 있는 값(상대방 업체명 등)을 모음 → 2회차: 그 값이 다른 쪽 · 본문에 나와도 수정 칸으로
   const ctx={vals:{}}, marks=[];
   pp.forEach((p,i)=>fmFind(p.items,p.W,p.H,i,kind,ctx,false));
   pp.forEach((p,i)=>marks.push(...fmFind(p.items,p.W,p.H,i,kind,ctx,true)));
+  // 품목 표 → 칸마다 수정 칸 (표 안에 겹친 다른 칸은 버림)
+  const T={rows:[],marks:[],used:new Set(),cols:null};
+  if(!/^(labor|cert)/.test(kind)) pp.forEach((p,i)=>fmTable(p.items,p.W,p.H,i,T));
+  const hit=(a,b)=>a.pg===b.pg&&a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+(b.h||b.f*1.2)*(1/(r[b.pg]||1.4142))&&b.y<a.y+(a.h||a.f*1.2)*(1/(r[a.pg]||1.4142));
+  for(let i=marks.length-1;i>=0;i--) if(marks[i].t==="text"&&T.marks.some(t=>hit(t,marks[i]))) marks.splice(i,1);
+  // 합계 · 계약금 · 약관 문장: 기본 양식처럼 {총액} {계약금비율} {의뢰인} … 로 바꿔 덮어 씀
+  const all=pp.map(p=>p.items.map(i=>i.s).join("\n")).join("\n"), rm=all.match(/(계약금|착수금|선금|선급금)\s*[(（]?\s*(\d{1,3})\s*%/);
+  const rate=rm?+rm[2]:(Number(state.depositRate)||30), supply=T.rows.reduce((s,x)=>s+(x.mode==="normal"&&fmRowAmt(x)!==""?fmRowAmt(x):0),0);
+  const V={rate,supply,total:supply,dep:Math.round(supply*rate/100),client:ctx.vals["client.name"],clientCeo:ctx.vals["client.ceo"],co:profile.name?ctx.vals["co.name"]:""};
+  V.bal=V.total-V.dep;
+  pp.forEach((p,pg)=>p.items.forEach(it=>{
+    if(T.used.has(it)) return;
+    const me={pg,x:it.x/p.W,y:it.y/p.H,w:it.w/p.W,f:it.h/p.W};
+    if(marks.some(m=>!m.n5&&m.b&&m.t==="text"&&hit(m,me))) return;     // 이름표 칸 · 날짜 칸이 이미 있는 줄은 그대로
+    const t=fmTemplate(it.s,V); if(t===it.s) return;
+    for(let i=marks.length-1;i>=0;i--) if(marks[i].t==="text"&&(marks[i].n5||!marks[i].b)&&hit(marks[i],me)) marks.splice(i,1);
+    marks.push({id:newId(),pg,t:"text",b:"",v:t,x:Math.max(0,it.x-1)/p.W,y:(it.y-it.h*.1)/p.H,w:(it.w+2)/p.W,f:it.h/p.W,o:1,bd:it.bd?1:undefined,al:it.x>p.W*.55?"r":""});
+  }));
+  marks.unshift(...T.marks);
+  marks.forEach(m=>{ if(m.t!=="text"||!m.o) return; const P0=pp[m.pg]; if(!P0||!P0.cv) return;
+    const k=P0.cv.width, g=P0.cv.getContext("2d"), x0=m.x*k, y0=m.y*P0.cv.height, w=m.w*k, h=Math.max(m.f*1.1,m.h||0)*k, cnt={};
+    for(let a=0;a<=8;a++) for(let b=0;b<=3;b++){ const px=Math.round(x0+1+(w-2)*a/8), py=Math.round(y0+1+(h-2)*b/3);
+      const d=g.getImageData(Math.min(k-1,Math.max(0,px)),Math.min(P0.cv.height-1,Math.max(0,py)),1,1).data;
+      const key=[d[0],d[1],d[2]].map(v=>Math.round(v/6)).join(","), e=cnt[key]=cnt[key]||[0,0,0,0]; e[0]++; e[1]+=d[0]; e[2]+=d[1]; e[3]+=d[2]; }
+    const top=Object.values(cnt).sort((a,b)=>b[0]-a[0])[0]; if(!top) return;
+    const c=[1,2,3].map(i=>Math.round(top[i]/top[0])); if(c.every(v=>v>=246)) return;
+    if(c[0]*.3+c[1]*.59+c[2]*.11<110) m.fc="#fff";   // 진한 바탕 → 흰 글자
+    m.bg="#"+c.map(v=>Math.min(255,v).toString(16).padStart(2,"0")).join(""); });
   // 원본 글자 줄 (글자 고치기용): 쪽 · 위치 · 크기 · 내용 (비율)
   const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s}); }));
-  return {pages,r,marks:marks.slice(0,120),lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
+  return {pages,r,marks:marks.slice(0,260),rows:T.rows,cols:T.cols,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
 }
 // 한 글자씩 쪼개진 PDF 글자를 같은 줄 · 가까운 것끼리 이어 붙임 (글자마다 x 위치는 xs에 보관)
 function fmMerge(items){
@@ -3951,7 +3992,7 @@ function fmMerge(items){
       if(cur){ const gap=it.x-(cur.x+cur.w), hh=Math.max(it.h,cur.h);
         if(gap<hh*1.1&&gap>-hh){ if(gap>hh*.25){ cur.s+=" "; cur.xs.push(cur.x+cur.w); }
           cur.s+=it.s; cur.xs.push(...xs); cur.w=Math.max(cur.w,it.x+it.w-cur.x); cur.h=hh; cur.y=Math.min(cur.y,it.y); return; } }
-      cur={s:it.s,x:it.x,y:it.y,w:it.w,h:it.h,xs}; out.push(cur);
+      cur={s:it.s,x:it.x,y:it.y,w:it.w,h:it.h,xs,bd:it.bd}; out.push(cur);
     });
   });
   return out;
@@ -3985,7 +4026,7 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     const w=t==="company"?22/210:17/210;
     add({id:newId(),pg,t,x:cx/W,y:cy/H,w,cx,cy,cw:w*W,ch:w*W*.7}); };
   // 이미 적힌 글자 위를 흰 바탕으로 덮는 칸 (b: 채울 내용, v: 직접 입력 값)
-  const cover=(x0,x1,it,b,v)=>add({id:newId(),pg,t:"text",b:b||"",v:b?"":(v||""),x:Math.max(0,x0-1)/W,y:(it.y-it.h*.1)/H,w:(x1-x0+2)/W,f:it.h/W,o:1,cx:(x0+x1)/2,cy:it.y+it.h/2,cw:x1-x0,ch:it.h});
+  const cover=(x0,x1,it,b,v)=>add({id:newId(),pg,t:"text",b:b||"",v:b?"":(v||""),d:b&&/^co./.test(b)&&v?String(v):undefined,x:Math.max(0,x0-1)/W,y:(it.y-it.h*.1)/H,w:(x1-x0+2)/W,f:it.h/W,o:1,cx:(x0+x1)/2,cy:it.y+it.h/2,cw:x1-x0,ch:it.h});
   const remember=(b,v)=>{ v=String(v||"").trim(); if(b&&v&&!ctx.vals[b]) ctx.vals[b]=v; };
   // 같은 줄끼리 묶기
   const rows=[];
@@ -4080,23 +4121,127 @@ function fmFind(items,W,H,pg,kind,ctx,final){
     list.forEach(([b,v])=>{ const key=cmp(String(v||"").split(/[(（]/)[0]); if(key.length<2) return;
       items.forEach(it=>{ let c=""; const idx=[];
         for(let i=0;i<it.s.length;i++) if(!/\s/.test(it.s[i])){ c+=it.s[i]; idx.push(i); }
-        for(let p=c.indexOf(key);p>=0;p=c.indexOf(key,p+key.length)) cover(xAt(it,idx[p]),xAt(it,idx[p+key.length-1]+1),it,b,"");
+        for(let p=c.indexOf(key);p>=0;p=c.indexOf(key,p+key.length)){ const n0=out.length; cover(xAt(it,idx[p]),xAt(it,idx[p+key.length-1]+1),it,b,""); if(out.length>n0) out[n0].n5=1; }
       });
     });
   }
   return out.map(m=>{ const o=Object.assign({},m); delete o.cx; delete o.cy; delete o.cw; delete o.ch; return o; });
 }
 
+/* --- 4-2. 원본 모양: 품목 표 · 합계 · 약관 문장 인식 --- */
+const FM_COLS=[["cat",/^(품목|품목명|품명|항목|항목명|구분|분류|제품명|상품명)$/],["desc",/^(세부|세부내용|세부항목|세부사항|내용|규격|사양|상세|상세내용|작업내용)$/],
+  ["qty",/^(수량)$/],["unit",/^(단위)$/],["up",/^(단가)$/],["amt",/^(공급가액|공급가|금액|합계|합계금액|소계)$/],["note",/^(비고)$/]];
+const FM_FLAG=/^(별도(\s*(청구|문의|협의))?|서비스(\s*제공)?|무상(\s*제공)?|무료|포함|-)$/;
+function fmNum(s){ if(typeof s==="number") return s; const t=String(s??"").replace(/[₩\s원]/g,""); return /^-?\d[\d,]*(\.\d+)?$/.test(t)?Number(t.replace(/,/g,"")):null; }
+// 한 줄의 공급가액: 직접 적은 금액 → 없으면 수량 × 단가
+function fmRowAmt(r){ const a=fmNum(r.amt); if(a!==null) return a; const q=fmNum(r.qty), u=fmNum(r.up); return q!==null&&u!==null?q*u:""; }
+function fmFlagText(r){ const f=r.fl||""; return r.mode==="service"?(/서비스|무상|무료|포함/.test(f)?f:"서비스 제공"):(/별도/.test(f)?f:"별도"); }
+// 표 줄 → 앱 품목 (합계 · 계약금 계산에 씀)
+function fmItems(rows){
+  return (rows||[]).filter(r=>r.cat||r.desc||fmRowAmt(r)!=="").map(r=>{ const a=fmRowAmt(r);
+    return {cat:r.cat||"",desc:r.desc||"",sub:"",qty:[r.qty,r.unit].filter(Boolean).join(""),price:a===""?"":a,amount:null,note:"",mode:r.mode||"normal"}; });
+}
+// 머리줄(품목 · 세부내용 · 수량 · 단가 · 공급가액 …)을 찾아 아래 줄들을 칸으로 나눔. 칸마다 흰 바탕 수정 칸(b: it.줄.항목)
+function fmTable(items,W,H,pg,T){
+  const nm=s=>String(s).replace(/[(（][^)）]*[)）]/g,"").replace(/[\s:：]/g,"");
+  const rows=[]; items.slice().sort((a,b)=>a.y-b.y).forEach(it=>{ let r=rows.find(r=>Math.abs(r.y-it.y)<=Math.max(2.5,it.h*.45)); if(!r){ r={y:it.y,its:[]}; rows.push(r); } r.its.push(it); });
+  rows.forEach(r=>r.its.sort((a,b)=>a.x-b.x));
+  for(let hi=0;hi<rows.length;hi++){
+    const hr=rows[hi], cols=[];
+    hr.its.forEach(it=>{ const c=FM_COLS.find(([,re])=>re.test(nm(it.s))); if(c&&!cols.some(x=>x.k===c[0])) cols.push({k:c[0],x0:it.x,x1:it.x+it.w,cx:it.x+it.w/2}); });
+    if(cols.length<3||!cols.some(c=>c.k==="amt"||c.k==="up")) continue;
+    cols.sort((a,b)=>a.cx-b.cx);
+    const hh=Math.max(...hr.its.map(i=>i.h)), body=[];
+    for(let j=hi+1;j<rows.length;j++){
+      const s=rows[j].its.map(i=>i.s).join(" ");
+      if(/(합\s*계|소\s*계|총\s*액|총\s*금\s*액|대\s*금|계약금|부가세|vat)/i.test(s)||/^\s*(\d{1,2}|[IVX]+)\s*[.)]\s*\S/.test(s)||/^\s*제\s*\d+\s*조/.test(s)) break;
+      if(rows[j].y-(body.length?body[body.length-1].y:hr.y)>hh*5) break;
+      body.push(rows[j]);
+    }
+    if(!body.length) continue;
+    const C=k=>cols.find(c=>c.k===k);
+    const colOf=it=>{ const cx=it.x+it.w/2; let best=cols[0], bd=1e9; cols.forEach(c=>{ const d=cx>=c.x0-2&&cx<=c.x1+2?0:Math.abs(c.cx-cx); if(d<bd){ bd=d; best=c; } }); return best.k; };
+    const isNum=s=>fmNum(s)!==null||FM_FLAG.test(String(s).trim());
+    // 글자 칸(품목 · 세부내용) 경계: 한 줄에 글자가 둘 있으면 오른쪽 글자의 시작 위치
+    let dx=null;
+    if(C("cat")&&C("desc")){
+      body.forEach(r=>{ const tx=r.its.filter(i=>/^(cat|desc)$/.test(colOf(i))&&!isNum(i.s)); if(tx.length>1) dx=dx===null?tx[1].x:Math.min(dx,tx[1].x); });
+      if(dx===null) dx=(C("cat").x1+C("desc").x0)/2;
+    }
+    const kOf=it=>{ const k=colOf(it); return dx!==null&&/^(cat|desc)$/.test(k)?(it.x>=dx-3?"desc":"cat"):k; };
+    // 숫자(수량 · 단가 · 금액)가 있는 줄 = 품목 한 줄
+    const R=[]; body.forEach(r=>{ if(r.its.some(i=>/^(qty|up|amt)$/.test(kOf(i))&&isNum(i.s))) R.push({y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}); });
+    const rowOf=new Map();
+    body.forEach(r=>{
+      let t=R.find(x=>x.y===r.y), own=null;
+      if(!t){ let bd=1e9; R.forEach(x=>{ const d=Math.abs(x.y-r.y); if(d<bd){ bd=d; t=x; } }); if(bd>hh*1.6) own={y:r.y,h:Math.max(...r.its.map(i=>i.h)),cells:{}}; }
+      r.its.forEach(it=>{ const k=kOf(it); let tt=t;
+        if(!R.some(x=>x.y===r.y)){   // 바로 위 같은 칸 글자에 붙은 둘째 줄(합친 칸 "홈페이지 제작 / (페이지형)")은 그 줄로
+          const a=[...rowOf.keys()].find(a=>kOf(a)===k&&a.x<it.x+it.w&&it.x<a.x+a.w&&it.y-(a.y+a.h)>=-1&&it.y-(a.y+a.h)<it.h*.6);
+          tt=a?rowOf.get(a):own||t; }
+        if(tt===own&&!R.includes(own)) R.push(own);
+        (tt.cells[k]=tt.cells[k]||[]).push(it); rowOf.set(it,tt); T.used.add(it); });
+    });
+    R.sort((a,b)=>a.y-b.y);
+    const qx=C("qty")||C("unit")||C("up")||C("amt"), descEnd=qx?qx.x0-Math.max(6,qx.x0-(C("desc")?C("desc").x1:qx.x0)>40?10:6):W*.6;
+    const box=k=>{ const c=C(k);
+      if(k==="desc"&&dx!==null) return [dx,descEnd];
+      if(k==="cat"&&dx!==null){ const right=dx-4; return [Math.max(0,2*c.cx-right),right]; }
+      return [c.x0-4,c.x1+4]; };
+    R.forEach(t=>{
+      const n=T.rows.length, row={cat:"",desc:"",qty:"",unit:"",up:"",amt:"",note:"",mode:"normal",fl:""};
+      cols.forEach(c=>{ const k=c.k, fr=(t.cells[k]||[]).sort((a,b)=>a.y-b.y||a.x-b.x);
+        let [x0,x1]=box(k), y0=t.y, y1=t.y+t.h, f=t.h;
+        if(fr.length){ x0=Math.min(x0,...fr.map(i=>i.x)); x1=Math.max(x1,...fr.map(i=>i.x+i.w)); y0=Math.min(...fr.map(i=>i.y)); y1=Math.max(...fr.map(i=>i.y+i.h)); f=Math.max(...fr.map(i=>i.h)); }
+        const s=fr.reduce((a,i,j)=>a+(j?(Math.abs(i.y-fr[j-1].y)>i.h*.5?"\n":" "):"")+i.s.trim(),"").trim();
+        if(k==="amt"&&FM_FLAG.test(s)){ row.mode=/별도/.test(s)?"exclude":"service"; row.fl=s; }
+        else if(k==="up"||k==="amt"){ const v=fmNum(s); row[k]=v===null?s:v; }
+        else row[k]=s;
+        T.marks.push({id:newId(),pg,t:"text",b:`it.${n}.${k}`,v:"",x:Math.max(0,x0-1)/W,y:(y0-f*.05)/H,w:(x1-x0+2)/W,f:Math.min(f,hh*1.05)/W,h:(y1-y0+f*.12)/W,o:fr.length?1:0,bd:fr.some(i=>i.bd)?1:undefined,al:/^(desc|note)$/.test(k)?"l":"c"});
+      });
+      T.rows.push(row);
+    });
+    T.cols=T.cols||cols.map(c=>c.k);
+    return;
+  }
+}
+// 표 밖 문장: 금액 · 비율 · 상대방 · 우리 회사 이름을 기본 양식처럼 {총액} {계약금비율} {의뢰인} {수행자} … 로 바꿈 (바뀐 줄만)
+function fmTemplate(s,V){
+  let t=String(s);
+  const money=(n,tok)=>{ if(!n) return; const w=won(n).replace(/,/g,","); t=t.replace(new RegExp("(^|[^\\d,.])"+w+"(?![\\d,])","g"),(m,a)=>a+tok); };
+  if(V.total){ money(V.total,"{총액}"); if(V.supply!==V.total) money(V.supply,"{금액}"); money(V.dep,"{계약금}"); money(V.bal,"{잔금}");
+    const kw=korWon(V.total); t=t.replace(new RegExp(kw+"(?=\\s*원)","g"),"{한글총액}"); }
+  t=t.replace(/((계약금|착수금|선금|선급금)[^%\d\n]{0,14}?)(\d{1,3})(\s*%)/g,(m,a,_,n,b)=>+n===V.rate?a+"{계약금비율}"+b:m);
+  t=t.replace(/((잔금|잔액|중도금)[^%\d\n]{0,14}?)(\d{1,3})(\s*%)/g,(m,a,_,n,b)=>+n===100-V.rate?a+"{잔금비율}"+b:m);
+  if(profile.account) t=t.replace(/^(\s*(계좌번호|입금계좌|입금\s*계좌|계좌)\s*[:：]\s*).+$/,"$1{계좌}");
+  [[V.client,"{의뢰인}"],[V.clientCeo,"{대표자}"],[V.co,"{수행자}"]].forEach(([v,tok])=>{ const re=v&&fmNameRe(v); if(re) t=t.replace(re,tok); });
+  return t;
+}
+
 
 /* --- 5. 원본 모양 문서 그리기 (미리보기 · 인쇄 · 전자서명 모두 같은 HTML) ---
    전자서명 PDF는 html2canvas로 찍기 때문에 페이지 안에서는 mm 단위만 씀 (cqw · aspect-ratio · object-fit 안 씀) */
 function fmImg(key,i){ const f=(profile.forms||{})[key]; return f&&f[i]||""; }
-function fmVal(m){
-  if(m.v) return m.v;
+// 이름이 바뀌면 조사도 맞춤 ("테스트상회이" → "테스트상회가")
+function fmJosa(v,p){
+  const J={"이":"이가","가":"이가","은":"은는","는":"은는","을":"을를","를":"을를","과":"과와","와":"과와"};
+  return fill(String(v).replace(/\{(수행자|의뢰인|대표자)\}(이|가|은|는|을|를|과|와)(?![가-힣])/g,(a,k,j)=>{
+    const n=fill("{"+k+"}",p), c=n.charCodeAt(n.length-1); if(!n.trim()) return a;
+    if(c<0xAC00||c>0xD7A3) return n+j;
+    return n+J[j][(c-0xAC00)%28?0:1]; }),p);
+}
+function fmVal(m,p){
+  if(m.v) return /\{[^{}]+\}/.test(m.v)?fmJosa(m.v,p):m.v;
+  if(m.b&&m.b.startsWith("it.")){   // 품목 표 칸
+    const [,n,k]=m.b.split("."), r=((p&&p.form&&p.form.rows)||[])[+n]; if(!r) return "";
+    if(k==="amt"){ if(r.mode&&r.mode!=="normal") return fmFlagText(r); const a=fmRowAmt(r); return a===""?"":won(a); }
+    if(k==="up"){ const u=fmNum(r.up); return u===null?String(r.up??""):won(u); }
+    return String(r[k]??"");
+  }
   if(m.b==="date"){ return certYmd(certDate(state.quoteDate)||new Date()); }
   if(!m.b) return "";
-  if(m.b.includes(" ")) return m.b.split(" ").map(b=>fmVal({b})).filter(Boolean).join(" ");   // 상호 + 대표자
-  const [o,k]=m.b.split("."); return String(((o==="co"?profile:state.client)||{})[k]||"");
+  if(m.b.includes(" ")) return m.b.split(" ").map(b=>fmVal({b,d:""})).filter(Boolean).join(" ")||m.d||"";   // 상호 + 대표자
+  const [o,k]=m.b.split("."); return String(((o==="co"?profile:state.client)||{})[k]||(o==="co"&&m.d)||"");   // 우리 회사 정보가 비어 있으면 원본 글자 유지
 }
 // mode: true = 편집 카드 (칸 번호 · 끌기), "pv" = 고르는 창 미리보기 (찾은 칸 표시), false = 실제 문서
 function fmBox(p,i,mode){
@@ -4108,8 +4253,11 @@ function fmBox(p,i,mode){
   const marks=F.marks.map((m,n)=>{ if(m.pg!==i) return "";
     const pos=`left:${(m.x*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`, no=edit?`<i class="fm-no">${n+1}</i>`:"", sel=edit&&fmSel===m.id?" sel":"", dm=edit?` data-mid="${m.id}"`:pv?" data-pv":"";
     if(m.t==="text"){
-      const val=fmVal(m), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
-      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}"${dm} style="${pos}${m.o||show?`min-width:${u(m.w)};`:""}${m.o?`min-height:${u(m.f*1.18)};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
+      const val=fmVal(m,p), lbl=show&&!val?esc(fmBindName(m.b)||"글자"):esc(val);
+      // al: c 가운데 · l 왼쪽 (칸 너비 고정, 길면 줄바꿈) · r 오른쪽 끝 맞춤
+      const al=m.al, ps=al==="r"?`right:${((1-m.x-m.w)*100).toFixed(3)}%;top:${(m.y*100).toFixed(3)}%;`:pos;
+      const wd=al==="c"||al==="l"?`width:${u(m.w)};text-align:${al==="c"?"center":"left"};white-space:normal;`:m.o||show?`min-width:${u(m.w)};${al==="r"?"text-align:right;":""}`:"";
+      return `<div class="fm-t${m.o?" o":""}${show&&!val?" ph":""}${sel}"${dm} style="${ps}${wd}${m.o?`min-height:${u(m.h?Math.max(m.f,m.h):m.f*1.18)};`:""}${m.o&&m.bg?`background:${m.bg};`:""}${m.bd?"font-weight:700;":""}${m.fc?`color:${m.fc};`:""}font-size:${u(m.f*.92)};line-height:${u(m.f*1.18)}">${no}${lbl.replace(/\n/g,"<br>")}</div>`;
     }
     const w=u(m.w), h=u(m.t==="company"?m.w:m.w*.7), ctr=`margin-left:-${u(m.w/2)};margin-top:-${u((m.t==="company"?m.w:m.w*.7)/2)};`;
     if(m.t==="client") return `<span class="fm-s${sel}"${dm}${show?"":' data-client-seal data-mark=" "'} style="${pos}${ctr}width:${w};height:${h}">${no}${show&&!cs?"상대방<br>서명":cs}</span>`;
@@ -4133,11 +4281,12 @@ function fmBindName(b){ const r=fmBinds().find(x=>x[0]===(b||"")); return b&&r?r
 function formCardHtml(p,pi){
   const k=`p${p.pid}`, F=p.form, B=fmBinds(), TY={text:"글자 칸",client:"상대방 서명",company:"회사 직인"};
   const rows=F.marks.map((m,i)=>{ const b=`prods.${pi}.form.marks.${i}`;
+    if(m.b&&m.b.startsWith("it.")) return "";   // 품목 표 칸은 아래 품목 표에서 고침
     const typeSel=`<select data-p="${b}.t" data-struct aria-label="칸 종류">${Object.entries(TY).map(([v,t])=>`<option value="${v}"${m.t===v?" selected":""}>${t}</option>`).join("")}</select>`;
     const size=m.t==="text"?`<label class="fm-sz">글자<input type="number" min="5" max="30" step=".5" data-fmsz="${i}" data-pi="${pi}" value="${Math.round(m.f*595*2)/2}">pt</label>`
       :`<label class="fm-sz">크기<input type="number" min="8" max="50" step="1" data-fmsz="${i}" data-pi="${pi}" value="${Math.round(m.w*210)}">mm</label>`;
     const body=m.t==="text"?`<select data-p="${b}.b" data-struct aria-label="채울 내용">${B.map(([v,t])=>`<option value="${v}"${(m.b||"")===v?" selected":""}>${t}</option>`).join("")}</select>
-        <input data-p="${b}.v" placeholder="${esc(m.b?(fmVal(Object.assign({},m,{v:""}))||"(비어 있음)")+" — 다르게 쓰려면 입력":"넣을 내용")}">
+        <input data-p="${b}.v" placeholder="${esc(m.b?(fmVal(Object.assign({},m,{v:""}),p)||"(비어 있음)")+" — 다르게 쓰려면 입력":"넣을 내용")}">
         <label class="chk" title="원본 글자 위를 흰 바탕으로 덮습니다"><input type="checkbox" data-p="${b}.o" data-bool data-struct ${m.o?"checked":""}>흰 바탕</label>`
       :`<span class="hint" style="margin:0">${m.t==="client"?"전자서명 · 고객 사인이 들어갑니다":profile.seal?"회사 직인이 찍힙니다":profile.sign?"대표 사인이 들어갑니다 (직인 없음)":"회사 설정에 직인이나 사인을 올려 주세요"}</span>`;
     return `<div class="fm-row${fmSel===m.id?" sel":""}" data-mrow="${m.id}"><span class="fm-no">${i+1}</span><span class="fm-pg">${F.r.length>1?`${m.pg+1}쪽`:""}</span>${typeSel}${body}${size}
@@ -4152,7 +4301,8 @@ function formCardHtml(p,pi){
         <span class="hint" style="margin:0">${fmAddT==="fix"?`<b>고칠 글자를 양식 그림에서 누르세요</b> (여러 줄 계속 가능 · 다 했으면 버튼을 다시 누름)`:fmAddT?`<b>양식 그림에서 넣을 곳을 누르세요</b>`:"칸은 끌어서 옮길 수 있습니다"}</span>
       </div>
       <div class="fm-thumbs">${F.r.map((_,i)=>`<div class="fm-thumb${fmAddT?" adding":""}" data-fpi="${pi}" data-fpg="${i}">${fmBox(p,i,true)}${F.r.length>1?`<div class="fm-tn">${i+1}쪽</div>`:""}</div>`).join("")}</div>
-      <div class="sub" style="margin-top:10px">칸 ${F.marks.length}개 <span class="hint" style="margin:0;font-weight:400">— 상대방 정보는 위 의뢰자 정보, 날짜는 작성일 칸의 값이 자동으로 들어갑니다</span></div>
+      ${fmItemsHtml(p,pi)}
+      <div class="sub" style="margin-top:10px">칸 ${F.marks.filter(m=>!(m.b||"").startsWith("it.")).length}개 <span class="hint" style="margin:0;font-weight:400">— 상대방 정보는 위 의뢰자 정보, 날짜는 작성일 칸의 값이 자동으로 들어갑니다</span></div>
       <div class="fm-rows">${rows||`<p class="hint">찾은 칸이 없습니다. 위 [+ 글자 칸] [+ 상대방 서명] [+ 회사 직인]을 누르고 양식 그림에서 자리를 눌러 넣으세요.</p>`}</div>
       <details class="prodcfg" data-k="${k}-cfg" ${isOpen(k+"-cfg")}><summary>이름 · 제목</summary>
         <div class="grid2">
@@ -4167,6 +4317,32 @@ function formCardHtml(p,pi){
     </div>
   </details>`;
 }
+// 원본 품목 표 편집: 줄마다 품목 · 세부내용 · 수량 · 단위 · 단가 · 공급가액 · 구분
+const FM_COLN={cat:"품목",desc:"세부내용",qty:"수량",unit:"단위",up:"단가",amt:"공급가액",note:"비고"};
+function fmItemsHtml(p,pi){
+  const F=p.form; if(!F.rows||!F.rows.length) return "";
+  const cols=(F.cols||Object.keys(FM_COLN)).filter(k=>FM_COLN[k]), t=totals(p);
+  const head=cols.map(k=>`<th>${FM_COLN[k]}</th>`).join("")+"<th>구분</th>";
+  const body=F.rows.map((r,n)=>{ const b=`prods.${pi}.form.rows.${n}`;
+    return `<tr>${cols.map(k=>{
+      if(k==="amt"){ const a=fmRowAmt(Object.assign({},r,{amt:""})); return `<td><input data-p="${b}.amt" data-fmrow inputmode="numeric" placeholder="${r.mode!=="normal"?esc(fmFlagText(r)):a===""?"":"자동 "+won(a)}" aria-label="공급가액"></td>`; }
+      return `<td><input data-p="${b}.${k}" data-fmrow${/^(qty|up)$/.test(k)?' inputmode="numeric"':""} aria-label="${FM_COLN[k]}"></td>`; }).join("")}
+      <td><select data-p="${b}.mode" data-fmrow aria-label="구분">${[["normal","금액"],["service","서비스 제공"],["exclude","별도"]].map(([v,l])=>`<option value="${v}"${(r.mode||"normal")===v?" selected":""}>${l}</option>`).join("")}</select></td></tr>`; }).join("");
+  return `<div class="sub" style="margin-top:12px">품목 표 <span class="hint" style="margin:0;font-weight:400">— 원본 표의 같은 칸에 그대로 들어갑니다. 수량 · 단가를 고치면 공급가액이 자동 계산됩니다</span></div>
+    <div class="fm-items"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>
+    <div class="hint fm-sum" data-fmsum="${pi}">${fmSumText(p)}</div>`;
+}
+function fmSumText(p){ const t=totals(p); return `합계 <b>${won(t.total)}원</b> · 계약금 ${t.rate}% ${won(t.dep)}원 · 잔금 ${100-t.rate}% ${won(t.bal)}원 <span style="opacity:.75">(계약금 비율은 위 금액 · 조건 칸에서 바꿉니다)</span>`; }
+$("#editor").addEventListener("input",e=>{
+  const el=e.target; if(!el.hasAttribute||!el.hasAttribute("data-fmrow")) return;
+  const m=el.dataset.p.match(/^prods\.(\d+)\.form\.rows\.(\d+)\.(\w+)$/); if(!m) return;
+  const p=P()[+m[1]], r=p.form.rows[+m[2]];
+  if(m[3]==="qty"||m[3]==="up"){ r.amt=""; const a=$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`); if(a){ a.value=""; const v=fmRowAmt(r); a.placeholder=v===""?"":"자동 "+won(v); } }
+  if(m[3]==="mode"){ const a=$(`#prodCards [data-p="prods.${m[1]}.form.rows.${m[2]}.amt"]`); if(a){ const v=fmRowAmt(Object.assign({},r,{amt:""})); a.placeholder=r.mode!=="normal"?fmFlagText(r):v===""?"":"자동 "+won(v); } }
+  const s=$(`#prodCards [data-fmsum="${m[1]}"]`); if(s) s.innerHTML=fmSumText(p);
+  const th=$$(`#prodCards [data-fpi="${m[1]}"]`); th.forEach(x=>{ const pg=+x.dataset.fpg; x.innerHTML=fmBox(p,pg,true)+(p.form.r.length>1?`<div class="fm-tn">${pg+1}쪽</div>`:""); });
+  updateSums(); esMarkStale(); save(); schedule();
+});
 function fmNewMark(t,pg,x,y){
   if(t==="text") return {id:newId(),pg,t,b:"",v:"",x,y:Math.max(0,y-.008),w:.2,f:.018,o:0};
   return {id:newId(),pg,t,x,y,w:t==="company"?22/210:17/210};
@@ -4220,7 +4396,7 @@ addEventListener("pointermove",e=>{
   if(!fmDrag) return; const D=fmDrag, dx=(e.clientX-D.sx)/D.R.width, dy=(e.clientY-D.sy)/D.R.height;
   if(!D.moved&&Math.hypot(e.clientX-D.sx,e.clientY-D.sy)<3) return;
   D.moved=true; D.m.x=Math.min(1,Math.max(0,D.x+dx)); D.m.y=Math.min(1,Math.max(0,D.y+dy));
-  D.el.style.left=(D.m.x*100)+"%"; D.el.style.top=(D.m.y*100)+"%";
+  D.el.style.left=(D.m.x*100)+"%"; D.el.style.right="auto"; D.el.style.top=(D.m.y*100)+"%";
 });
 addEventListener("pointerup",()=>{
   if(!fmDrag) return; const D=fmDrag; fmDrag=null;
@@ -4254,7 +4430,7 @@ function fmShowB(){
   $("#fmB").classList.remove("off");
   const n=t=>B.marks.filter(m=>m.t===t).length;
   $("#fmInfoB").textContent=B.scan?"글자가 없는 그림이라 칸은 직접 넣어야 합니다":`서명 자리 ${n("client")}곳 · 직인 자리 ${n("company")}곳 · 글자 칸 ${n("text")}곳 찾음`;
-  const p={form:{key:"_prev",r:B.r,marks:B.marks}};
+  const p={kind:"form",form:{key:"_prev",r:B.r,marks:B.marks,rows:B.rows||[]}};
   profile.forms=profile.forms||{}; profile.forms._prev=B.pages;
   try{ el.innerHTML=`<div class="fm-z">${B.r.map((_,i)=>`<div class="page fm-page">${fmBox(p,i,"pv")}</div>`).join("")}</div>`; }
   finally{ delete profile.forms._prev; }
@@ -4304,11 +4480,12 @@ $("#fmOkB").onclick=()=>{
   const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
   const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
   const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
-    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[])}});
+    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null}});
+  if(B.rate) state.depositRate=B.rate;
   if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
     return alert("양식 그림이 커서 이 브라우저에 저장할 공간이 부족합니다.\n쪽수가 적은 PDF로 나눠 올리거나, 문서 목록에서 오래된 문서를 지운 뒤 다시 해 주세요."); }
   fmSel=null; fmAddT=null;
-  fmAddProduct(p,{});
+  fmAddProduct(p,(c.A&&c.A.client)||{});
   $("#saved").textContent=`'${p.name}' 원본 양식을 넣었습니다 — 칸 위치 · 내용을 확인하세요`;
 };
 
