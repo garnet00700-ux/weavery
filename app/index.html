@@ -494,6 +494,13 @@ textarea{resize:vertical;line-height:1.5}
 .draft-ask .da-note{background:#f4f8ec;border:1px solid #d9e8c4;border-radius:10px;padding:10px 12px;line-height:1.7;font-size:13.5px;margin-bottom:14px}
 .draft-ask .da-btns{display:flex;flex-direction:column;gap:6px}
 .draft-ask .da-btns .btn{width:100%;padding:10px}
+/* 인식 점검 (원본 양식 불러오기) */
+.fm-chk{background:#fff7e0;border:1px solid #f0d48a;color:#6b4a00;border-radius:10px;padding:10px 14px;margin:0 0 10px;font-size:13px;line-height:1.6}
+.fm-chk b{display:block;margin-bottom:2px}
+.fm-chk ul{margin:6px 0 4px;padding-left:18px}
+.fm-chk li{margin:3px 0}
+.fm-chk .btn{margin-top:6px}
+.fm-chk.ok{background:#eef7ee;border-color:#bfe0bf;color:#25622a}
 </style>
 
 <!-- 계약서 문서 스타일 (전자서명 시 이 부분이 그대로 서명 페이지로 전달됩니다) -->
@@ -4125,7 +4132,8 @@ async function fmBuildB(f,kind){
   // 1회차: 이미 적혀 있는 값(상대방 업체명 등)을 모음 → 2회차: 그 값이 다른 쪽 · 본문에 나와도 수정 칸으로
   const ctx={vals:{}}, marks=[];
   // 인식 단계 하나가 실패해도 원본 모양 불러오기는 멈추지 않음 (그 단계만 건너뜀)
-  const safe=(f,why)=>{ try{ return f(); }catch(e){ console.warn("원본 양식 인식 건너뜀:",why,e); return null; } };
+  const chk=new Set();   // 인식 점검: 자동으로 못 맞춘 곳 (숨기지 않고 알림)
+  const safe=(f,why)=>{ try{ return f(); }catch(e){ console.warn("원본 양식 인식 건너뜀:",why,e); chk.add(`'${why}' 읽기에서 오류가 나서 그 부분은 원본 그대로 두었습니다.\n해당 자리를 확인해 주세요.`); return null; } };
   pp.forEach((p,i)=>safe(()=>fmFind(p.items,p.W,p.H,i,kind,ctx,false),"칸"));
   pp.forEach((p,i)=>{ const r0=safe(()=>fmFind(p.items,p.W,p.H,i,kind,ctx,true),"칸"); if(r0) marks.push(...r0); });
   // 품목 표 → 칸마다 수정 칸 (표 안에 겹친 다른 칸은 버림)
@@ -4201,8 +4209,16 @@ async function fmBuildB(f,kind){
   // 정렬: 글자를 둘러싼 칸(디자인 그림의 경계선)을 찾아 원본이 왼쪽 · 가운데 · 오른쪽 중 어디에 맞췄는지 보고 그대로 따름
   safe(()=>fmAlign(marks,pp),"정렬");
   // 원본 글자 줄 (글자 고치기용): 쪽 · 위치 · 크기 · 내용 (비율)
+  if(!txt) chk.add("글자가 없는 그림 PDF(스캔본)입니다.\n칸을 자동으로 찾지 못하니 [+ 글자 칸]으로 직접 넣어 주세요.");
+  else {
+    const has=re=>marks.some(m=>re.test(m.t==="text"?(m.b||""):m.t));
+    if(!/^(labor|cert)/.test(kind)&&/(quote|stmt|contract)/.test(kind)&&!T.rows.length) chk.add("품목 표를 찾지 못했습니다.\n표 머리줄(품명 · 수량 · 단가 · 금액 등)이 없거나 처음 보는 이름입니다.\n품목을 넣으려면 이 양식을 보내 주세요.");
+    if(!has(/^client/)) chk.add("상대방(의뢰자) 칸을 찾지 못했습니다.\n이름 · 연락처가 자동으로 들어가지 않습니다.\n필요한 자리에 [+ 글자 칸]을 넣어 주세요.");
+    if(!/^cert/.test(kind)&&!has(/^(co\.|company)/)) chk.add("우리 회사 칸(상호 · 대표자 · 직인)을 찾지 못했습니다.\n원본 글자가 그대로 남습니다.");
+    if(/^(contract|labor)/.test(kind)&&!marks.some(m=>m.t==="client")) chk.add("상대방 서명 자리를 찾지 못했습니다.\n전자서명을 받으려면 [+ 상대방 서명]으로 넣어 주세요.");
+  }
   const lines=[]; pp.forEach((p,i)=>p.items.forEach(it=>{ if(it.s.trim()) lines.push({pg:i,x:+(it.x/p.W).toFixed(4),y:+(it.y/p.H).toFixed(4),w:+(it.w/p.W).toFixed(4),f:+(it.h/p.W).toFixed(4),s:it.s}); }));
-  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt};
+  return {pages,r,marks:marks.slice(0,900),rows:T.rows,cols:T.cols,rate:rm?rate:0,lines,more:pdf.numPages>N?pdf.numPages:0,scan:!txt,chk:[...chk]};
 }
 // 한 글자씩 쪼개진 PDF 글자를 같은 줄 · 가까운 것끼리 이어 붙임 (글자마다 x 위치는 xs에 보관)
 function fmMerge(items){
@@ -4729,6 +4745,7 @@ function formCardHtml(p,pi){
   return `<details class="card${p.on?"":" hide"}" open data-k="${k}">
     <summary>${esc(p.name||"(이름 없는 양식)")} — 원본 양식</summary>
     <div class="in">
+      ${F.chk&&F.chk.length&&!F.chkOk?fmChkHtml(F.chk,pi):""}
       <div class="fm-tools">
         <span>칸 추가:</span>
         ${Object.entries(TY).map(([v,t])=>`<button class="btn${fmAddT===v?" go":""}" type="button" data-fmadd="${v}" data-pi="${pi}">+ ${t}</button>`).join("")}
@@ -4890,6 +4907,7 @@ function fmShowB(){
   try{ el.innerHTML=`<div class="fm-z">${B.r.map((_,i)=>`<div class="page fm-page">${fmBox(p,i,"pv")}</div>`).join("")}</div>`; }
   finally{ delete profile.forms._prev; }
   if(B.more) el.insertAdjacentHTML("afterbegin",`<div class="fm-msg warn">${B.more}쪽 중 앞 ${B.r.length}쪽만 넣습니다.</div>`);
+  el.insertAdjacentHTML("afterbegin",fmChkHtml(B.chk,false));
   fmZoom(el);
 }
 function openFormImport(){
@@ -4944,7 +4962,7 @@ $("#fmOkB").onclick=()=>{
   const key="f"+newId(); profile.forms=profile.forms||{}; profile.forms[key]=B.pages.slice();
   const title=c.text.trim()?fmTitle(c.text,c.kind):c.file.name.replace(/\.[^.]+$/,"");
   const p=Object.assign(GENERIC_PRODUCT(),{kind:"form",name:title,quoteTitle:"",contractTitle:title,items:[],notices:[],noticeIntro:"",terms:[],intro:"",docs:"contract",
-    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null}});
+    form:{key,r:B.r.slice(),marks:clone(B.marks),lines:clone(B.lines||[]),rows:clone(B.rows||[]),cols:B.cols?B.cols.slice():null,chk:(B.chk||[]).slice()}});
   if(B.rate) state.depositRate=B.rate;
   if(!lsSet(K.prof,profile)){ delete profile.forms[key]; lsSet(K.prof,profile);
     return alert("양식 그림이 커서 이 브라우저에 저장할 공간이 부족합니다.\n쪽수가 적은 PDF로 나눠 올리거나, 문서 목록에서 오래된 문서를 지운 뒤 다시 해 주세요."); }
@@ -5082,6 +5100,17 @@ $("#editor").addEventListener("focusin",e=>{
 $("#editor").addEventListener("focusout",()=>{ setTimeout(()=>{ const a=document.activeElement; if(a&&a===fmHlEl) return; fmHl=null; fmHlEl=null; fmHlShow(false); },0); });
 // 문서를 다시 그린 뒤(글자를 고칠 때마다)에도 표시 유지
 new MutationObserver(()=>{ if((fmHl||fmHlEl)&&!$("#pages .fm-hl,#pages .doc-hl")) fmHlShow(false); }).observe(document.getElementById("pages"),{childList:true});
+// 인식 점검 안내: 자동으로 못 맞춘 곳 목록. pi가 있으면 편집 카드 위 (확인하면 닫힘)
+function fmChkHtml(list,pi){
+  const ok=!list||!list.length;
+  const li=ok?"":list.map(s=>`<li>${esc(s).replace(/\n/g,"<br>")}</li>`).join("");
+  if(pi===false) return `<div class="fm-chk${ok?" ok":""}"><b>인식 점검</b>${ok?"<span>자동으로 맞출 칸을 모두 찾았습니다.<br>그래도 미리보기에서 한 번 확인해 주세요.</span>":`<span>아래는 자동으로 맞추지 못했습니다.<br>불러온 뒤 직접 고치거나, 이 양식을 보내 주세요.</span><ul>${li}</ul>`}</div>`;
+  return `<div class="fm-chk"><b>인식 점검 — 확인이 필요한 곳</b><ul>${li}</ul><button class="btn" type="button" data-fmchk="${pi}">확인했어요 · 닫기</button></div>`;
+}
+document.getElementById("editor").addEventListener("click",e=>{
+  const c=e.target.closest("[data-fmchk]"); if(!c) return;
+  const p=P()[+c.dataset.fmchk]; if(!p||!p.form) return; p.form.chkOk=1; save(); renderEditor();
+});
 // 원본 품목 카드: 위 · 아래 · 비우기 · 빈 줄에 추가 (원본 표의 줄 자리는 그대로, 내용만 옮김)
 document.getElementById("editor").addEventListener("click",e=>{
   const b=e.target.closest("[data-fmit]"); if(!b) return;
